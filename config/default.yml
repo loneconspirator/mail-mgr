@@ -1,0 +1,15 @@
+imap:
+  host: imap.example.com
+  port: 993
+  tls: true
+  auth:
+    user: you@example.com
+    pass: ${IMAP_PASSWORD}
+  idleTimeout: 300000
+  pollInterval: 60000
+
+server:
+  port: 3000
+  host: 0.0.0.0
+
+rules: []

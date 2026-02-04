@@ -1,0 +1,9 @@
+node_modules/
+dist/
+data/
+.git/
+.ralph/
+docs/
+test/
+*.md
+.env
