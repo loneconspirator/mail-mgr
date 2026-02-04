@@ -15,7 +15,7 @@ Tasks are listed in dependency order. A task cannot start until everything it de
 
 ### Phase 2 — IMAP Client
 
-- [ ] **2.1 IMAP connection management** — `ImapClient` class wrapping `imapflow`. `connect()` (authenticate, select INBOX, emit `connected`), `disconnect()` (graceful logout). Auto-reconnect with exponential backoff (1s..60s cap, reset on success). Connection states: `connected`, `connecting`, `disconnected`, `error`. Event emitter for `connected`, `disconnected`, `error`, `newMail`. Accept ImapFlow factory for test injection. Tests: backoff timing, state transitions, event firing. See [WBS 2.1](../docs/WBS-1.md#21-connection-management).
+- [x] **2.1 IMAP connection management** — `ImapClient` class wrapping `imapflow`. `connect()` (authenticate, select INBOX, emit `connected`), `disconnect()` (graceful logout). Auto-reconnect with exponential backoff (1s..60s cap, reset on success). Connection states: `connected`, `connecting`, `disconnected`, `error`. Event emitter for `connected`, `disconnected`, `error`, `newMail`. Accept ImapFlow factory for test injection. Tests: backoff timing, state transitions, event firing. See [WBS 2.1](../docs/WBS-1.md#21-connection-management).
   - Depends on: 1.1, 1.2
 
 - [ ] **2.2 IMAP IDLE and polling** — Enter IDLE on INBOX after connect. Use `mailbox.exists` for new mail detection. Re-issue IDLE every `idleTimeout` ms (default 5 min). Polling fallback at `pollInterval` ms when IDLE unsupported. Track last-seen UID to avoid reprocessing. Tests: new message triggers fetch, polling fallback, UID dedup. See [WBS 2.2](../docs/WBS-1.md#22-idle-and-polling).
@@ -64,6 +64,7 @@ Tasks are listed in dependency order. A task cannot start until everything it de
 ## Completed
 - [x] Project enabled for Ralph
 - [x] 1.2 Config schema and loading (Zod schemas, loadConfig, saveConfig, ensureConfig, env var substitution, 18 tests passing)
+- [x] 2.1 IMAP connection management (ImapClient class with connect/disconnect, exponential backoff 1s..60s, state machine, event emitter, factory injection for testing, 17 tests passing)
 
 ## Notes
 - Build bottom-up per [WBS implementation order](../docs/WBS-1.md#implementation-order)

@@ -1,2 +1,2 @@
-// Placeholder — implemented in tasks 2.1, 2.2, 2.3
-export {};
+export { ImapClient } from './client.js';
+export type { ConnectionState, ImapClientEvents, ImapFlowLike, ImapFlowFactory } from './client.js';
