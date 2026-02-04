@@ -1,2 +1,1 @@
-// Placeholder — implemented in tasks 3.1, 3.2
-export {};
+export { matchRule } from './matcher.js';

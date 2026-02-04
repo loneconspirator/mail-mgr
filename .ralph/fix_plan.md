@@ -26,7 +26,7 @@ Tasks are listed in dependency order. A task cannot start until everything it de
 
 ### Phase 3 — Rule Engine
 
-- [ ] **3.1 Rule engine pattern matching** — `matchRule(rule, message): boolean`. Glob matching via `picomatch` on sender, recipient, subject. AND logic (all specified fields must match). Recipient checks both `to` and `cc`. Case-insensitive for addresses and subject. Tests: exact match, glob match (`*@github.com`), recipient across to/cc, subject glob, multi-field AND, no match, case insensitivity, ordering, disabled skip. See [WBS 3.1](../docs/WBS-1.md#31-pattern-matching).
+- [x] **3.1 Rule engine pattern matching** — `matchRule(rule, message): boolean`. Glob matching via `picomatch` on sender, recipient, subject. AND logic (all specified fields must match). Recipient checks both `to` and `cc`. Case-insensitive for addresses and subject. Tests: exact match, glob match (`*@github.com`), recipient across to/cc, subject glob, multi-field AND, no match, case insensitivity, ordering, disabled skip. See [WBS 3.1](../docs/WBS-1.md#31-pattern-matching).
   - Depends on: 1.2, 2.3
 
 - [ ] **3.2 Rule evaluation pipeline** — `evaluateRules(rules[], message): Rule | null`. Sort by `order`, filter `enabled: true`, return first match or null. Tests: first match wins, null on no match, disabled skipped. See [WBS 3.2](../docs/WBS-1.md#32-rule-evaluation-pipeline).
@@ -66,6 +66,7 @@ Tasks are listed in dependency order. A task cannot start until everything it de
 - [x] 1.2 Config schema and loading (Zod schemas, loadConfig, saveConfig, ensureConfig, env var substitution, 18 tests passing)
 - [x] 2.1 IMAP connection management (ImapClient class with connect/disconnect, exponential backoff 1s..60s, state machine, event emitter, factory injection for testing, 17 tests passing)
 - [x] 2.3 IMAP message fetching (EmailMessage/EmailAddress types, parseMessage from imapflow envelope, edge case handling, 12 tests passing)
+- [x] 3.1 Rule engine pattern matching (matchRule with picomatch glob matching, AND logic, recipient checks to+cc, case-insensitive, 18 tests passing)
 
 ## Notes
 - Build bottom-up per [WBS implementation order](../docs/WBS-1.md#implementation-order)
