@@ -21,7 +21,7 @@ Tasks are listed in dependency order. A task cannot start until everything it de
 - [ ] **2.2 IMAP IDLE and polling** — Enter IDLE on INBOX after connect. Use `mailbox.exists` for new mail detection. Re-issue IDLE every `idleTimeout` ms (default 5 min). Polling fallback at `pollInterval` ms when IDLE unsupported. Track last-seen UID to avoid reprocessing. Tests: new message triggers fetch, polling fallback, UID dedup. See [WBS 2.2](../docs/WBS-1.md#22-idle-and-polling).
   - Depends on: 2.1
 
-- [ ] **2.3 IMAP message fetching** — Fetch envelope data (UID, from, to, cc, subject, date, flags) via `imapflow` `fetchOne`/`fetch`. Return typed `EmailMessage` and `EmailAddress` objects. Tier 1 = envelope only (body is Tier 2). Tests: correct typed structure, edge cases (missing subject, multiple recipients, encoded headers). See [WBS 2.3](../docs/WBS-1.md#23-message-fetching).
+- [x] **2.3 IMAP message fetching** — Fetch envelope data (UID, from, to, cc, subject, date, flags) via `imapflow` `fetchOne`/`fetch`. Return typed `EmailMessage` and `EmailAddress` objects. Tier 1 = envelope only (body is Tier 2). Tests: correct typed structure, edge cases (missing subject, multiple recipients, encoded headers). See [WBS 2.3](../docs/WBS-1.md#23-message-fetching).
   - Depends on: 2.1
 
 ### Phase 3 — Rule Engine
@@ -65,6 +65,7 @@ Tasks are listed in dependency order. A task cannot start until everything it de
 - [x] Project enabled for Ralph
 - [x] 1.2 Config schema and loading (Zod schemas, loadConfig, saveConfig, ensureConfig, env var substitution, 18 tests passing)
 - [x] 2.1 IMAP connection management (ImapClient class with connect/disconnect, exponential backoff 1s..60s, state machine, event emitter, factory injection for testing, 17 tests passing)
+- [x] 2.3 IMAP message fetching (EmailMessage/EmailAddress types, parseMessage from imapflow envelope, edge case handling, 12 tests passing)
 
 ## Notes
 - Build bottom-up per [WBS implementation order](../docs/WBS-1.md#implementation-order)
