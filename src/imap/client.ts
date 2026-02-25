@@ -14,6 +14,8 @@ export interface ImapFlowLike {
   connect(): Promise<void>;
   logout(): Promise<void>;
   mailboxOpen(path: string | string[]): Promise<unknown>;
+  messageMove(range: number[] | string, destination: string, options?: { uid?: boolean }): Promise<unknown>;
+  mailboxCreate(path: string | string[]): Promise<unknown>;
   on(event: string, listener: (...args: unknown[]) => void): this;
   removeAllListeners(event?: string): this;
   usable: boolean;
@@ -91,6 +93,20 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
 
   getBackoffMs(): number {
     return this.backoffMs;
+  }
+
+  async moveMessage(uid: number, destination: string): Promise<void> {
+    if (!this.flow) {
+      throw new Error('Not connected');
+    }
+    await this.flow.messageMove([uid], destination, { uid: true });
+  }
+
+  async createMailbox(path: string): Promise<void> {
+    if (!this.flow) {
+      throw new Error('Not connected');
+    }
+    await this.flow.mailboxCreate(path);
   }
 
   private bindFlowEvents(flow: ImapFlowLike): void {
