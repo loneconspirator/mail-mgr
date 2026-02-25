@@ -16,6 +16,7 @@ export interface ImapFlowLike {
   mailboxOpen(path: string | string[]): Promise<unknown>;
   messageMove(range: number[] | string, destination: string, options?: { uid?: boolean }): Promise<unknown>;
   mailboxCreate(path: string | string[]): Promise<unknown>;
+  fetch(range: string, query: Record<string, unknown>, options?: { uid?: boolean }): AsyncIterable<unknown>;
   on(event: string, listener: (...args: unknown[]) => void): this;
   removeAllListeners(event?: string): this;
   usable: boolean;
@@ -107,6 +108,25 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
       throw new Error('Not connected');
     }
     await this.flow.mailboxCreate(path);
+  }
+
+  /**
+   * Fetch envelopes for messages newer than the given UID.
+   * Returns raw fetch results for parsing with parseMessage().
+   */
+  async fetchNewMessages(sinceUid: number): Promise<unknown[]> {
+    if (!this.flow) {
+      throw new Error('Not connected');
+    }
+    const range = sinceUid > 0 ? `${sinceUid + 1}:*` : '1:*';
+    const results: unknown[] = [];
+    for await (const msg of this.flow.fetch(range, { uid: true, envelope: true, flags: true }, { uid: true })) {
+      const m = msg as { uid?: number };
+      if (m.uid !== undefined && m.uid > sinceUid) {
+        results.push(msg);
+      }
+    }
+    return results;
   }
 
   private bindFlowEvents(flow: ImapFlowLike): void {
