@@ -1,2 +1,2 @@
-// Placeholder — implemented in task 7.1
-export {};
+export { buildServer } from './server.js';
+export type { ServerDeps } from './server.js';
