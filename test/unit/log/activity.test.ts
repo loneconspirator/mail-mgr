@@ -140,8 +140,8 @@ describe('ActivityLog', () => {
       VALUES (datetime('now', '-60 days'), 1, 'move', 1)
     `).run();
 
-    // Insert a recent entry
-    log.logActivity(makeResult({ messageUid: 99 }), makeMessage({ uid: 99 }), makeRule());
+    // Insert a recent entry (use current time so it's within 30-day window)
+    log.logActivity(makeResult({ messageUid: 99, timestamp: new Date() }), makeMessage({ uid: 99 }), makeRule());
 
     expect(log.getRecentActivity()).toHaveLength(2);
 
