@@ -18,7 +18,7 @@ Tasks are listed in dependency order. A task cannot start until everything it de
 - [x] **2.1 IMAP connection management** — `ImapClient` class wrapping `imapflow`. `connect()` (authenticate, select INBOX, emit `connected`), `disconnect()` (graceful logout). Auto-reconnect with exponential backoff (1s..60s cap, reset on success). Connection states: `connected`, `connecting`, `disconnected`, `error`. Event emitter for `connected`, `disconnected`, `error`, `newMail`. Accept ImapFlow factory for test injection. Tests: backoff timing, state transitions, event firing. See [WBS 2.1](../docs/WBS-1.md#21-connection-management).
   - Depends on: 1.1, 1.2
 
-- [ ] **2.2 IMAP IDLE and polling** — Enter IDLE on INBOX after connect. Use `mailbox.exists` for new mail detection. Re-issue IDLE every `idleTimeout` ms (default 5 min). Polling fallback at `pollInterval` ms when IDLE unsupported. Track last-seen UID to avoid reprocessing. Tests: new message triggers fetch, polling fallback, UID dedup. See [WBS 2.2](../docs/WBS-1.md#22-idle-and-polling).
+- [x] **2.2 IMAP IDLE and polling** — Enter IDLE on INBOX after connect. Use `mailbox.exists` for new mail detection. Re-issue IDLE every `idleTimeout` ms (default 5 min). Polling fallback at `pollInterval` ms when IDLE unsupported. Track last-seen UID to avoid reprocessing. Tests: new message triggers fetch, polling fallback, UID dedup. See [WBS 2.2](../docs/WBS-1.md#22-idle-and-polling).
   - Depends on: 2.1
 
 - [x] **2.3 IMAP message fetching** — Fetch envelope data (UID, from, to, cc, subject, date, flags) via `imapflow` `fetchOne`/`fetch`. Return typed `EmailMessage` and `EmailAddress` objects. Tier 1 = envelope only (body is Tier 2). Tests: correct typed structure, edge cases (missing subject, multiple recipients, encoded headers). See [WBS 2.3](../docs/WBS-1.md#23-message-fetching).
@@ -73,6 +73,7 @@ Tasks are listed in dependency order. A task cannot start until everything it de
 - [x] 5.1 SQLite activity log (activity table, logActivity, getRecentActivity, pruning — 1 flaky prune test)
 - [x] 6.1 Monitor orchestration pipeline (Monitor class, fetch→evaluate→execute→log pipeline)
 - [x] 7.1 Fastify API server (rule CRUD, activity, status, IMAP config, password masking)
+- [x] 2.2 IMAP IDLE and polling (IDLE cycling via NOOP at idleTimeout, polling fallback when IDLE unsupported, UID dedup, 10 new tests)
 
 ## Notes
 - Build bottom-up per [WBS implementation order](../docs/WBS-1.md#implementation-order)

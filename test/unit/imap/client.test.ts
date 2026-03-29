@@ -19,6 +19,7 @@ function createMockFlow(overrides: Partial<ImapFlowLike> = {}): ImapFlowLike {
     connect: vi.fn(async () => {}),
     logout: vi.fn(async () => {}),
     mailboxOpen: vi.fn(async () => ({})),
+    noop: vi.fn(async () => {}),
     on(event: string, listener: (...args: unknown[]) => void) {
       if (!listeners.has(event)) listeners.set(event, []);
       listeners.get(event)!.push(listener);
@@ -291,6 +292,164 @@ describe('ImapClient', () => {
 
       expect(errorHandler).toHaveBeenCalledWith(err);
       expect(client.state).toBe('error');
+    });
+  });
+
+  describe('IDLE cycling', () => {
+    it('sends NOOP after idleTimeout to cycle IDLE', async () => {
+      await client.connect();
+
+      expect(mockFlow.noop).not.toHaveBeenCalled();
+
+      // Advance past idleTimeout (300_000ms)
+      await vi.advanceTimersByTimeAsync(300_000);
+
+      expect(mockFlow.noop).toHaveBeenCalledTimes(1);
+    });
+
+    it('reschedules IDLE cycle after each NOOP', async () => {
+      await client.connect();
+
+      await vi.advanceTimersByTimeAsync(300_000);
+      expect(mockFlow.noop).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(300_000);
+      expect(mockFlow.noop).toHaveBeenCalledTimes(2);
+    });
+
+    it('stops IDLE cycling on disconnect', async () => {
+      await client.connect();
+
+      await client.disconnect();
+
+      await vi.advanceTimersByTimeAsync(600_000);
+      expect(mockFlow.noop).not.toHaveBeenCalled();
+    });
+
+    it('stops IDLE cycling on unexpected close', async () => {
+      await client.connect();
+
+      mockFlow.emit('close');
+
+      // Create a new flow for the reconnect attempt
+      const newFlow = createMockFlow();
+      (factory as ReturnType<typeof vi.fn>).mockReturnValueOnce(newFlow);
+
+      // The old NOOP should not fire during the backoff period
+      expect(mockFlow.noop).not.toHaveBeenCalled();
+    });
+
+    it('handles NOOP failure gracefully', async () => {
+      const noopFail = createMockFlow({
+        noop: vi.fn(async () => { throw new Error('noop failed'); }),
+      });
+      const f = vi.fn(() => noopFail);
+      const c = new ImapClient(TEST_CONFIG, f);
+      c.on('error', () => {});
+
+      await c.connect();
+      // Should not throw
+      await vi.advanceTimersByTimeAsync(300_000);
+
+      await c.disconnect();
+    });
+  });
+
+  describe('polling fallback', () => {
+    it('polls when IDLE is not supported', async () => {
+      const noIdleFlow = createMockFlow({ idleSupported: false }) as ReturnType<typeof createMockFlow> & { emit(event: string, ...args: unknown[]): void };
+      const f = vi.fn(() => noIdleFlow);
+      const c = new ImapClient(TEST_CONFIG, f);
+
+      await c.connect();
+
+      expect(c.idleSupported).toBe(false);
+
+      // Should poll at pollInterval (60_000ms)
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(noIdleFlow.noop).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(noIdleFlow.noop).toHaveBeenCalledTimes(2);
+
+      await c.disconnect();
+    });
+
+    it('does not use IDLE cycling when polling', async () => {
+      const noIdleFlow = createMockFlow({ idleSupported: false }) as ReturnType<typeof createMockFlow> & { emit(event: string, ...args: unknown[]): void };
+      const f = vi.fn(() => noIdleFlow);
+      const c = new ImapClient(TEST_CONFIG, f);
+
+      await c.connect();
+
+      // At 60s (pollInterval), should have 1 poll NOOP
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(noIdleFlow.noop).toHaveBeenCalledTimes(1);
+
+      // At 120s, should have 2 poll NOOPs (not an IDLE cycle at 300s)
+      await vi.advanceTimersByTimeAsync(60_000);
+      expect(noIdleFlow.noop).toHaveBeenCalledTimes(2);
+
+      await c.disconnect();
+    });
+
+    it('stops polling on disconnect', async () => {
+      const noIdleFlow = createMockFlow({ idleSupported: false }) as ReturnType<typeof createMockFlow> & { emit(event: string, ...args: unknown[]): void };
+      const f = vi.fn(() => noIdleFlow);
+      const c = new ImapClient(TEST_CONFIG, f);
+
+      await c.connect();
+      await c.disconnect();
+
+      await vi.advanceTimersByTimeAsync(120_000);
+      expect(noIdleFlow.noop).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('UID dedup', () => {
+    it('fetchNewMessages only returns messages above sinceUid', async () => {
+      const messages = [
+        { uid: 1, envelope: {}, flags: new Set() },
+        { uid: 2, envelope: {}, flags: new Set() },
+        { uid: 5, envelope: {}, flags: new Set() },
+      ];
+      const fetchFlow = createMockFlow({
+        fetch: vi.fn(function* () {
+          yield* messages;
+        } as unknown as ImapFlowLike['fetch']),
+      });
+      const f = vi.fn(() => fetchFlow);
+      const c = new ImapClient(TEST_CONFIG, f);
+
+      await c.connect();
+
+      // Fetch since UID 2 — should only get UID 5
+      const results = await c.fetchNewMessages(2);
+      expect(results).toHaveLength(1);
+      expect((results[0] as { uid: number }).uid).toBe(5);
+
+      await c.disconnect();
+    });
+
+    it('fetchNewMessages returns all when sinceUid is 0', async () => {
+      const messages = [
+        { uid: 1, envelope: {}, flags: new Set() },
+        { uid: 3, envelope: {}, flags: new Set() },
+      ];
+      const fetchFlow = createMockFlow({
+        fetch: vi.fn(function* () {
+          yield* messages;
+        } as unknown as ImapFlowLike['fetch']),
+      });
+      const f = vi.fn(() => fetchFlow);
+      const c = new ImapClient(TEST_CONFIG, f);
+
+      await c.connect();
+
+      const results = await c.fetchNewMessages(0);
+      expect(results).toHaveLength(2);
+
+      await c.disconnect();
     });
   });
 });

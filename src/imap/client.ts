@@ -17,9 +17,11 @@ export interface ImapFlowLike {
   messageMove(range: number[] | string, destination: string, options?: { uid?: boolean }): Promise<unknown>;
   mailboxCreate(path: string | string[]): Promise<unknown>;
   fetch(range: string, query: Record<string, unknown>, options?: { uid?: boolean }): AsyncIterable<unknown>;
+  noop(): Promise<void>;
   on(event: string, listener: (...args: unknown[]) => void): this;
   removeAllListeners(event?: string): this;
   usable: boolean;
+  idleSupported?: boolean;
 }
 
 export type ImapFlowFactory = (config: ImapConfig) => ImapFlowLike;
@@ -32,7 +34,10 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   private _state: ConnectionState = 'disconnected';
   private backoffMs = MIN_BACKOFF_MS;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private idleTimer: ReturnType<typeof setTimeout> | null = null;
+  private pollTimer: ReturnType<typeof setInterval> | null = null;
   private autoReconnect = true;
+  private _idleSupported = true;
   private readonly config: ImapConfig;
   private readonly factory: ImapFlowFactory;
 
@@ -66,6 +71,8 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
 
       this.setState('connected');
       this.resetBackoff();
+      this.detectIdleSupport(this.flow);
+      this.startIdleOrPoll();
       this.emit('connected');
     } catch (err) {
       const error = err instanceof Error ? err : new Error(String(err));
@@ -75,9 +82,14 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     }
   }
 
+  get idleSupported(): boolean {
+    return this._idleSupported;
+  }
+
   async disconnect(): Promise<void> {
     this.autoReconnect = false;
     this.clearReconnectTimer();
+    this.stopIdleAndPoll();
 
     if (this.flow) {
       try {
@@ -129,6 +141,89 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     return results;
   }
 
+  private detectIdleSupport(flow: ImapFlowLike): void {
+    if (flow.idleSupported === false) {
+      this._idleSupported = false;
+    } else {
+      this._idleSupported = true;
+    }
+  }
+
+  private startIdleOrPoll(): void {
+    this.stopIdleAndPoll();
+
+    if (this._idleSupported) {
+      this.startIdleCycling();
+    } else {
+      this.startPolling();
+    }
+  }
+
+  /**
+   * Re-issue IDLE every idleTimeout ms by sending NOOP to break IDLE,
+   * which causes ImapFlow to re-enter IDLE automatically.
+   */
+  private startIdleCycling(): void {
+    const timeout = this.config.idleTimeout;
+    this.idleTimer = setTimeout(() => {
+      this.cycleIdle();
+    }, timeout);
+  }
+
+  private async cycleIdle(): Promise<void> {
+    if (this._state !== 'connected' || !this.flow?.usable) {
+      return;
+    }
+
+    try {
+      await this.flow.noop();
+    } catch {
+      // noop failure will trigger error/close handlers
+    }
+
+    // Schedule the next cycle
+    if (this._state === 'connected') {
+      this.idleTimer = setTimeout(() => {
+        this.cycleIdle();
+      }, this.config.idleTimeout);
+    }
+  }
+
+  /**
+   * Poll for new mail at pollInterval ms when IDLE is not supported.
+   * Emits newMail so the Monitor pipeline picks it up the same way.
+   */
+  private startPolling(): void {
+    const interval = this.config.pollInterval;
+    this.pollTimer = setInterval(() => {
+      this.poll();
+    }, interval);
+  }
+
+  private async poll(): Promise<void> {
+    if (this._state !== 'connected' || !this.flow?.usable) {
+      return;
+    }
+
+    try {
+      // NOOP triggers the server to send any pending EXISTS updates
+      await this.flow.noop();
+    } catch {
+      // noop failure will trigger error/close handlers
+    }
+  }
+
+  private stopIdleAndPoll(): void {
+    if (this.idleTimer !== null) {
+      clearTimeout(this.idleTimer);
+      this.idleTimer = null;
+    }
+    if (this.pollTimer !== null) {
+      clearInterval(this.pollTimer);
+      this.pollTimer = null;
+    }
+  }
+
   private bindFlowEvents(flow: ImapFlowLike): void {
     flow.on('close', () => {
       this.handleClose();
@@ -152,6 +247,7 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   }
 
   private handleClose(): void {
+    this.stopIdleAndPoll();
     this.cleanupFlow();
 
     if (this._state === 'disconnected') {
