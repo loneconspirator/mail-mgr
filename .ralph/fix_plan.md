@@ -58,8 +58,11 @@ Tasks are listed in dependency order. A task cannot start until everything it de
 - [x] **8.1 Dockerfile and docker-compose** — Multi-stage (node:22-alpine build + runtime). Non-root user. Port 3000. Volume `/data`. First-run config seeding. Compose: single service, named volume, `IMAP_PASSWORD` env, `restart: unless-stopped`. Tests: build succeeds, healthy start, config seeding, no overwrite on subsequent runs. See [WBS 8.1](../docs/WBS-1.md#81-dockerfile-and-compose).
   - Depends on: 7.2
 
-- [ ] **9.1 IMAP integration tests** — Real IMAP server (greenmail Docker image). Scenarios: connect + IDLE + move, poll fallback, reconnect after drop, full pipeline (inject email -> rule match -> move -> activity logged). See [WBS 9.1](../docs/WBS-1.md#91-imap-integration-tests).
+- [x] **9.1 IMAP integration tests** — Real IMAP server (greenmail Docker image). Scenarios: connect + IDLE + move, poll fallback, reconnect after drop, full pipeline (inject email -> rule match -> move -> activity logged). See [WBS 9.1](../docs/WBS-1.md#91-imap-integration-tests).
   - Depends on: 6.1, 8.1
+
+- [ ] **9.3 ImapClient mailbox locking** — Acquire `getMailboxLock` around IMAP operations that mutate mailbox state (`moveMessage`, `createMailbox`, `fetchNewMessages`). Without locking, ImapFlow issues commands while in IDLE state, which causes unreliable MOVE behavior on some servers. Extend `ImapFlowLike` interface, add `withMailboxLock` helper, update unit test mocks, restore integration test mailbox assertions removed in 9.1. See [plan](../docs/plans/2026-03-29-imap-client-mailbox-locking.md).
+  - Depends on: 9.1
 
 ## Completed
 - [x] Project enabled for Ralph
@@ -76,6 +79,7 @@ Tasks are listed in dependency order. A task cannot start until everything it de
 - [x] 2.2 IMAP IDLE and polling (IDLE cycling via NOOP at idleTimeout, polling fallback when IDLE unsupported, UID dedup, 10 new tests)
 - [x] 7.2 Frontend SPA (vanilla TS, 3 views: Rules/Activity/Settings, esbuild bundle, @fastify/static, SPA fallback, 6 frontend tests, 122 total passing)
 - [x] 8.1 Dockerfile and docker-compose (multi-stage build, non-root user, config seeding entrypoint, compose with named volume)
+- [x] 9.1 IMAP integration tests (GreenMail Docker, 2 pipeline tests: rule match move + no-match stays in INBOX, helpers for SMTP send/IMAP assertions, separate vitest config, nodemailer devDep)
 
 ## Notes
 - Build bottom-up per [WBS implementation order](../docs/WBS-1.md#implementation-order)
