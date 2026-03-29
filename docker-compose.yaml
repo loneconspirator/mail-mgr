@@ -1,0 +1,14 @@
+services:
+  mail-mgr:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - mail-mgr-data:/data
+    environment:
+      - IMAP_PASSWORD=${IMAP_PASSWORD}
+      - DATA_PATH=/data
+    restart: unless-stopped
+
+volumes:
+  mail-mgr-data:

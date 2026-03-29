@@ -55,7 +55,7 @@ Tasks are listed in dependency order. A task cannot start until everything it de
 
 ### Phase 7 — Packaging & Integration
 
-- [ ] **8.1 Dockerfile and docker-compose** — Multi-stage (node:22-alpine build + runtime). Non-root user. Port 3000. Volume `/data`. First-run config seeding. Compose: single service, named volume, `IMAP_PASSWORD` env, `restart: unless-stopped`. Tests: build succeeds, healthy start, config seeding, no overwrite on subsequent runs. See [WBS 8.1](../docs/WBS-1.md#81-dockerfile-and-compose).
+- [x] **8.1 Dockerfile and docker-compose** — Multi-stage (node:22-alpine build + runtime). Non-root user. Port 3000. Volume `/data`. First-run config seeding. Compose: single service, named volume, `IMAP_PASSWORD` env, `restart: unless-stopped`. Tests: build succeeds, healthy start, config seeding, no overwrite on subsequent runs. See [WBS 8.1](../docs/WBS-1.md#81-dockerfile-and-compose).
   - Depends on: 7.2
 
 - [ ] **9.1 IMAP integration tests** — Real IMAP server (greenmail Docker image). Scenarios: connect + IDLE + move, poll fallback, reconnect after drop, full pipeline (inject email -> rule match -> move -> activity logged). See [WBS 9.1](../docs/WBS-1.md#91-imap-integration-tests).
@@ -75,6 +75,7 @@ Tasks are listed in dependency order. A task cannot start until everything it de
 - [x] 7.1 Fastify API server (rule CRUD, activity, status, IMAP config, password masking)
 - [x] 2.2 IMAP IDLE and polling (IDLE cycling via NOOP at idleTimeout, polling fallback when IDLE unsupported, UID dedup, 10 new tests)
 - [x] 7.2 Frontend SPA (vanilla TS, 3 views: Rules/Activity/Settings, esbuild bundle, @fastify/static, SPA fallback, 6 frontend tests, 122 total passing)
+- [x] 8.1 Dockerfile and docker-compose (multi-stage build, non-root user, config seeding entrypoint, compose with named volume)
 
 ## Notes
 - Build bottom-up per [WBS implementation order](../docs/WBS-1.md#implementation-order)
