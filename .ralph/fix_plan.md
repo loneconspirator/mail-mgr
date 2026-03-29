@@ -50,7 +50,7 @@ Tasks are listed in dependency order. A task cannot start until everything it de
 - [x] **7.1 Fastify API server** — Routes: `GET/POST /api/rules`, `PUT/DELETE /api/rules/:id`, `PUT /api/rules/reorder`, `GET /api/activity`, `GET /api/status`, `GET/PUT /api/config/imap`. Zod validation. Rule CRUD persists to config file. IDs via `crypto.randomUUID()`. IMAP password masked (`****`) on read, preserved on `****` write. Serve static from `dist/public/`. Tests: status codes, CRUD persistence, reorder, password masking, 400 on invalid body. See [WBS 7.1](../docs/WBS-1.md#71-fastify-api-server).
   - Depends on: 1.2, 5.1, 6.1
 
-- [ ] **7.2 Frontend SPA** — Vanilla TS or preact (3KB). Three views: Rules (table, CRUD modal, drag reorder, enabled toggle), Activity (paginated table, 30s auto-refresh), Settings (IMAP form, connection status, test button). Build with esbuild. Serve via `@fastify/static`. `fetch` for API. Minimal CSS, system fonts, no framework. Tests: API wrappers and data transforms in vitest; manual E2E for Tier 1. See [WBS 7.2](../docs/WBS-1.md#72-frontend-spa).
+- [x] **7.2 Frontend SPA** — Vanilla TS or preact (3KB). Three views: Rules (table, CRUD modal, drag reorder, enabled toggle), Activity (paginated table, 30s auto-refresh), Settings (IMAP form, connection status, test button). Build with esbuild. Serve via `@fastify/static`. `fetch` for API. Minimal CSS, system fonts, no framework. Tests: API wrappers and data transforms in vitest; manual E2E for Tier 1. See [WBS 7.2](../docs/WBS-1.md#72-frontend-spa).
   - Depends on: 7.1
 
 ### Phase 7 — Packaging & Integration
@@ -74,6 +74,7 @@ Tasks are listed in dependency order. A task cannot start until everything it de
 - [x] 6.1 Monitor orchestration pipeline (Monitor class, fetch→evaluate→execute→log pipeline)
 - [x] 7.1 Fastify API server (rule CRUD, activity, status, IMAP config, password masking)
 - [x] 2.2 IMAP IDLE and polling (IDLE cycling via NOOP at idleTimeout, polling fallback when IDLE unsupported, UID dedup, 10 new tests)
+- [x] 7.2 Frontend SPA (vanilla TS, 3 views: Rules/Activity/Settings, esbuild bundle, @fastify/static, SPA fallback, 6 frontend tests, 122 total passing)
 
 ## Notes
 - Build bottom-up per [WBS implementation order](../docs/WBS-1.md#implementation-order)
