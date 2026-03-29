@@ -62,6 +62,8 @@ function makeMockFlow(): ImapFlowLike {
     messageMove: vi.fn().mockResolvedValue(undefined),
     mailboxCreate: vi.fn().mockResolvedValue(undefined),
     fetch: vi.fn().mockReturnValue({ [Symbol.asyncIterator]: () => ({ next: () => Promise.resolve({ done: true, value: undefined }) }) }),
+    noop: vi.fn().mockResolvedValue(undefined),
+    getMailboxLock: vi.fn().mockResolvedValue({ release: vi.fn() }),
     usable: true,
     on(event: string, listener: (...args: unknown[]) => void) {
       if (!listeners.has(event)) listeners.set(event, []);

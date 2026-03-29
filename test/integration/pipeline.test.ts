@@ -113,8 +113,12 @@ describe('Full Pipeline Integration', () => {
     expect(entry.folder).toBe('Processed');
     expect(entry.success).toBe(1);
 
-    // Activity log entry confirms the full pipeline:
-    // SMTP delivery → IMAP detection → rule match → move action → success logged
+    // With mailbox locking, the MOVE should now reliably relocate the message
+    const inboxMessages = await listMailboxMessages('INBOX');
+    expect(inboxMessages).toHaveLength(0);
+
+    const processedMessages = await listMailboxMessages('Processed');
+    expect(processedMessages.length).toBeGreaterThan(0);
   });
 
   it('no rule match leaves email in INBOX', async () => {

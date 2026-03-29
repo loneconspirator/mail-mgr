@@ -20,6 +20,7 @@ function createMockFlow(overrides: Partial<ImapFlowLike> = {}): ImapFlowLike {
     logout: vi.fn(async () => {}),
     mailboxOpen: vi.fn(async () => ({})),
     noop: vi.fn(async () => {}),
+    getMailboxLock: vi.fn(async () => ({ release: vi.fn() })),
     on(event: string, listener: (...args: unknown[]) => void) {
       if (!listeners.has(event)) listeners.set(event, []);
       listeners.get(event)!.push(listener);

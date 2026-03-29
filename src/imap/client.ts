@@ -10,10 +10,15 @@ export interface ImapClientEvents {
   newMail: [count: number];
 }
 
+export interface MailboxLock {
+  release(): void;
+}
+
 export interface ImapFlowLike {
   connect(): Promise<void>;
   logout(): Promise<void>;
   mailboxOpen(path: string | string[]): Promise<unknown>;
+  getMailboxLock(path: string | string[]): Promise<MailboxLock>;
   messageMove(range: number[] | string, destination: string, options?: { uid?: boolean }): Promise<unknown>;
   mailboxCreate(path: string | string[]): Promise<unknown>;
   fetch(range: string, query: Record<string, unknown>, options?: { uid?: boolean }): AsyncIterable<unknown>;
@@ -108,18 +113,26 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     return this.backoffMs;
   }
 
-  async moveMessage(uid: number, destination: string): Promise<void> {
-    if (!this.flow) {
-      throw new Error('Not connected');
+  private async withMailboxLock<T>(fn: (flow: ImapFlowLike) => Promise<T>): Promise<T> {
+    if (!this.flow) throw new Error('Not connected');
+    const lock = await this.flow.getMailboxLock('INBOX');
+    try {
+      return await fn(this.flow);
+    } finally {
+      lock.release();
     }
-    await this.flow.messageMove([uid], destination, { uid: true });
+  }
+
+  async moveMessage(uid: number, destination: string): Promise<void> {
+    await this.withMailboxLock(async (flow) => {
+      await flow.messageMove([uid], destination, { uid: true });
+    });
   }
 
   async createMailbox(path: string): Promise<void> {
-    if (!this.flow) {
-      throw new Error('Not connected');
-    }
-    await this.flow.mailboxCreate(path);
+    await this.withMailboxLock(async (flow) => {
+      await flow.mailboxCreate(path);
+    });
   }
 
   /**
@@ -127,18 +140,17 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
    * Returns raw fetch results for parsing with parseMessage().
    */
   async fetchNewMessages(sinceUid: number): Promise<unknown[]> {
-    if (!this.flow) {
-      throw new Error('Not connected');
-    }
-    const range = sinceUid > 0 ? `${sinceUid + 1}:*` : '1:*';
-    const results: unknown[] = [];
-    for await (const msg of this.flow.fetch(range, { uid: true, envelope: true, flags: true }, { uid: true })) {
-      const m = msg as { uid?: number };
-      if (m.uid !== undefined && m.uid > sinceUid) {
-        results.push(msg);
+    return this.withMailboxLock(async (flow) => {
+      const range = sinceUid > 0 ? `${sinceUid + 1}:*` : '1:*';
+      const results: unknown[] = [];
+      for await (const msg of flow.fetch(range, { uid: true, envelope: true, flags: true }, { uid: true })) {
+        const m = msg as { uid?: number };
+        if (m.uid !== undefined && m.uid > sinceUid) {
+          results.push(msg);
+        }
       }
-    }
-    return results;
+      return results;
+    });
   }
 
   private detectIdleSupport(flow: ImapFlowLike): void {

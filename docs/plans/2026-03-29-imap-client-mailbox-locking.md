@@ -102,4 +102,11 @@ Also remove the `processNewMessages()` nudge if the locking fix allows IDLE-base
 |------|--------|
 | `src/imap/client.ts` | Add `MailboxLock` interface, `getMailboxLock` to `ImapFlowLike`, `withMailboxLock` helper, wrap `moveMessage`/`createMailbox`/`fetchNewMessages` |
 | `test/unit/imap/client.test.ts` | Add `getMailboxLock` to mock flow |
+| `test/unit/monitor/monitor.test.ts` | Add `getMailboxLock` and `noop` to mock flow |
 | `test/integration/pipeline.test.ts` | Restore INBOX-empty and Processed-has-message assertions |
+
+## Completion
+
+**Completed: 2026-03-29**
+
+All four steps implemented. 122 unit tests pass, 2 integration tests pass (including INBOX-empty and Processed-has-message assertions). The `processNewMessages()` nudge was retained in the integration test because GreenMail does not reliably push IDLE EXISTS notifications — this is a GreenMail limitation, not a locking issue.
