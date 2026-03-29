@@ -29,25 +29,25 @@ Tasks are listed in dependency order. A task cannot start until everything it de
 - [x] **3.1 Rule engine pattern matching** — `matchRule(rule, message): boolean`. Glob matching via `picomatch` on sender, recipient, subject. AND logic (all specified fields must match). Recipient checks both `to` and `cc`. Case-insensitive for addresses and subject. Tests: exact match, glob match (`*@github.com`), recipient across to/cc, subject glob, multi-field AND, no match, case insensitivity, ordering, disabled skip. See [WBS 3.1](../docs/WBS-1.md#31-pattern-matching).
   - Depends on: 1.2, 2.3
 
-- [ ] **3.2 Rule evaluation pipeline** — `evaluateRules(rules[], message): Rule | null`. Sort by `order`, filter `enabled: true`, return first match or null. Tests: first match wins, null on no match, disabled skipped. See [WBS 3.2](../docs/WBS-1.md#32-rule-evaluation-pipeline).
+- [x] **3.2 Rule evaluation pipeline** — `evaluateRules(rules[], message): Rule | null`. Sort by `order`, filter `enabled: true`, return first match or null. Tests: first match wins, null on no match, disabled skipped. See [WBS 3.2](../docs/WBS-1.md#32-rule-evaluation-pipeline).
   - Depends on: 3.1
 
 ### Phase 4 — Actions & Logging
 
-- [ ] **4.1 Move-to-folder action** — `executeAction(client, message, action): Promise<ActionResult>`. Use `imapflow` `messageMove` by UID. Auto-create target folder with `mailboxCreate` if missing (retry once). `ActionResult`: success, messageUid, messageId, action, folder, rule (id), timestamp, error. Tests: successful move, folder auto-creation, failed move error. See [WBS 4.1](../docs/WBS-1.md#41-move-to-folder).
+- [x] **4.1 Move-to-folder action** — `executeAction(client, message, action): Promise<ActionResult>`. Use `imapflow` `messageMove` by UID. Auto-create target folder with `mailboxCreate` if missing (retry once). `ActionResult`: success, messageUid, messageId, action, folder, rule (id), timestamp, error. Tests: successful move, folder auto-creation, failed move error. See [WBS 4.1](../docs/WBS-1.md#41-move-to-folder).
   - Depends on: 1.2, 2.1
 
-- [ ] **5.1 SQLite activity log** — `better-sqlite3`, single `activity` table (id, timestamp, message_uid, message_id, message_from, message_to, message_subject, rule_id, rule_name, action, folder, success, error). `logActivity()`, `getRecentActivity(limit, offset)`. DB at `DATA_PATH/db.sqlite3`. Prune >30 days on startup and daily. Tests: all fields logged, reverse chrono order, pagination, pruning. See [WBS 5.1](../docs/WBS-1.md#51-sqlite-activity-log).
+- [x] **5.1 SQLite activity log** — `better-sqlite3`, single `activity` table (id, timestamp, message_uid, message_id, message_from, message_to, message_subject, rule_id, rule_name, action, folder, success, error). `logActivity()`, `getRecentActivity(limit, offset)`. DB at `DATA_PATH/db.sqlite3`. Prune >30 days on startup and daily. Tests: all fields logged, reverse chrono order, pagination, pruning. See [WBS 5.1](../docs/WBS-1.md#51-sqlite-activity-log).
   - Depends on: 1.1, 4.1
 
 ### Phase 5 — Orchestration
 
-- [ ] **6.1 Monitor orchestration pipeline** — `Monitor` class owning ImapClient, config, rule engine, activity log. Pipeline: fetch envelope -> evaluate rules -> execute action -> log result. No-match = leave in inbox, no activity row. Sequential IMAP ops. Startup: initial INBOX scan then IDLE/poll. Expose state (connection status, last poll, messages processed) for web UI. Tests: full pipeline, no-match, error handling continues. See [WBS 6.1](../docs/WBS-1.md#61-message-processing-pipeline).
+- [x] **6.1 Monitor orchestration pipeline** — `Monitor` class owning ImapClient, config, rule engine, activity log. Pipeline: fetch envelope -> evaluate rules -> execute action -> log result. No-match = leave in inbox, no activity row. Sequential IMAP ops. Startup: initial INBOX scan then IDLE/poll. Expose state (connection status, last poll, messages processed) for web UI. Tests: full pipeline, no-match, error handling continues. See [WBS 6.1](../docs/WBS-1.md#61-message-processing-pipeline).
   - Depends on: 2.1, 2.2, 2.3, 3.2, 4.1, 5.1
 
 ### Phase 6 — Web UI & API
 
-- [ ] **7.1 Fastify API server** — Routes: `GET/POST /api/rules`, `PUT/DELETE /api/rules/:id`, `PUT /api/rules/reorder`, `GET /api/activity`, `GET /api/status`, `GET/PUT /api/config/imap`. Zod validation. Rule CRUD persists to config file. IDs via `crypto.randomUUID()`. IMAP password masked (`****`) on read, preserved on `****` write. Serve static from `dist/public/`. Tests: status codes, CRUD persistence, reorder, password masking, 400 on invalid body. See [WBS 7.1](../docs/WBS-1.md#71-fastify-api-server).
+- [x] **7.1 Fastify API server** — Routes: `GET/POST /api/rules`, `PUT/DELETE /api/rules/:id`, `PUT /api/rules/reorder`, `GET /api/activity`, `GET /api/status`, `GET/PUT /api/config/imap`. Zod validation. Rule CRUD persists to config file. IDs via `crypto.randomUUID()`. IMAP password masked (`****`) on read, preserved on `****` write. Serve static from `dist/public/`. Tests: status codes, CRUD persistence, reorder, password masking, 400 on invalid body. See [WBS 7.1](../docs/WBS-1.md#71-fastify-api-server).
   - Depends on: 1.2, 5.1, 6.1
 
 - [ ] **7.2 Frontend SPA** — Vanilla TS or preact (3KB). Three views: Rules (table, CRUD modal, drag reorder, enabled toggle), Activity (paginated table, 30s auto-refresh), Settings (IMAP form, connection status, test button). Build with esbuild. Serve via `@fastify/static`. `fetch` for API. Minimal CSS, system fonts, no framework. Tests: API wrappers and data transforms in vitest; manual E2E for Tier 1. See [WBS 7.2](../docs/WBS-1.md#72-frontend-spa).
@@ -63,10 +63,16 @@ Tasks are listed in dependency order. A task cannot start until everything it de
 
 ## Completed
 - [x] Project enabled for Ralph
+- [x] 1.1 Project scaffolding (TypeScript, directory structure, deps, npm scripts)
 - [x] 1.2 Config schema and loading (Zod schemas, loadConfig, saveConfig, ensureConfig, env var substitution, 18 tests passing)
 - [x] 2.1 IMAP connection management (ImapClient class with connect/disconnect, exponential backoff 1s..60s, state machine, event emitter, factory injection for testing, 17 tests passing)
 - [x] 2.3 IMAP message fetching (EmailMessage/EmailAddress types, parseMessage from imapflow envelope, edge case handling, 12 tests passing)
 - [x] 3.1 Rule engine pattern matching (matchRule with picomatch glob matching, AND logic, recipient checks to+cc, case-insensitive, 18 tests passing)
+- [x] 3.2 Rule evaluation pipeline (evaluateRules, sort by order, first match wins, disabled skip)
+- [x] 4.1 Move-to-folder action (executeAction, messageMove by UID, folder auto-creation)
+- [x] 5.1 SQLite activity log (activity table, logActivity, getRecentActivity, pruning — 1 flaky prune test)
+- [x] 6.1 Monitor orchestration pipeline (Monitor class, fetch→evaluate→execute→log pipeline)
+- [x] 7.1 Fastify API server (rule CRUD, activity, status, IMAP config, password masking)
 
 ## Notes
 - Build bottom-up per [WBS implementation order](../docs/WBS-1.md#implementation-order)
