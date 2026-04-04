@@ -1,38 +1,10 @@
 // API wrapper — all fetch calls to the backend
 
-export interface Rule {
-  id: string;
-  name: string;
-  match: { sender?: string; subject?: string; from?: string };
-  action: { type: string; folder: string };
-  enabled: boolean;
-  order: number;
-}
+import type { Rule, ImapConfig } from '../../shared/types.js';
+import type { ActivityEntry, StatusResponse } from '../../shared/types.js';
 
-export interface ActivityEntry {
-  id: number;
-  timestamp: string;
-  from: string;
-  subject: string;
-  ruleName: string;
-  action: string;
-  folder: string;
-}
-
-export interface ImapConfig {
-  host: string;
-  port: number;
-  tls: boolean;
-  auth: { user: string; pass: string };
-  idleTimeout: number;
-  pollInterval: number;
-}
-
-export interface Status {
-  connectionStatus: string;
-  lastProcessedAt: string | null;
-  messagesProcessed: number;
-}
+// Re-export for frontend consumers
+export type { Rule, ImapConfig, ActivityEntry, StatusResponse };
 
 async function request<T>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -59,7 +31,7 @@ export const api = {
     list: (limit = 25, offset = 0) => request<ActivityEntry[]>(`/api/activity?limit=${limit}&offset=${offset}`),
   },
   status: {
-    get: () => request<Status>('/api/status'),
+    get: () => request<StatusResponse>('/api/status'),
   },
   config: {
     getImap: () => request<ImapConfig>('/api/config/imap'),
