@@ -219,11 +219,11 @@ async function renderActivity() {
         const time = new Date(e.timestamp).toLocaleString();
         tr.append(
           h('td', {}, time),
-          h('td', {}, e.from),
-          h('td', {}, e.subject),
-          h('td', {}, e.ruleName),
+          h('td', {}, e.from ?? ''),
+          h('td', {}, e.subject ?? ''),
+          h('td', {}, e.ruleName ?? ''),
           h('td', {}, e.action),
-          h('td', {}, e.folder),
+          h('td', {}, e.folder ?? ''),
         );
         tbody.append(tr);
       }

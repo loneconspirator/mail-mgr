@@ -25,14 +25,14 @@ export interface ActivityEntry {
   id: number;
   timestamp: string;
   uid: number;
-  messageId: string;
-  from: string;
-  to: string;
-  subject: string;
-  ruleId: string;
-  ruleName: string;
+  messageId: string | null;
+  from: string | null;
+  to: string | null;
+  subject: string | null;
+  ruleId: string | null;
+  ruleName: string | null;
   action: string;
-  folder: string;
+  folder: string | null;
   success: number;
   error: string | null;
 }

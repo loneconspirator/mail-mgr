@@ -1,9 +1,10 @@
 import type { FastifyInstance } from 'fastify';
 import type { ServerDeps } from '../server.js';
+import type { ImapConfigResponse } from '../../shared/types.js';
 
 const PASSWORD_MASK = '****';
 
-function maskImapConfig(imap: { host: string; port: number; tls: boolean; auth: { user: string; pass: string }; idleTimeout: number; pollInterval: number }) {
+function maskImapConfig(imap: { host: string; port: number; tls: boolean; auth: { user: string; pass: string }; idleTimeout: number; pollInterval: number }): ImapConfigResponse {
   return { ...imap, auth: { user: imap.auth.user, pass: PASSWORD_MASK } };
 }
 

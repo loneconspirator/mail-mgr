@@ -1,5 +1,6 @@
 import type { FastifyInstance } from 'fastify';
 import type { ServerDeps } from '../server.js';
+import type { ActivityEntry } from '../../shared/types.js';
 
 export function registerActivityRoutes(app: FastifyInstance, deps: ServerDeps): void {
   // GET /api/activity — recent activity (query: limit, offset)
@@ -9,7 +10,7 @@ export function registerActivityRoutes(app: FastifyInstance, deps: ServerDeps): 
     const offset = Math.max(parseInt(query.offset || '0', 10) || 0, 0);
 
     const rows = deps.activityLog.getRecentActivity(limit, offset);
-    return rows.map((r) => ({
+    return rows.map((r): ActivityEntry => ({
       id: r.id,
       timestamp: r.timestamp,
       uid: r.message_uid,
