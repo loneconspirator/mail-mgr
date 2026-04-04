@@ -8,6 +8,21 @@ export function registerActivityRoutes(app: FastifyInstance, deps: ServerDeps): 
     const limit = Math.min(Math.max(parseInt(query.limit || '50', 10) || 50, 1), 200);
     const offset = Math.max(parseInt(query.offset || '0', 10) || 0, 0);
 
-    return deps.activityLog.getRecentActivity(limit, offset);
+    const rows = deps.activityLog.getRecentActivity(limit, offset);
+    return rows.map((r) => ({
+      id: r.id,
+      timestamp: r.timestamp,
+      uid: r.message_uid,
+      messageId: r.message_id,
+      from: r.message_from,
+      to: r.message_to,
+      subject: r.message_subject,
+      ruleId: r.rule_id,
+      ruleName: r.rule_name,
+      action: r.action,
+      folder: r.folder,
+      success: r.success,
+      error: r.error,
+    }));
   });
 }
