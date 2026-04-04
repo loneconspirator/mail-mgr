@@ -140,3 +140,61 @@ describe('ConfigRepository - rule mutations', () => {
     expect(rules[1].id).toBe('a');
   });
 });
+
+describe('ConfigRepository - IMAP config', () => {
+  it('updateImapConfig validates, persists, and returns new config', async () => {
+    const repo = writeAndLoad(makeConfig());
+    const updated = await repo.updateImapConfig({
+      host: 'new.host.com',
+      port: 993,
+      tls: true,
+      auth: { user: 'new@test.com', pass: 'newpass' },
+      idleTimeout: 300000,
+      pollInterval: 60000,
+    });
+    expect(updated.host).toBe('new.host.com');
+    expect(repo.getImapConfig().host).toBe('new.host.com');
+  });
+
+  it('updateImapConfig rejects invalid input', async () => {
+    const repo = writeAndLoad(makeConfig());
+    await expect(repo.updateImapConfig({ host: '' } as any)).rejects.toThrow();
+  });
+});
+
+describe('ConfigRepository - onChange listener', () => {
+  it('calls rules listener when rules change', () => {
+    const repo = writeAndLoad(makeConfig());
+    const calls: Config['rules'][] = [];
+    repo.onRulesChange((rules) => calls.push(rules));
+
+    repo.addRule({
+      name: 'New',
+      match: { sender: '*@foo.com' },
+      action: { type: 'move', folder: 'Foo' },
+      enabled: true,
+      order: 0,
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0]).toHaveLength(1);
+  });
+
+  it('calls imap listener when imap config changes', async () => {
+    const repo = writeAndLoad(makeConfig());
+    const calls: Config[] = [];
+    repo.onImapConfigChange((config) => { calls.push(config); return Promise.resolve(); });
+
+    await repo.updateImapConfig({
+      host: 'new.host.com',
+      port: 993,
+      tls: true,
+      auth: { user: 'u', pass: 'p' },
+      idleTimeout: 300000,
+      pollInterval: 60000,
+    });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].imap.host).toBe('new.host.com');
+  });
+});
