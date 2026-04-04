@@ -28,7 +28,7 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   app.decorate('deps', deps);
 
   // Serve frontend static files
-  const publicDir = deps.staticRoot || path.join(__dirname, '..', '..', 'public');
+  const publicDir = deps.staticRoot || path.join(process.cwd(), 'dist', 'public');
   app.register(fastifyStatic, {
     root: publicDir,
     prefix: '/',
