@@ -1,4 +1,4 @@
-import { loadConfig, ensureConfig, getConfigPath } from './config/index.js';
+import { ensureConfig, getConfigPath, ConfigRepository } from './config/index.js';
 import type { ImapConfig } from './config/index.js';
 import { buildServer } from './web/index.js';
 import { ActivityLog } from './log/index.js';
@@ -23,25 +23,31 @@ function createImapFlow(config: ImapConfig): ImapFlowLike {
 async function main(): Promise<void> {
   const configPath = getConfigPath();
   ensureConfig(configPath);
-  const config = loadConfig(configPath);
+
+  const configRepo = new ConfigRepository(configPath);
+  const config = configRepo.getConfig();
 
   const activityLog = ActivityLog.fromDataPath();
   activityLog.startAutoPrune();
 
   const imapClient = new ImapClient(config.imap, createImapFlow);
-  const monitor = new Monitor(config, { imapClient, activityLog, logger });
+  let monitor = new Monitor(config, { imapClient, activityLog, logger });
+
+  configRepo.onRulesChange((rules) => {
+    monitor.updateRules(rules);
+  });
+
+  configRepo.onImapConfigChange(async (newConfig) => {
+    await monitor.stop();
+    const newClient = new ImapClient(newConfig.imap, createImapFlow);
+    monitor = new Monitor(newConfig, { imapClient: newClient, activityLog, logger });
+    await monitor.start();
+  });
 
   const app = buildServer({
-    config,
-    configPath,
+    configRepo,
     activityLog,
     monitor,
-    onImapConfigChange: async (newConfig) => {
-      await monitor.stop();
-      const newClient = new ImapClient(newConfig.imap, createImapFlow);
-      const newMonitor = new Monitor(newConfig, { imapClient: newClient, activityLog, logger });
-      await newMonitor.start();
-    },
   });
 
   await app.listen({ port: config.server.port, host: config.server.host });
