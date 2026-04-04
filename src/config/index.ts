@@ -1,4 +1,5 @@
 export { loadConfig, saveConfig, ensureConfig, getConfigPath, substituteEnvVars } from './loader.js';
+export { ConfigRepository } from './repository.js';
 export {
   configSchema,
   ruleSchema,
