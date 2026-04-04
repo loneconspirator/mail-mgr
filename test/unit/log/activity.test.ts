@@ -153,6 +153,30 @@ describe('ActivityLog', () => {
     expect(remaining[0].message_uid).toBe(99);
   });
 
+  it('getState returns undefined for missing keys', () => {
+    expect(log.getState('nonexistent')).toBeUndefined();
+  });
+
+  it('setState and getState round-trip values', () => {
+    log.setState('lastUid', '42');
+    expect(log.getState('lastUid')).toBe('42');
+
+    log.setState('lastUid', '99');
+    expect(log.getState('lastUid')).toBe('99');
+  });
+
+  it('state persists across ActivityLog instances', () => {
+    log.setState('lastUid', '123');
+    log.close();
+
+    const log2 = new ActivityLog(dbPath);
+    expect(log2.getState('lastUid')).toBe('123');
+    log2.close();
+
+    // Re-open for afterEach cleanup
+    log = new ActivityLog(dbPath);
+  });
+
   it('includes cc recipients in message_to field', () => {
     const msg = makeMessage({
       to: [{ name: 'Bob', address: 'bob@example.com' }],

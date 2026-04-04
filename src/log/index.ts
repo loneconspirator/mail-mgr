@@ -19,6 +19,10 @@ CREATE TABLE IF NOT EXISTS activity (
   folder TEXT,
   success INTEGER NOT NULL DEFAULT 1,
   error TEXT
+);
+CREATE TABLE IF NOT EXISTS state (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
 )`;
 
 const PRUNE_DAYS = 30;
@@ -86,6 +90,21 @@ export class ActivityLog {
       result.success ? 1 : 0,
       result.error ?? null,
     );
+  }
+
+  /**
+   * Get a persisted state value by key.
+   */
+  getState(key: string): string | undefined {
+    const row = this.db.prepare('SELECT value FROM state WHERE key = ?').get(key) as { value: string } | undefined;
+    return row?.value;
+  }
+
+  /**
+   * Set a persisted state value by key.
+   */
+  setState(key: string, value: string): void {
+    this.db.prepare('INSERT OR REPLACE INTO state (key, value) VALUES (?, ?)').run(key, value);
   }
 
   /**

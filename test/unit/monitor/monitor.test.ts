@@ -221,6 +221,46 @@ describe('Monitor', () => {
     expect(monitor.getState().connectionStatus).toBe('disconnected');
   });
 
+  it('persists lastUid and restores it on new Monitor instance', async () => {
+    const rule = makeRule();
+    const config = makeConfig([rule]);
+    const flow = makeMockFlow();
+
+    const fetchResult = makeFetchResult(5, 'alice@example.com', 'Hello');
+    (flow.fetch as ReturnType<typeof vi.fn>).mockReturnValue({
+      async *[Symbol.asyncIterator]() {
+        yield fetchResult;
+      },
+    });
+
+    const client = new ImapClient(config.imap, () => flow);
+    const monitor = new Monitor(config, { imapClient: client, activityLog, logger: silentLogger });
+
+    await client.connect();
+    await monitor.processNewMessages();
+
+    // lastUid should be persisted
+    expect(activityLog.getState('lastUid')).toBe('5');
+
+    // New monitor instance should restore lastUid from db
+    const flow2 = makeMockFlow();
+    (flow2.fetch as ReturnType<typeof vi.fn>).mockReturnValue({
+      async *[Symbol.asyncIterator]() { /* no messages */ },
+    });
+
+    const client2 = new ImapClient(config.imap, () => flow2);
+    const monitor2 = new Monitor(config, { imapClient: client2, activityLog, logger: silentLogger });
+
+    await client2.connect();
+    await monitor2.processNewMessages();
+
+    // fetch should have been called with sinceUid=5, so range '6:*'
+    expect(flow2.fetch).toHaveBeenCalledWith('6:*', expect.any(Object), expect.any(Object));
+
+    await client.disconnect();
+    await client2.disconnect();
+  });
+
   it('updateRules replaces the active rule set', async () => {
     const config = makeConfig([]);
     const flow = makeMockFlow();

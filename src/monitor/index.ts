@@ -25,7 +25,7 @@ export class Monitor {
   private readonly activityLog: ActivityLog;
   private readonly logger: pino.Logger;
   private rules: Rule[];
-  private lastUid: number = 0;
+  private lastUid: number;
   private processing: boolean = false;
   private lastProcessedAt: Date | null = null;
   private messagesProcessed: number = 0;
@@ -35,6 +35,8 @@ export class Monitor {
     this.activityLog = deps.activityLog;
     this.logger = deps.logger ?? pino({ name: 'monitor' });
     this.rules = config.rules;
+    const saved = this.activityLog.getState('lastUid');
+    this.lastUid = saved ? parseInt(saved, 10) : 0;
   }
 
   /**
@@ -98,6 +100,7 @@ export class Monitor {
         const message = parseMessage(raw as ImapFetchResult);
         if (message.uid > this.lastUid) {
           this.lastUid = message.uid;
+          this.activityLog.setState('lastUid', String(this.lastUid));
         }
         await this.processMessage(message);
       }
