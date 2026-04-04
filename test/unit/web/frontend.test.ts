@@ -6,6 +6,7 @@ import { stringify as stringifyYaml } from 'yaml';
 import { buildServer } from '../../../src/web/server.js';
 import type { ServerDeps } from '../../../src/web/server.js';
 import type { Config } from '../../../src/config/index.js';
+import { ConfigRepository } from '../../../src/config/repository.js';
 import { ActivityLog } from '../../../src/log/index.js';
 
 // --- Helpers ---
@@ -31,13 +32,12 @@ let activityLog: ActivityLog;
 
 function makeDeps(config: Config): ServerDeps {
   fs.writeFileSync(configPath, stringifyYaml(config), 'utf-8');
+  const configRepo = new ConfigRepository(configPath);
   return {
-    config,
-    configPath,
+    configRepo,
     activityLog,
     staticRoot: path.join(process.cwd(), 'dist', 'public'),
     monitor: {
-      updateRules() {},
       getState() {
         return {
           connectionStatus: 'connected',

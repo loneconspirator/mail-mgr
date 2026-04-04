@@ -2,7 +2,7 @@ import path from 'node:path';
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
 import type { FastifyInstance } from 'fastify';
-import type { Config } from '../config/index.js';
+import type { ConfigRepository } from '../config/index.js';
 import type { ActivityLog } from '../log/index.js';
 import type { Monitor } from '../monitor/index.js';
 import { registerRuleRoutes } from './routes/rules.js';
@@ -11,12 +11,9 @@ import { registerStatusRoutes } from './routes/status.js';
 import { registerImapConfigRoutes } from './routes/imap-config.js';
 
 export interface ServerDeps {
-  config: Config;
-  configPath: string;
+  configRepo: ConfigRepository;
   activityLog: ActivityLog;
   monitor: Monitor;
-  /** Called after IMAP config changes to trigger reconnect */
-  onImapConfigChange?: (newConfig: Config) => Promise<void>;
   /** Override static files root for testing (defaults to dist/public) */
   staticRoot?: string;
 }

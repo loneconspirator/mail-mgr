@@ -6,6 +6,7 @@ import { stringify as stringifyYaml } from 'yaml';
 import { buildServer } from '../../../src/web/server.js';
 import type { ServerDeps } from '../../../src/web/server.js';
 import type { Config } from '../../../src/config/index.js';
+import { ConfigRepository } from '../../../src/config/repository.js';
 import { ActivityLog } from '../../../src/log/index.js';
 
 // --- Helpers ---
@@ -49,12 +50,13 @@ function writeConfig(config: Config): void {
 function makeDeps(config: Config): ServerDeps {
   writeConfig(config);
   updatedRules = null;
+  const configRepo = new ConfigRepository(configPath);
+  configRepo.onRulesChange((rules) => { updatedRules = rules; });
+
   return {
-    config,
-    configPath,
+    configRepo,
     activityLog,
     monitor: {
-      updateRules(rules: Config['rules']) { updatedRules = rules; },
       getState() {
         return {
           connectionStatus: 'connected',
@@ -262,7 +264,7 @@ describe('PUT /api/config/imap', () => {
   it('updates IMAP config preserving masked password', async () => {
     let configChanged = false;
     const deps = makeDeps(makeConfig());
-    deps.onImapConfigChange = async () => { configChanged = true; };
+    deps.configRepo.onImapConfigChange(async () => { configChanged = true; });
     const app = buildServer(deps);
 
     const res = await app.inject({
