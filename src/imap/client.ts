@@ -126,6 +126,25 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     }
   }
 
+  async withMailboxSwitch<T>(folder: string, fn: (flow: ImapFlowLike) => Promise<T>): Promise<T> {
+    if (!this.flow) throw new Error('Not connected');
+
+    this.stopIdleAndPoll();
+
+    const lock = await this.flow.getMailboxLock(folder);
+    try {
+      return await fn(this.flow);
+    } finally {
+      lock.release();
+      try {
+        await this.flow!.mailboxOpen('INBOX');
+      } catch {
+        // best-effort reopen
+      }
+      this.startIdleOrPoll();
+    }
+  }
+
   async moveMessage(uid: number, destination: string, sourceFolder: string = 'INBOX'): Promise<void> {
     await this.withMailboxLock(sourceFolder, async (flow) => {
       await flow.messageMove([uid], destination, { uid: true });

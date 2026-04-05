@@ -600,6 +600,72 @@ describe('ImapClient', () => {
     });
   });
 
+  describe('withMailboxSwitch', () => {
+    it('pauses IDLE, locks folder, executes fn, reopens INBOX, resumes IDLE', async () => {
+      await client.connect();
+
+      const callOrder: string[] = [];
+      (mockFlow.getMailboxLock as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
+        callOrder.push(`lock:${path}`);
+        return { release: () => callOrder.push('unlock') };
+      });
+      (mockFlow.mailboxOpen as ReturnType<typeof vi.fn>).mockImplementation(async (path: string) => {
+        callOrder.push(`open:${path}`);
+        return {};
+      });
+
+      const result = await client.withMailboxSwitch('Review', async () => {
+        callOrder.push('callback');
+        return 'sweep-result';
+      });
+
+      expect(result).toBe('sweep-result');
+      expect(mockFlow.getMailboxLock).toHaveBeenCalledWith('Review');
+      expect(callOrder).toContain('lock:Review');
+      expect(callOrder).toContain('callback');
+      expect(callOrder).toContain('unlock');
+      expect(callOrder).toContain('open:INBOX');
+
+      // Verify ordering: lock before callback, callback before unlock, unlock before INBOX reopen
+      const lockIdx = callOrder.indexOf('lock:Review');
+      const cbIdx = callOrder.indexOf('callback');
+      const unlockIdx = callOrder.indexOf('unlock');
+      const reopenIdx = callOrder.indexOf('open:INBOX');
+      expect(lockIdx).toBeLessThan(cbIdx);
+      expect(cbIdx).toBeLessThan(unlockIdx);
+      expect(unlockIdx).toBeLessThan(reopenIdx);
+
+      // IDLE should resume — verify by advancing timers past idleTimeout
+      (mockFlow.noop as ReturnType<typeof vi.fn>).mockClear();
+      await vi.advanceTimersByTimeAsync(300_000);
+      expect(mockFlow.noop).toHaveBeenCalled();
+    });
+
+    it('reopens INBOX and resumes IDLE even if callback throws', async () => {
+      await client.connect();
+
+      await expect(
+        client.withMailboxSwitch('Review', async () => {
+          throw new Error('sweep failed');
+        }),
+      ).rejects.toThrow('sweep failed');
+
+      // INBOX should still be reopened
+      expect(mockFlow.mailboxOpen).toHaveBeenLastCalledWith('INBOX');
+
+      // IDLE should resume
+      (mockFlow.noop as ReturnType<typeof vi.fn>).mockClear();
+      await vi.advanceTimersByTimeAsync(300_000);
+      expect(mockFlow.noop).toHaveBeenCalled();
+    });
+
+    it('throws when not connected', async () => {
+      await expect(
+        client.withMailboxSwitch('Review', async () => 'nope'),
+      ).rejects.toThrow('Not connected');
+    });
+  });
+
   describe('UID dedup', () => {
     it('fetchNewMessages only returns messages above sinceUid', async () => {
       const messages = [
