@@ -1,6 +1,5 @@
-import type { Action, Rule } from '../config/index.js';
-import type { ImapClient } from '../imap/index.js';
-import type { EmailMessage } from '../imap/index.js';
+import type { Rule } from '../config/index.js';
+import type { ImapClient, EmailMessage } from '../imap/index.js';
 
 export interface ActionContext {
   client: ImapClient;
