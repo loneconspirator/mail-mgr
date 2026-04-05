@@ -113,9 +113,9 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     return this.backoffMs;
   }
 
-  private async withMailboxLock<T>(fn: (flow: ImapFlowLike) => Promise<T>): Promise<T> {
+  async withMailboxLock<T>(folder: string, fn: (flow: ImapFlowLike) => Promise<T>): Promise<T> {
     if (!this.flow) throw new Error('Not connected');
-    const lock = await this.flow.getMailboxLock('INBOX');
+    const lock = await this.flow.getMailboxLock(folder);
     try {
       return await fn(this.flow);
     } finally {
@@ -124,13 +124,13 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   }
 
   async moveMessage(uid: number, destination: string): Promise<void> {
-    await this.withMailboxLock(async (flow) => {
+    await this.withMailboxLock('INBOX', async (flow) => {
       await flow.messageMove([uid], destination, { uid: true });
     });
   }
 
   async createMailbox(path: string): Promise<void> {
-    await this.withMailboxLock(async (flow) => {
+    await this.withMailboxLock('INBOX', async (flow) => {
       await flow.mailboxCreate(path);
     });
   }
@@ -140,7 +140,7 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
    * Returns raw fetch results for parsing with parseMessage().
    */
   async fetchNewMessages(sinceUid: number): Promise<unknown[]> {
-    return this.withMailboxLock(async (flow) => {
+    return this.withMailboxLock('INBOX', async (flow) => {
       const range = sinceUid > 0 ? `${sinceUid + 1}:*` : '1:*';
       const results: unknown[] = [];
       for await (const msg of flow.fetch(range, { uid: true, envelope: true, flags: true }, { uid: true })) {

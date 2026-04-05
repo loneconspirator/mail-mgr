@@ -407,6 +407,35 @@ describe('ImapClient', () => {
     });
   });
 
+  describe('withMailboxLock', () => {
+    it('acquires lock on the specified folder', async () => {
+      await client.connect();
+
+      const result = await client.withMailboxLock('SomeFolder', async () => 'done');
+
+      expect(mockFlow.getMailboxLock).toHaveBeenCalledWith('SomeFolder');
+      expect(result).toBe('done');
+    });
+
+    it('releases lock even if callback throws', async () => {
+      await client.connect();
+      const releaseSpy = vi.fn();
+      (mockFlow.getMailboxLock as ReturnType<typeof vi.fn>).mockResolvedValueOnce({ release: releaseSpy });
+
+      await expect(
+        client.withMailboxLock('INBOX', async () => { throw new Error('boom'); }),
+      ).rejects.toThrow('boom');
+
+      expect(releaseSpy).toHaveBeenCalled();
+    });
+
+    it('throws when not connected', async () => {
+      await expect(
+        client.withMailboxLock('INBOX', async () => 'nope'),
+      ).rejects.toThrow('Not connected');
+    });
+  });
+
   describe('UID dedup', () => {
     it('fetchNewMessages only returns messages above sinceUid', async () => {
       const messages = [
