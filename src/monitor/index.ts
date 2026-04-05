@@ -6,6 +6,7 @@ import { parseMessage } from '../imap/index.js';
 import type { EmailMessage } from '../imap/index.js';
 import { evaluateRules } from '../rules/index.js';
 import { executeAction } from '../actions/index.js';
+import type { ActionContext } from '../actions/index.js';
 import { ActivityLog } from '../log/index.js';
 
 export interface MonitorState {
@@ -24,6 +25,8 @@ export class Monitor {
   private readonly client: ImapClient;
   private readonly activityLog: ActivityLog;
   private readonly logger: pino.Logger;
+  private readonly reviewFolder: string;
+  private readonly trashFolder: string;
   private rules: Rule[];
   private lastUid: number;
   private processing: boolean = false;
@@ -34,6 +37,8 @@ export class Monitor {
     this.client = deps.imapClient;
     this.activityLog = deps.activityLog;
     this.logger = deps.logger ?? pino({ name: 'monitor' });
+    this.reviewFolder = config.review?.folder ?? 'Review';
+    this.trashFolder = config.review?.trashFolder ?? 'Trash';
     this.rules = config.rules;
     const saved = this.activityLog.getState('lastUid');
     this.lastUid = saved ? parseInt(saved, 10) : 0;
@@ -134,7 +139,12 @@ export class Monitor {
       'Rule matched',
     );
 
-    const result = await executeAction(this.client, message, matchedRule);
+    const ctx: ActionContext = {
+      client: this.client,
+      reviewFolder: this.reviewFolder,
+      trashFolder: this.trashFolder,
+    };
+    const result = await executeAction(ctx, message, matchedRule);
 
     if (result.success) {
       this.logger.info(

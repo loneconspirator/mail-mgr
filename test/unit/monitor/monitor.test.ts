@@ -23,6 +23,16 @@ function makeConfig(rules: Rule[] = []): Config {
     },
     server: { port: 3000, host: '0.0.0.0' },
     rules,
+    review: {
+      folder: 'Review',
+      defaultArchiveFolder: 'MailingLists',
+      trashFolder: 'Trash',
+      sweep: {
+        intervalHours: 6,
+        readMaxAgeDays: 7,
+        unreadMaxAgeDays: 14,
+      },
+    },
   };
 }
 
