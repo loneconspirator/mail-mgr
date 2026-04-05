@@ -307,4 +307,72 @@ describe('Monitor', () => {
 
     await client.disconnect();
   });
+
+  it('review action moves message to Review folder', async () => {
+    const rule = makeRule({
+      id: 'review-rule',
+      match: { sender: '*@example.com' },
+      action: { type: 'review' },
+    });
+    const config = makeConfig([rule]);
+    const flow = makeMockFlow();
+
+    const fetchResult = makeFetchResult(1, 'alice@example.com', 'Review me');
+    (flow.fetch as ReturnType<typeof vi.fn>).mockReturnValue({
+      async *[Symbol.asyncIterator]() {
+        yield fetchResult;
+      },
+    });
+
+    const client = new ImapClient(config.imap, () => flow);
+    const monitor = new Monitor(config, { imapClient: client, activityLog, logger: silentLogger });
+
+    await client.connect();
+    await monitor.processNewMessages();
+
+    expect(flow.messageMove).toHaveBeenCalledWith([1], 'Review', { uid: true });
+
+    const entries = activityLog.getRecentActivity();
+    expect(entries).toHaveLength(1);
+    expect(entries[0].action).toBe('review');
+    expect(entries[0].folder).toBe('Review');
+    expect(entries[0].source).toBe('arrival');
+    expect(entries[0].rule_id).toBe('review-rule');
+
+    await client.disconnect();
+  });
+
+  it('delete action moves message to Trash folder', async () => {
+    const rule = makeRule({
+      id: 'delete-rule',
+      match: { sender: '*@example.com' },
+      action: { type: 'delete' },
+    });
+    const config = makeConfig([rule]);
+    const flow = makeMockFlow();
+
+    const fetchResult = makeFetchResult(1, 'alice@example.com', 'Delete me');
+    (flow.fetch as ReturnType<typeof vi.fn>).mockReturnValue({
+      async *[Symbol.asyncIterator]() {
+        yield fetchResult;
+      },
+    });
+
+    const client = new ImapClient(config.imap, () => flow);
+    const monitor = new Monitor(config, { imapClient: client, activityLog, logger: silentLogger });
+
+    await client.connect();
+    await monitor.processNewMessages();
+
+    expect(flow.messageMove).toHaveBeenCalledWith([1], 'Trash', { uid: true });
+
+    const entries = activityLog.getRecentActivity();
+    expect(entries).toHaveLength(1);
+    expect(entries[0].action).toBe('delete');
+    expect(entries[0].folder).toBe('Trash');
+    expect(entries[0].source).toBe('arrival');
+    expect(entries[0].rule_id).toBe('delete-rule');
+
+    await client.disconnect();
+  });
 });
