@@ -44,6 +44,7 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   private pollTimer: ReturnType<typeof setInterval> | null = null;
   private autoReconnect = true;
   private _idleSupported = true;
+  private specialUseCache: Map<string, string | null> = new Map();
   private readonly config: ImapConfig;
   private readonly factory: ImapFlowFactory;
 
@@ -134,6 +135,26 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     await this.withMailboxLock('INBOX', async (flow) => {
       await flow.mailboxCreate(path);
     });
+  }
+
+  async getSpecialUseFolder(use: string): Promise<string | null> {
+    if (this.specialUseCache.has(use)) {
+      return this.specialUseCache.get(use)!;
+    }
+
+    if (!this.flow) throw new Error('Not connected');
+
+    const mailboxes = await this.flow.list();
+    for (const mb of mailboxes) {
+      const box = mb as { path?: string; specialUse?: string };
+      if (box.specialUse === use && box.path) {
+        this.specialUseCache.set(use, box.path);
+        return box.path;
+      }
+    }
+
+    this.specialUseCache.set(use, null);
+    return null;
   }
 
   /**
@@ -303,5 +324,6 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
       this.flow.removeAllListeners();
       this.flow = null;
     }
+    this.specialUseCache.clear();
   }
 }

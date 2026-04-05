@@ -467,6 +467,61 @@ describe('ImapClient', () => {
     });
   });
 
+  describe('getSpecialUseFolder', () => {
+    it('returns folder name when special-use attribute found', async () => {
+      mockFlow = createMockFlow({
+        list: vi.fn(async () => [
+          { path: 'INBOX', specialUse: undefined },
+          { path: 'Sent', specialUse: '\\Sent' },
+          { path: 'Junk', specialUse: '\\Junk' },
+          { path: 'MyTrash', specialUse: '\\Trash' },
+        ]),
+      }) as typeof mockFlow;
+      factory = vi.fn(() => mockFlow);
+      client = new ImapClient(TEST_CONFIG, factory);
+
+      await client.connect();
+
+      const result = await client.getSpecialUseFolder('\\Trash');
+      expect(result).toBe('MyTrash');
+    });
+
+    it('returns null when special-use attribute not found', async () => {
+      mockFlow = createMockFlow({
+        list: vi.fn(async () => [
+          { path: 'INBOX', specialUse: undefined },
+          { path: 'Sent', specialUse: '\\Sent' },
+        ]),
+      }) as typeof mockFlow;
+      factory = vi.fn(() => mockFlow);
+      client = new ImapClient(TEST_CONFIG, factory);
+
+      await client.connect();
+
+      const result = await client.getSpecialUseFolder('\\Trash');
+      expect(result).toBeNull();
+    });
+
+    it('caches results for connection lifetime', async () => {
+      mockFlow = createMockFlow({
+        list: vi.fn(async () => [
+          { path: 'MyTrash', specialUse: '\\Trash' },
+        ]),
+      }) as typeof mockFlow;
+      factory = vi.fn(() => mockFlow);
+      client = new ImapClient(TEST_CONFIG, factory);
+
+      await client.connect();
+
+      const first = await client.getSpecialUseFolder('\\Trash');
+      const second = await client.getSpecialUseFolder('\\Trash');
+
+      expect(first).toBe('MyTrash');
+      expect(second).toBe('MyTrash');
+      expect(mockFlow.list).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('UID dedup', () => {
     it('fetchNewMessages only returns messages above sinceUid', async () => {
       const messages = [
