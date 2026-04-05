@@ -44,6 +44,8 @@ export async function executeAction(
       const folder = action.folder ?? ctx.reviewFolder;
       return executeMove(ctx.client, message, folder, base).then((r) => ({ ...r, action: 'review' }));
     }
+    case 'skip':
+      return { ...base, success: true, action: 'skip' };
     default:
       return { ...base, success: false, action: 'unknown', error: `Unknown action type` };
   }

@@ -144,4 +144,19 @@ describe('executeAction', () => {
     expect(result.folder).toBe('Review/Important');
     expect(moveMessage).toHaveBeenCalledWith(42, 'Review/Important');
   });
+
+  it('skip action returns success without any IMAP calls', async () => {
+    const ctx = makeCtx();
+    const moveMessage = vi.mocked(ctx.client.moveMessage);
+    const createMailbox = vi.mocked(ctx.client.createMailbox);
+    const rule = makeRule({ action: { type: 'skip' } });
+
+    const result = await executeAction(ctx, makeMessage(), rule);
+
+    expect(result.success).toBe(true);
+    expect(result.action).toBe('skip');
+    expect(result.folder).toBeUndefined();
+    expect(moveMessage).not.toHaveBeenCalled();
+    expect(createMailbox).not.toHaveBeenCalled();
+  });
 });
