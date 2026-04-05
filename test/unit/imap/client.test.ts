@@ -436,6 +436,36 @@ describe('ImapClient', () => {
     });
   });
 
+  describe('moveMessage', () => {
+    it('acquires lock on INBOX by default', async () => {
+      mockFlow = createMockFlow({
+        messageMove: vi.fn(async () => ({})),
+      }) as typeof mockFlow;
+      factory = vi.fn(() => mockFlow);
+      client = new ImapClient(TEST_CONFIG, factory);
+
+      await client.connect();
+      await client.moveMessage(42, 'Archive');
+
+      expect(mockFlow.getMailboxLock).toHaveBeenCalledWith('INBOX');
+      expect(mockFlow.messageMove).toHaveBeenCalledWith([42], 'Archive', { uid: true });
+    });
+
+    it('acquires lock on custom source folder when specified', async () => {
+      mockFlow = createMockFlow({
+        messageMove: vi.fn(async () => ({})),
+      }) as typeof mockFlow;
+      factory = vi.fn(() => mockFlow);
+      client = new ImapClient(TEST_CONFIG, factory);
+
+      await client.connect();
+      await client.moveMessage(42, 'Archive', 'Review');
+
+      expect(mockFlow.getMailboxLock).toHaveBeenCalledWith('Review');
+      expect(mockFlow.messageMove).toHaveBeenCalledWith([42], 'Archive', { uid: true });
+    });
+  });
+
   describe('UID dedup', () => {
     it('fetchNewMessages only returns messages above sinceUid', async () => {
       const messages = [

@@ -123,8 +123,8 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     }
   }
 
-  async moveMessage(uid: number, destination: string): Promise<void> {
-    await this.withMailboxLock('INBOX', async (flow) => {
+  async moveMessage(uid: number, destination: string, sourceFolder: string = 'INBOX'): Promise<void> {
+    await this.withMailboxLock(sourceFolder, async (flow) => {
       await flow.messageMove([uid], destination, { uid: true });
     });
   }
