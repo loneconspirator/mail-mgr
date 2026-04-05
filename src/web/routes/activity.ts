@@ -22,6 +22,7 @@ export function registerActivityRoutes(app: FastifyInstance, deps: ServerDeps): 
       ruleName: r.rule_name,
       action: r.action,
       folder: r.folder,
+      source: (r as unknown as { source?: string }).source ?? 'arrival',
       success: r.success,
       error: r.error,
     }));

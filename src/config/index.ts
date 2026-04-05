@@ -9,6 +9,11 @@ export {
   emailMatchSchema,
   actionSchema,
   moveActionSchema,
+  reviewActionSchema,
+  skipActionSchema,
+  deleteActionSchema,
+  sweepConfigSchema,
+  reviewConfigSchema,
 } from './schema.js';
 export type {
   Config,
@@ -18,5 +23,10 @@ export type {
   ServerConfig,
   Action,
   MoveAction,
+  ReviewAction,
+  SkipAction,
+  DeleteAction,
   EmailMatch,
+  SweepConfig,
+  ReviewConfig,
 } from './schema.js';

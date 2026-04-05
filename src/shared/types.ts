@@ -6,8 +6,13 @@ export type {
   Rule,
   Action,
   MoveAction,
+  ReviewAction,
+  SkipAction,
+  DeleteAction,
   EmailMatch,
   ImapConfig,
+  ReviewConfig,
+  SweepConfig,
 } from '../config/schema.js';
 
 // The IMAP config as returned by GET /api/config/imap (password masked)
@@ -33,8 +38,23 @@ export interface ActivityEntry {
   ruleName: string | null;
   action: string;
   folder: string | null;
+  source: string;
   success: number;
   error: string | null;
+}
+
+// GET /api/review/status response
+export interface ReviewStatusResponse {
+  folder: string;
+  totalMessages: number;
+  unreadMessages: number;
+  readMessages: number;
+  nextSweepAt: string | null;
+  lastSweep: {
+    completedAt: string;
+    messagesArchived: number;
+    errors: number;
+  } | null;
 }
 
 // GET /api/status response

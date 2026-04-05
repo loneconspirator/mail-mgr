@@ -82,7 +82,7 @@ async function renderRules() {
       tr.dataset.id = rule.id;
 
       const matchStr = Object.entries(rule.match).map(([k, v]) => `${k}: ${v}`).join(', ');
-      const actionStr = `${rule.action.type} → ${rule.action.folder}`;
+      const actionStr = 'folder' in rule.action ? `${rule.action.type} → ${rule.action.folder}` : rule.action.type;
 
       const toggleLabel = document.createElement('label');
       toggleLabel.className = 'toggle';
@@ -141,7 +141,7 @@ function openRuleModal(rule?: Rule) {
     <div class="form-group"><label>Match Sender</label><input id="m-sender" value="${rule?.match?.sender || ''}" placeholder="*@example.com" /></div>
     <div class="form-group"><label>Match Subject</label><input id="m-subject" value="${rule?.match?.subject || ''}" placeholder="*newsletter*" /></div>
     <div class="form-group"><label>Action</label><select id="m-action-type"><option value="move">Move</option></select></div>
-    <div class="form-group"><label>Folder</label><input id="m-folder" value="${rule?.action?.folder || ''}" placeholder="Archive" /></div>
+    <div class="form-group"><label>Folder</label><input id="m-folder" value="${rule?.action && 'folder' in rule.action ? rule.action.folder || '' : ''}" placeholder="Archive" /></div>
     <div class="form-actions">
       <button class="btn" id="m-cancel">Cancel</button>
       <button class="btn btn-primary" id="m-save">${isEdit ? 'Save' : 'Create'}</button>

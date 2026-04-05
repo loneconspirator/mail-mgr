@@ -3,7 +3,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { loadConfig, saveConfig, ensureConfig, substituteEnvVars } from '../../../src/config/index.js';
-import { configSchema } from '../../../src/config/index.js';
+import {
+  configSchema,
+  actionSchema,
+  reviewActionSchema,
+  skipActionSchema,
+  deleteActionSchema,
+  sweepConfigSchema,
+  reviewConfigSchema,
+} from '../../../src/config/index.js';
 
 const FIXTURES_DIR = path.join(os.tmpdir(), `mail-mgr-test-${process.pid}`);
 const CONFIG_PATH = path.join(FIXTURES_DIR, 'config.yml');
@@ -295,5 +303,148 @@ describe('configSchema', () => {
     };
     const result = configSchema.safeParse(bad);
     expect(result.success).toBe(false);
+  });
+});
+
+describe('action schemas', () => {
+  it('accepts review action without folder', () => {
+    const result = actionSchema.safeParse({ type: 'review' });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.type).toBe('review');
+    }
+  });
+
+  it('accepts review action with folder', () => {
+    const result = actionSchema.safeParse({ type: 'review', folder: 'Archive/Lists' });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data).toEqual({ type: 'review', folder: 'Archive/Lists' });
+    }
+  });
+
+  it('rejects review action with empty folder string', () => {
+    const result = reviewActionSchema.safeParse({ type: 'review', folder: '' });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts skip action', () => {
+    const result = actionSchema.safeParse({ type: 'skip' });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.type).toBe('skip');
+    }
+  });
+
+  it('accepts delete action', () => {
+    const result = actionSchema.safeParse({ type: 'delete' });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.type).toBe('delete');
+    }
+  });
+
+  it('still accepts move action (backward compat)', () => {
+    const result = actionSchema.safeParse({ type: 'move', folder: 'Dev/OSS' });
+    expect(result.success).toBe(true);
+  });
+
+  it('still rejects unknown action types', () => {
+    const result = actionSchema.safeParse({ type: 'explode' });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('sweepConfigSchema', () => {
+  it('applies defaults when empty object provided', () => {
+    const result = sweepConfigSchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.intervalHours).toBe(6);
+      expect(result.data.readMaxAgeDays).toBe(7);
+      expect(result.data.unreadMaxAgeDays).toBe(14);
+    }
+  });
+
+  it('allows partial overrides', () => {
+    const result = sweepConfigSchema.safeParse({ intervalHours: 12 });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.intervalHours).toBe(12);
+      expect(result.data.readMaxAgeDays).toBe(7);
+    }
+  });
+
+  it('rejects non-positive values', () => {
+    expect(sweepConfigSchema.safeParse({ intervalHours: 0 }).success).toBe(false);
+    expect(sweepConfigSchema.safeParse({ readMaxAgeDays: -1 }).success).toBe(false);
+  });
+});
+
+describe('reviewConfigSchema', () => {
+  it('applies all defaults when empty object provided', () => {
+    const result = reviewConfigSchema.safeParse({});
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.folder).toBe('Review');
+      expect(result.data.defaultArchiveFolder).toBe('MailingLists');
+      expect(result.data.trashFolder).toBe('Trash');
+      expect(result.data.sweep.intervalHours).toBe(6);
+      expect(result.data.sweep.readMaxAgeDays).toBe(7);
+      expect(result.data.sweep.unreadMaxAgeDays).toBe(14);
+    }
+  });
+
+  it('allows partial overrides', () => {
+    const result = reviewConfigSchema.safeParse({ folder: 'ToReview', sweep: { intervalHours: 24 } });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.folder).toBe('ToReview');
+      expect(result.data.defaultArchiveFolder).toBe('MailingLists');
+      expect(result.data.sweep.intervalHours).toBe(24);
+      expect(result.data.sweep.readMaxAgeDays).toBe(7);
+    }
+  });
+
+  it('rejects empty folder string', () => {
+    const result = reviewConfigSchema.safeParse({ folder: '' });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('configSchema with review section', () => {
+  const minimalConfig = {
+    imap: { host: 'imap.test.com', auth: { user: 'u', pass: 'p' } },
+    server: {},
+  };
+
+  it('defaults review config when absent', () => {
+    const result = configSchema.safeParse(minimalConfig);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.review).toBeDefined();
+      expect(result.data.review.folder).toBe('Review');
+    }
+  });
+
+  it('accepts explicit review config', () => {
+    const result = configSchema.safeParse({
+      ...minimalConfig,
+      review: { folder: 'MyReview' },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.review.folder).toBe('MyReview');
+    }
+  });
+
+  it('backward compat: existing configs with only move rules still parse', () => {
+    const result = configSchema.safeParse({
+      ...minimalConfig,
+      rules: [
+        { id: 'r1', name: 'Rule 1', match: { sender: 'foo@bar.com' }, action: { type: 'move', folder: 'F' }, order: 0 },
+      ],
+    });
+    expect(result.success).toBe(true);
   });
 });
