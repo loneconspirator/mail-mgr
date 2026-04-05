@@ -148,7 +148,7 @@ export class Monitor {
       );
     }
 
-    this.activityLog.logActivity(result, message, matchedRule);
+    this.activityLog.logActivity(result, message, matchedRule, 'arrival');
     this.messagesProcessed++;
     this.lastProcessedAt = new Date();
   }

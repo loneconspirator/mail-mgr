@@ -39,6 +39,7 @@ export interface ActivityEntry {
   rule_name: string | null;
   action: string;
   folder: string | null;
+  source: string;
   success: number;
   error: string | null;
 }
@@ -51,6 +52,18 @@ export class ActivityLog {
     this.db = new Database(dbPath);
     this.db.pragma('journal_mode = WAL');
     this.db.exec(SCHEMA);
+    this.migrate();
+  }
+
+  /**
+   * Run idempotent migrations for schema changes added after initial release.
+   */
+  private migrate(): void {
+    try {
+      this.db.exec(`ALTER TABLE activity ADD COLUMN source TEXT NOT NULL DEFAULT 'arrival'`);
+    } catch {
+      // Column already exists — nothing to do.
+    }
   }
 
   /**
@@ -64,12 +77,12 @@ export class ActivityLog {
   /**
    * Log an action result with message and rule context.
    */
-  logActivity(result: ActionResult, message: EmailMessage, rule: Rule): void {
+  logActivity(result: ActionResult, message: EmailMessage, rule: Rule | null, source: 'arrival' | 'sweep' = 'arrival'): void {
     const stmt = this.db.prepare(`
       INSERT INTO activity (
         timestamp, message_uid, message_id, message_from, message_to,
-        message_subject, rule_id, rule_name, action, folder, success, error
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        message_subject, rule_id, rule_name, action, folder, success, error, source
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
     const recipients = [...message.to, ...message.cc]
@@ -83,12 +96,13 @@ export class ActivityLog {
       message.from.address || null,
       recipients || null,
       message.subject || null,
-      rule.id,
-      rule.name,
+      rule?.id ?? null,
+      rule?.name ?? null,
       result.action,
       result.folder ?? null,
       result.success ? 1 : 0,
       result.error ?? null,
+      source,
     );
   }
 

@@ -83,6 +83,7 @@ describe('ActivityLog', () => {
     expect(e.rule_name).toBe('Test Rule');
     expect(e.action).toBe('move');
     expect(e.folder).toBe('Archive');
+    expect(e.source).toBe('arrival');
     expect(e.success).toBe(1);
     expect(e.error).toBeNull();
   });
@@ -186,5 +187,78 @@ describe('ActivityLog', () => {
 
     const entries = log.getRecentActivity();
     expect(entries[0].message_to).toBe('bob@example.com, carol@example.com');
+  });
+
+  describe('source column migration', () => {
+    it('adds source column on fresh database', () => {
+      // Fresh DB created in beforeEach — source column should exist
+      log.logActivity(makeResult(), makeMessage(), makeRule(), 'arrival');
+      const entries = log.getRecentActivity();
+      expect(entries[0].source).toBe('arrival');
+    });
+
+    it('adds source column idempotently on existing database without it', () => {
+      // Simulate a pre-migration DB: drop the source column by creating a DB
+      // without the migration, then re-open with the migration
+      log.close();
+      fs.rmSync(dbPath, { force: true });
+
+      // Create a DB with the old schema (no source column)
+      const Database = require('better-sqlite3');
+      const rawDb = new Database(dbPath);
+      rawDb.pragma('journal_mode = WAL');
+      rawDb.exec(`
+        CREATE TABLE IF NOT EXISTS activity (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          timestamp TEXT NOT NULL DEFAULT (datetime('now')),
+          message_uid INTEGER NOT NULL,
+          message_id TEXT,
+          message_from TEXT,
+          message_to TEXT,
+          message_subject TEXT,
+          rule_id TEXT,
+          rule_name TEXT,
+          action TEXT NOT NULL,
+          folder TEXT,
+          success INTEGER NOT NULL DEFAULT 1,
+          error TEXT
+        );
+        CREATE TABLE IF NOT EXISTS state (
+          key TEXT PRIMARY KEY,
+          value TEXT NOT NULL
+        );
+      `);
+      // Insert a row without source column
+      rawDb.prepare(`INSERT INTO activity (timestamp, message_uid, action, success) VALUES (datetime('now'), 1, 'move', 1)`).run();
+      rawDb.close();
+
+      // Re-open with ActivityLog — migration should add the column
+      log = new ActivityLog(dbPath);
+      const entries = log.getRecentActivity();
+      expect(entries).toHaveLength(1);
+      expect(entries[0].source).toBe('arrival'); // DEFAULT value
+    });
+  });
+
+  describe('logActivity with sweep source and null rule', () => {
+    it('logs with sweep source', () => {
+      log.logActivity(makeResult(), makeMessage(), makeRule(), 'sweep');
+      const entries = log.getRecentActivity();
+      expect(entries[0].source).toBe('sweep');
+    });
+
+    it('logs with null rule', () => {
+      log.logActivity(makeResult(), makeMessage(), null, 'sweep');
+      const entries = log.getRecentActivity();
+      expect(entries[0].rule_id).toBeNull();
+      expect(entries[0].rule_name).toBeNull();
+      expect(entries[0].source).toBe('sweep');
+    });
+
+    it('defaults source to arrival when omitted', () => {
+      log.logActivity(makeResult(), makeMessage(), makeRule());
+      const entries = log.getRecentActivity();
+      expect(entries[0].source).toBe('arrival');
+    });
   });
 });
