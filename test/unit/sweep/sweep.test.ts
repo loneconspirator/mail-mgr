@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { isEligibleForSweep } from '../../../src/sweep/index.js';
+import { isEligibleForSweep, resolveSweepDestination } from '../../../src/sweep/index.js';
 import type { SweepDeps, SweepState } from '../../../src/sweep/index.js';
-import type { SweepConfig } from '../../../src/config/index.js';
+import type { SweepConfig, Rule } from '../../../src/config/index.js';
 import type { ReviewMessage } from '../../../src/imap/index.js';
 
 describe('SweepDeps and SweepState', () => {
@@ -90,5 +90,83 @@ describe('isEligibleForSweep', () => {
       internalDate: new Date('2026-03-18T00:00:00Z'), // exactly 14 days old
     });
     expect(isEligibleForSweep(msg, defaultSweepConfig, now)).toBe(true);
+  });
+});
+
+function makeRule(overrides: Partial<Rule> = {}): Rule {
+  return {
+    id: 'rule-1',
+    name: 'Test Rule',
+    match: { sender: '*@example.com' },
+    action: { type: 'move', folder: 'Archive/Lists' },
+    enabled: true,
+    order: 1,
+    ...overrides,
+  };
+}
+
+describe('resolveSweepDestination', () => {
+  const defaultArchiveFolder = 'MailingLists';
+
+  it('returns move rule folder when move rule matches', () => {
+    const msg = makeReviewMessage();
+    const rules = [makeRule({ action: { type: 'move', folder: 'Archive/OSS' } })];
+    const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
+    expect(result).toEqual({ type: 'move', folder: 'Archive/OSS' });
+  });
+
+  it('returns trash destination when delete rule matches', () => {
+    const msg = makeReviewMessage();
+    const rules = [makeRule({ action: { type: 'delete' } })];
+    const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
+    expect(result).toEqual({ type: 'delete' });
+  });
+
+  it('returns review rule folder when review rule with folder matches', () => {
+    const msg = makeReviewMessage();
+    const rules = [makeRule({ action: { type: 'review', folder: 'Review/Important' } })];
+    const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
+    expect(result).toEqual({ type: 'move', folder: 'Review/Important' });
+  });
+
+  it('returns default archive folder when review rule without folder matches', () => {
+    const msg = makeReviewMessage();
+    const rules = [makeRule({ action: { type: 'review' } })];
+    const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
+    expect(result).toEqual({ type: 'move', folder: 'MailingLists' });
+  });
+
+  it('filters out skip rules', () => {
+    const msg = makeReviewMessage();
+    const rules = [
+      makeRule({ id: 'skip-rule', order: 0, action: { type: 'skip' } }),
+      makeRule({ id: 'move-rule', order: 1, action: { type: 'move', folder: 'Archive' } }),
+    ];
+    const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
+    expect(result).toEqual({ type: 'move', folder: 'Archive' });
+  });
+
+  it('returns default archive folder when no rule matches', () => {
+    const msg = makeReviewMessage();
+    const rules = [makeRule({ match: { sender: '*@other.com' } })];
+    const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
+    expect(result).toEqual({ type: 'move', folder: 'MailingLists' });
+  });
+
+  it('respects rule priority ordering', () => {
+    const msg = makeReviewMessage();
+    const rules = [
+      makeRule({ id: 'r2', order: 2, action: { type: 'move', folder: 'Second' } }),
+      makeRule({ id: 'r1', order: 1, action: { type: 'move', folder: 'First' } }),
+    ];
+    const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
+    expect(result).toEqual({ type: 'move', folder: 'First' });
+  });
+
+  it('skip-only rules fall through to default archive', () => {
+    const msg = makeReviewMessage();
+    const rules = [makeRule({ action: { type: 'skip' } })];
+    const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
+    expect(result).toEqual({ type: 'move', folder: 'MailingLists' });
   });
 });
