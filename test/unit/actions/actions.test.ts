@@ -159,4 +159,17 @@ describe('executeAction', () => {
     expect(moveMessage).not.toHaveBeenCalled();
     expect(createMailbox).not.toHaveBeenCalled();
   });
+
+  it('delete action moves message to trash folder', async () => {
+    const ctx = makeCtx();
+    const moveMessage = vi.mocked(ctx.client.moveMessage);
+    const rule = makeRule({ action: { type: 'delete' } });
+
+    const result = await executeAction(ctx, makeMessage(), rule);
+
+    expect(result.success).toBe(true);
+    expect(result.action).toBe('delete');
+    expect(result.folder).toBe('Trash');
+    expect(moveMessage).toHaveBeenCalledWith(42, 'Trash');
+  });
 });

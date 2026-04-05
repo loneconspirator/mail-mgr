@@ -46,6 +46,8 @@ export async function executeAction(
     }
     case 'skip':
       return { ...base, success: true, action: 'skip' };
+    case 'delete':
+      return executeMove(ctx.client, message, ctx.trashFolder, base).then((r) => ({ ...r, action: 'delete' }));
     default:
       return { ...base, success: false, action: 'unknown', error: `Unknown action type` };
   }
