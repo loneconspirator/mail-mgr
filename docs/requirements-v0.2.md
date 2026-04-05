@@ -15,13 +15,14 @@ Every rule must specify one of four action types:
 | Action | Behavior | Config representation |
 |--------|----------|----------------------|
 | **move** | Move to a named folder (existing v0.1 behavior) | `{ type: "move", folder: "Projects/Acme" }` |
-| **review** | Move to the Review folder | `{ type: "review" }` |
+| **review** | Move to the Review folder; optionally specifies an archive folder for sweep | `{ type: "review" }` or `{ type: "review", folder: "MailingLists" }` |
 | **skip** | Leave in Inbox, mark as processed | `{ type: "skip" }` |
 | **delete** | Move to Trash | `{ type: "delete" }` |
 
 ### 1.2 Constraints
 
-- `move` requires a non-empty `folder` field. `review`, `skip`, and `delete` have no additional fields.
+- `move` requires a non-empty `folder` field. `skip` and `delete` have no additional fields.
+- `review` accepts an optional `folder` field. During **arrival routing**, the message always goes to the Review folder regardless of whether `folder` is set — the folder field has no effect at arrival time. During **sweep archival**, if the rule that originally matched has a `folder`, that folder is used as the archive destination instead of the global `review.defaultArchiveFolder`. This lets the user say "route newsletters to Review, and when they age out, file them in MailingLists" vs. "route GitHub notifications to Review, and when they age out, file them in Projects/OpenSource" — all without needing separate `move` rules.
 - Existing v0.1 rules (all `type: "move"`) must continue working with no config migration. The schema change is purely additive — new action types in the discriminated union.
 - `skip` is an explicit "I've seen this pattern and it belongs in Inbox." Without it, the only way to prevent a lower-priority rule from matching is to reorder rules. `skip` makes intent clear and stops evaluation.
 - `delete` moves to the IMAP Trash folder (or server-configured equivalent via the `\Trash` special-use attribute). It does not expunge.
@@ -72,10 +73,15 @@ Two thresholds, evaluated in order:
 
 When a sweep archives a message, it needs to know where to put it. Resolution order:
 
-1. Re-evaluate the message against the current rule set. If a rule matches and has a `move` action, use that folder. This handles the case where the user has since created a more specific rule.
-2. Fall back to a configurable default: `review.defaultArchiveFolder` (default: `MailingLists`).
+1. Re-evaluate the message against the current rule set. The sweep evaluator **skips `review` and `skip` actions** — these are arrival-time dispositions and would create infinite loops or no-ops during sweep. Only `move` and `delete` actions are considered matches during re-evaluation. If a rule matches with a `move` action, use that folder. If a rule matches with a `delete` action, delete the message. This handles the case where the user has since created a more specific rule that should take priority.
+2. If the rule that originally routed the message to Review was a `review` action **with a `folder` field**, use that folder. This is the per-rule archive destination — the rule author's intent for where this category of mail should end up after review.
+3. Fall back to the global default: `review.defaultArchiveFolder` (default: `MailingLists`).
 
-This means sweep archival is not purely time-based — it's "where would this message go if we re-evaluated it now, falling back to a default if nothing matches."
+**Why this ordering matters:** Most messages in Review will have been placed there by a `review` rule. During sweep re-evaluation, that same `review` rule will match first — but the sweep evaluator skips it (step 1 only considers `move`/`delete`). If no other rule matches, the sweep falls through to step 2 (the originating rule's `folder` field) or step 3 (the global default). This means:
+
+- A `review` rule with `folder: "MailingLists"` → message ages out to `MailingLists`.
+- A `review` rule with no `folder` → message ages out to `review.defaultArchiveFolder`.
+- If the user later adds a `move` rule that matches the same pattern with higher priority, the `move` rule wins during sweep (step 1) and the message goes to the `move` rule's folder instead.
 
 ### 3.4 Configuration
 
@@ -96,8 +102,8 @@ All sweep fields have defaults as shown above.
 - Sweeps run on a periodic timer (`intervalHours`), not triggered by IMAP events. This is a batch job.
 - A sweep fetches all messages in the Review folder with their UID, flags, and internal date.
 - Messages matching either threshold are processed. For each:
-  - Determine archive destination (rule re-evaluation → default).
-  - Execute the move.
+  - Determine archive destination per the three-step resolution in §3.3. For step 2 (originating rule's folder), the sweep needs to know which rule originally routed the message to Review. This can be determined by re-evaluating the message against the full rule set — the first matching `review` rule is the originator. No need to persist the originating rule ID on the IMAP message itself.
+  - Execute the move (or delete).
   - Log to the activity table with a distinct source indicator (see §5.2).
 - Sweeps must be serialized (no concurrent sweeps). If a sweep is already running when the timer fires, skip that cycle.
 - Sweeps must not block the arrival-routing pipeline. They run on a separate timer and acquire mailbox locks independently.
@@ -181,10 +187,10 @@ When a `skip` rule matches, log it to the activity table like any other action. 
 
 Sweep-archived messages are logged with:
 - `source`: `"sweep"`
-- `action`: `"move"`
+- `action`: `"move"` (or `"delete"` if a delete rule matched during re-evaluation)
 - `folder`: the archive destination
-- `rule_id` / `rule_name`: the matched rule if re-evaluation found one, or null if the default archive folder was used
-- A null `rule_id` with a non-null `folder` indicates the default archive path was taken.
+- `rule_id` / `rule_name`: the rule that determined the destination. This could be: (a) a `move`/`delete` rule that matched during re-evaluation, (b) the original `review` rule whose `folder` field was used, or (c) null if the global default archive folder was used.
+- A null `rule_id` with a non-null `folder` indicates the global default archive path was taken.
 
 ---
 
@@ -194,7 +200,7 @@ Sweep-archived messages are logged with:
 
 Add to the Zod action discriminated union:
 
-- `reviewActionSchema`: `{ type: "review" }` — no additional fields.
+- `reviewActionSchema`: `{ type: "review", folder?: string }` — optional `folder` specifies the archive destination when the message ages out of Review during sweep. If omitted, the global `review.defaultArchiveFolder` is used.
 - `skipActionSchema`: `{ type: "skip" }` — no additional fields.
 - `deleteActionSchema`: `{ type: "delete" }` — no additional fields.
 
@@ -231,7 +237,7 @@ All fields optional with defaults. The entire `review` section is optional — i
 The rule create/edit modal currently has a hardcoded "move" action with a folder text field. Replace with:
 
 - A dropdown/radio group: **Archive to folder** | **Route to Review** | **Leave in Inbox** | **Delete**
-- The folder text field appears only when "Archive to folder" is selected.
+- The folder text field appears when "Archive to folder" is selected (required) or when "Route to Review" is selected (optional, labeled "Archive to folder after review" or similar to indicate it controls where the message goes when it ages out of Review). When the folder field is populated for a `review` rule, the UI should make it clear this is the sweep destination, not the immediate destination.
 - Default selection for new rules: "Archive to folder" (preserves current behavior).
 
 Use human-readable labels in the UI, not the internal type names:
@@ -250,7 +256,8 @@ The rules list currently shows the destination folder. Update to show the action
 | Action | Display |
 |--------|---------|
 | move | `→ Projects/Acme` (folder name, as today) |
-| review | `→ Review` |
+| review (no folder) | `→ Review` |
+| review (with folder) | `→ Review → MailingLists` (shows both the immediate and eventual destination) |
 | skip | `— Inbox` |
 | delete | `✕ Delete` |
 
@@ -440,7 +447,7 @@ The following must be true for v0.2 to be considered complete:
 4. A `delete` rule moves the message to the server's Trash folder.
 5. The Review lifecycle sweep runs on schedule and archives read messages older than the configured threshold.
 6. The Review lifecycle sweep archives unread messages older than the configured threshold.
-7. Sweep archive destination respects rule re-evaluation before falling back to the default folder.
+7. Sweep archive destination follows the three-step resolution: (a) re-evaluation against `move`/`delete` rules, (b) originating `review` rule's `folder` field, (c) global default. `review` and `skip` rules are ignored during sweep re-evaluation.
 8. The activity log distinguishes arrival-routed actions from sweep-archived actions.
 9. The web UI displays Review folder status (count, read/unread, next sweep, last sweep results).
 10. All existing v0.1 functionality (move rules, activity log, settings, connection management) continues to work without config migration.
