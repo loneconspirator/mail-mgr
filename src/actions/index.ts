@@ -40,6 +40,10 @@ export async function executeAction(
   switch (action.type) {
     case 'move':
       return executeMove(ctx.client, message, action.folder, base);
+    case 'review': {
+      const folder = action.folder ?? ctx.reviewFolder;
+      return executeMove(ctx.client, message, folder, base).then((r) => ({ ...r, action: 'review' }));
+    }
     default:
       return { ...base, success: false, action: 'unknown', error: `Unknown action type` };
   }

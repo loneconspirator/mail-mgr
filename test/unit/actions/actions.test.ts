@@ -118,4 +118,30 @@ describe('executeAction', () => {
     });
     expect(result.error).toBeUndefined();
   });
+
+  it('review action moves message to review folder', async () => {
+    const ctx = makeCtx();
+    const moveMessage = vi.mocked(ctx.client.moveMessage);
+    const rule = makeRule({ action: { type: 'review' } });
+
+    const result = await executeAction(ctx, makeMessage(), rule);
+
+    expect(result.success).toBe(true);
+    expect(result.action).toBe('review');
+    expect(result.folder).toBe('Review');
+    expect(moveMessage).toHaveBeenCalledWith(42, 'Review');
+  });
+
+  it('review action uses rule-specific folder when provided', async () => {
+    const ctx = makeCtx();
+    const moveMessage = vi.mocked(ctx.client.moveMessage);
+    const rule = makeRule({ action: { type: 'review', folder: 'Review/Important' } });
+
+    const result = await executeAction(ctx, makeMessage(), rule);
+
+    expect(result.success).toBe(true);
+    expect(result.action).toBe('review');
+    expect(result.folder).toBe('Review/Important');
+    expect(moveMessage).toHaveBeenCalledWith(42, 'Review/Important');
+  });
 });
