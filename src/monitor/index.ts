@@ -37,8 +37,8 @@ export class Monitor {
     this.client = deps.imapClient;
     this.activityLog = deps.activityLog;
     this.logger = deps.logger ?? pino({ name: 'monitor' });
-    this.reviewFolder = config.review?.folder ?? 'Review';
-    this.trashFolder = config.review?.trashFolder ?? 'Trash';
+    this.reviewFolder = config.review.folder;
+    this.trashFolder = config.review.trashFolder;
     this.rules = config.rules;
     const saved = this.activityLog.getState('lastUid');
     this.lastUid = saved ? parseInt(saved, 10) : 0;
