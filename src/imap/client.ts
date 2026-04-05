@@ -1,5 +1,6 @@
 import { EventEmitter } from 'events';
 import type { ImapConfig } from '../config/index.js';
+import type { ReviewMessage, EmailAddress } from './messages.js';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -182,6 +183,57 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
       }
       return results;
     });
+  }
+
+  async fetchAllMessages(folder: string): Promise<ReviewMessage[]> {
+    return this.withMailboxLock(folder, async () => {
+      const raw = await this.fetchMessagesRaw('1:*', {
+        uid: true,
+        flags: true,
+        internalDate: true,
+        envelope: true,
+      });
+      return raw.map((r) => this.parseRawToReviewMessage(r));
+    });
+  }
+
+  private parseRawToReviewMessage(raw: unknown): ReviewMessage {
+    const msg = raw as {
+      uid: number;
+      flags?: Set<string>;
+      internalDate?: Date;
+      envelope?: {
+        from?: Array<{ name?: string; address?: string }>;
+        to?: Array<{ name?: string; address?: string }>;
+        cc?: Array<{ name?: string; address?: string }>;
+        subject?: string;
+        messageId?: string;
+      };
+    };
+
+    const parseAddr = (a?: { name?: string; address?: string }): EmailAddress => ({
+      name: a?.name ?? '',
+      address: a?.address ?? '',
+    });
+
+    const parseAddrList = (list?: Array<{ name?: string; address?: string }>): EmailAddress[] =>
+      list?.map(parseAddr) ?? [];
+
+    const fromList = msg.envelope?.from;
+    const from = fromList && fromList.length > 0 ? parseAddr(fromList[0]) : { name: '', address: '' };
+
+    return {
+      uid: msg.uid,
+      flags: msg.flags ?? new Set(),
+      internalDate: msg.internalDate ?? new Date(0),
+      envelope: {
+        from,
+        to: parseAddrList(msg.envelope?.to),
+        cc: parseAddrList(msg.envelope?.cc),
+        subject: msg.envelope?.subject ?? '',
+        messageId: msg.envelope?.messageId ?? '',
+      },
+    };
   }
 
   private detectIdleSupport(flow: ImapFlowLike): void {

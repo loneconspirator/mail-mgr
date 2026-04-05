@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ImapClient, type ImapFlowLike, type ImapFlowFactory, type ConnectionState } from '../../../src/imap/index.js';
+import { ImapClient, type ImapFlowLike, type ImapFlowFactory, type ConnectionState, type ReviewMessage } from '../../../src/imap/index.js';
 import type { ImapConfig } from '../../../src/config/index.js';
 
 const TEST_CONFIG: ImapConfig = {
@@ -547,6 +547,56 @@ describe('ImapClient', () => {
       await expect(
         client.fetchMessagesRaw('1:*', { uid: true }),
       ).rejects.toThrow('Not connected');
+    });
+  });
+
+  describe('fetchAllMessages', () => {
+    it('acquires lock on folder and returns ReviewMessage array', async () => {
+      const rawMessages = [
+        {
+          uid: 10,
+          flags: new Set(['\\Seen']),
+          internalDate: new Date('2026-03-01T12:00:00Z'),
+          envelope: {
+            from: [{ name: 'Alice', address: 'alice@test.com' }],
+            to: [{ name: 'Bob', address: 'bob@test.com' }],
+            cc: [],
+            subject: 'Hello',
+            messageId: '<msg-10@test.com>',
+          },
+        },
+        {
+          uid: 20,
+          flags: new Set<string>(),
+          internalDate: new Date('2026-03-10T12:00:00Z'),
+          envelope: {
+            from: [{ name: 'Charlie', address: 'charlie@test.com' }],
+            to: [{ name: 'Bob', address: 'bob@test.com' }],
+            cc: [],
+            subject: 'World',
+            messageId: '<msg-20@test.com>',
+          },
+        },
+      ];
+
+      mockFlow = createMockFlow({
+        fetch: vi.fn(function* () {
+          yield* rawMessages;
+        } as unknown as ImapFlowLike['fetch']),
+      }) as typeof mockFlow;
+      factory = vi.fn(() => mockFlow);
+      client = new ImapClient(TEST_CONFIG, factory);
+
+      await client.connect();
+      const results = await client.fetchAllMessages('Review');
+
+      expect(mockFlow.getMailboxLock).toHaveBeenCalledWith('Review');
+      expect(results).toHaveLength(2);
+      expect(results[0].uid).toBe(10);
+      expect(results[0].flags).toEqual(new Set(['\\Seen']));
+      expect(results[0].internalDate).toEqual(new Date('2026-03-01T12:00:00Z'));
+      expect(results[0].envelope.from).toEqual({ name: 'Alice', address: 'alice@test.com' });
+      expect(results[1].uid).toBe(20);
     });
   });
 
