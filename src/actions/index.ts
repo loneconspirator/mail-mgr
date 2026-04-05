@@ -2,6 +2,12 @@ import type { Action, Rule } from '../config/index.js';
 import type { ImapClient } from '../imap/index.js';
 import type { EmailMessage } from '../imap/index.js';
 
+export interface ActionContext {
+  client: ImapClient;
+  reviewFolder: string;
+  trashFolder: string;
+}
+
 export interface ActionResult {
   success: boolean;
   messageUid: number;
@@ -19,7 +25,7 @@ export interface ActionResult {
  * auto-creating the folder if it doesn't exist.
  */
 export async function executeAction(
-  client: ImapClient,
+  ctx: ActionContext,
   message: EmailMessage,
   rule: Rule,
 ): Promise<ActionResult> {
@@ -33,7 +39,7 @@ export async function executeAction(
 
   switch (action.type) {
     case 'move':
-      return executeMove(client, message, action.folder, base);
+      return executeMove(ctx.client, message, action.folder, base);
     default:
       return { ...base, success: false, action: 'unknown', error: `Unknown action type` };
   }

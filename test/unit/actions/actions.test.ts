@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { executeAction } from '../../../src/actions/index.js';
+import type { ActionContext } from '../../../src/actions/index.js';
 import type { Rule } from '../../../src/config/index.js';
 import type { EmailMessage } from '../../../src/imap/index.js';
 import type { ImapClient } from '../../../src/imap/index.js';
@@ -30,21 +31,26 @@ function makeRule(overrides: Partial<Rule> = {}): Rule {
   };
 }
 
-function makeMockClient(overrides: Partial<Pick<ImapClient, 'moveMessage' | 'createMailbox'>> = {}) {
+function makeCtx(overrides: Partial<ActionContext> = {}): ActionContext {
   return {
-    moveMessage: overrides.moveMessage ?? vi.fn().mockResolvedValue(undefined),
-    createMailbox: overrides.createMailbox ?? vi.fn().mockResolvedValue(undefined),
-  } as unknown as ImapClient;
+    client: {
+      moveMessage: vi.fn().mockResolvedValue(undefined),
+      createMailbox: vi.fn().mockResolvedValue(undefined),
+    } as unknown as ImapClient,
+    reviewFolder: 'Review',
+    trashFolder: 'Trash',
+    ...overrides,
+  };
 }
 
 describe('executeAction', () => {
   it('moves a message to the target folder', async () => {
     const moveMessage = vi.fn().mockResolvedValue(undefined);
-    const client = makeMockClient({ moveMessage });
+    const ctx = makeCtx({ client: { moveMessage, createMailbox: vi.fn().mockResolvedValue(undefined) } as unknown as ImapClient });
     const msg = makeMessage();
     const rule = makeRule();
 
-    const result = await executeAction(client, msg, rule);
+    const result = await executeAction(ctx, msg, rule);
 
     expect(result.success).toBe(true);
     expect(result.action).toBe('move');
@@ -61,9 +67,9 @@ describe('executeAction', () => {
       .mockRejectedValueOnce(new Error('Mailbox not found'))
       .mockResolvedValueOnce(undefined);
     const createMailbox = vi.fn().mockResolvedValue(undefined);
-    const client = makeMockClient({ moveMessage, createMailbox });
+    const ctx = makeCtx({ client: { moveMessage, createMailbox } as unknown as ImapClient });
 
-    const result = await executeAction(client, makeMessage(), makeRule());
+    const result = await executeAction(ctx, makeMessage(), makeRule());
 
     expect(result.success).toBe(true);
     expect(result.action).toBe('move');
@@ -74,9 +80,9 @@ describe('executeAction', () => {
   it('returns error when both move and folder creation fail', async () => {
     const moveMessage = vi.fn().mockRejectedValue(new Error('Move failed'));
     const createMailbox = vi.fn().mockRejectedValue(new Error('Cannot create folder'));
-    const client = makeMockClient({ moveMessage, createMailbox });
+    const ctx = makeCtx({ client: { moveMessage, createMailbox } as unknown as ImapClient });
 
-    const result = await executeAction(client, makeMessage(), makeRule());
+    const result = await executeAction(ctx, makeMessage(), makeRule());
 
     expect(result.success).toBe(false);
     expect(result.action).toBe('move');
@@ -87,20 +93,20 @@ describe('executeAction', () => {
   it('returns error when folder is created but retry move still fails', async () => {
     const moveMessage = vi.fn().mockRejectedValue(new Error('Persistent failure'));
     const createMailbox = vi.fn().mockResolvedValue(undefined);
-    const client = makeMockClient({ moveMessage, createMailbox });
+    const ctx = makeCtx({ client: { moveMessage, createMailbox } as unknown as ImapClient });
 
-    const result = await executeAction(client, makeMessage(), makeRule());
+    const result = await executeAction(ctx, makeMessage(), makeRule());
 
     expect(result.success).toBe(false);
     expect(result.error).toBe('Persistent failure');
   });
 
   it('populates all ActionResult fields correctly', async () => {
-    const client = makeMockClient();
+    const ctx = makeCtx();
     const msg = makeMessage({ uid: 99, messageId: '<special@test.com>' });
     const rule = makeRule({ id: 'my-rule', action: { type: 'move', folder: 'Dev/OSS' } });
 
-    const result = await executeAction(client, msg, rule);
+    const result = await executeAction(ctx, msg, rule);
 
     expect(result).toMatchObject({
       success: true,
