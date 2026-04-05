@@ -296,3 +296,242 @@ describe('ReviewSweeper', () => {
     expect(secondNext).not.toBe(firstNext);
   });
 });
+
+describe('ReviewSweeper.runSweep', () => {
+  it('fetches review folder, moves eligible messages, logs with sweep source', async () => {
+    const oldMsg = makeReviewMessage({
+      uid: 10,
+      flags: new Set(['\\Seen']),
+      internalDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    });
+    const youngMsg = makeReviewMessage({
+      uid: 20,
+      flags: new Set(),
+      internalDate: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
+    });
+
+    const client = makeMockClient();
+    (client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([oldMsg, youngMsg]);
+
+    const activityLog = makeMockActivityLog();
+
+    const sweeper = new ReviewSweeper({
+      client,
+      activityLog,
+      rules: [],
+      reviewConfig: {
+        folder: 'Review',
+        defaultArchiveFolder: 'MailingLists',
+        trashFolder: 'Trash',
+        sweep: { intervalHours: 6, readMaxAgeDays: 7, unreadMaxAgeDays: 14 },
+      },
+      trashFolder: 'Trash',
+      logger: silentLogger,
+    });
+
+    await sweeper.runSweep();
+
+    expect(client.moveMessage).toHaveBeenCalledTimes(1);
+    expect(client.moveMessage).toHaveBeenCalledWith(10, 'MailingLists', 'Review');
+
+    expect(activityLog.logActivity).toHaveBeenCalledTimes(1);
+    expect(activityLog.logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ success: true, messageUid: 10, action: 'move', folder: 'MailingLists' }),
+      expect.objectContaining({ uid: 10 }),
+      null,
+      'sweep',
+    );
+
+    const state = sweeper.getState();
+    expect(state.totalMessages).toBe(2);
+    expect(state.readMessages).toBe(1);
+    expect(state.unreadMessages).toBe(1);
+    expect(state.lastSweep).not.toBeNull();
+    expect(state.lastSweep!.messagesArchived).toBe(1);
+    expect(state.lastSweep!.errors).toBe(0);
+  });
+
+  it('resolves destination via matching rule', async () => {
+    const oldMsg = makeReviewMessage({
+      uid: 10,
+      flags: new Set(['\\Seen']),
+      internalDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    });
+
+    const client = makeMockClient();
+    (client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([oldMsg]);
+
+    const rules = [makeRule({ action: { type: 'move', folder: 'Archive/OSS' } })];
+
+    const sweeper = new ReviewSweeper({
+      client,
+      activityLog: makeMockActivityLog(),
+      rules,
+      reviewConfig: {
+        folder: 'Review',
+        defaultArchiveFolder: 'MailingLists',
+        trashFolder: 'Trash',
+        sweep: { intervalHours: 6, readMaxAgeDays: 7, unreadMaxAgeDays: 14 },
+      },
+      trashFolder: 'Trash',
+      logger: silentLogger,
+    });
+
+    await sweeper.runSweep();
+    expect(client.moveMessage).toHaveBeenCalledWith(10, 'Archive/OSS', 'Review');
+  });
+
+  it('resolves delete destination to trash folder', async () => {
+    const oldMsg = makeReviewMessage({
+      uid: 10,
+      flags: new Set(['\\Seen']),
+      internalDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    });
+
+    const client = makeMockClient();
+    (client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([oldMsg]);
+
+    const rules = [makeRule({ action: { type: 'delete' } })];
+
+    const sweeper = new ReviewSweeper({
+      client,
+      activityLog: makeMockActivityLog(),
+      rules,
+      reviewConfig: {
+        folder: 'Review',
+        defaultArchiveFolder: 'MailingLists',
+        trashFolder: 'Trash',
+        sweep: { intervalHours: 6, readMaxAgeDays: 7, unreadMaxAgeDays: 14 },
+      },
+      trashFolder: 'Trash',
+      logger: silentLogger,
+    });
+
+    await sweeper.runSweep();
+    expect(client.moveMessage).toHaveBeenCalledWith(10, 'Trash', 'Review');
+  });
+
+  it('skips cycle when already running (serialization guard)', async () => {
+    const client = makeMockClient();
+    let resolveFetch!: (value: ReviewMessage[]) => void;
+    (client.fetchAllMessages as ReturnType<typeof vi.fn>).mockReturnValue(
+      new Promise((resolve) => { resolveFetch = resolve; }),
+    );
+
+    const sweeper = new ReviewSweeper({
+      client,
+      activityLog: makeMockActivityLog(),
+      rules: [],
+      reviewConfig: {
+        folder: 'Review',
+        defaultArchiveFolder: 'MailingLists',
+        trashFolder: 'Trash',
+        sweep: { intervalHours: 6, readMaxAgeDays: 7, unreadMaxAgeDays: 14 },
+      },
+      trashFolder: 'Trash',
+      logger: silentLogger,
+    });
+
+    const first = sweeper.runSweep();
+    const second = sweeper.runSweep();
+    await second;
+
+    expect(client.fetchAllMessages).toHaveBeenCalledTimes(1);
+
+    resolveFetch([]);
+    await first;
+  });
+
+  it('continues processing remaining messages when one move fails', async () => {
+    const msg1 = makeReviewMessage({
+      uid: 10,
+      flags: new Set(['\\Seen']),
+      internalDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    });
+    const msg2 = makeReviewMessage({
+      uid: 20,
+      flags: new Set(['\\Seen']),
+      internalDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    });
+
+    const client = makeMockClient();
+    (client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([msg1, msg2]);
+    (client.moveMessage as ReturnType<typeof vi.fn>)
+      .mockRejectedValueOnce(new Error('Move failed'))
+      .mockResolvedValueOnce(undefined);
+
+    const activityLog = makeMockActivityLog();
+
+    const sweeper = new ReviewSweeper({
+      client,
+      activityLog,
+      rules: [],
+      reviewConfig: {
+        folder: 'Review',
+        defaultArchiveFolder: 'MailingLists',
+        trashFolder: 'Trash',
+        sweep: { intervalHours: 6, readMaxAgeDays: 7, unreadMaxAgeDays: 14 },
+      },
+      trashFolder: 'Trash',
+      logger: silentLogger,
+    });
+
+    await sweeper.runSweep();
+
+    expect(client.moveMessage).toHaveBeenCalledTimes(2);
+    expect(activityLog.logActivity).toHaveBeenCalledTimes(2);
+
+    const state = sweeper.getState();
+    expect(state.lastSweep!.messagesArchived).toBe(1);
+    expect(state.lastSweep!.errors).toBe(1);
+  });
+
+  it('skips sweep when client is disconnected', async () => {
+    const client = makeMockClient();
+    Object.defineProperty(client, 'state', { value: 'disconnected' });
+
+    const sweeper = new ReviewSweeper({
+      client,
+      activityLog: makeMockActivityLog(),
+      rules: [],
+      reviewConfig: {
+        folder: 'Review',
+        defaultArchiveFolder: 'MailingLists',
+        trashFolder: 'Trash',
+        sweep: { intervalHours: 6, readMaxAgeDays: 7, unreadMaxAgeDays: 14 },
+      },
+      trashFolder: 'Trash',
+      logger: silentLogger,
+    });
+
+    await sweeper.runSweep();
+    expect(client.fetchAllMessages).not.toHaveBeenCalled();
+  });
+
+  it('handles empty review folder gracefully', async () => {
+    const client = makeMockClient();
+    (client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+    const sweeper = new ReviewSweeper({
+      client,
+      activityLog: makeMockActivityLog(),
+      rules: [],
+      reviewConfig: {
+        folder: 'Review',
+        defaultArchiveFolder: 'MailingLists',
+        trashFolder: 'Trash',
+        sweep: { intervalHours: 6, readMaxAgeDays: 7, unreadMaxAgeDays: 14 },
+      },
+      trashFolder: 'Trash',
+      logger: silentLogger,
+    });
+
+    await sweeper.runSweep();
+
+    const state = sweeper.getState();
+    expect(state.totalMessages).toBe(0);
+    expect(state.lastSweep).not.toBeNull();
+    expect(state.lastSweep!.messagesArchived).toBe(0);
+    expect(state.lastSweep!.errors).toBe(0);
+  });
+});

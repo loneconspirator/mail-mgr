@@ -85,6 +85,7 @@ export class ReviewSweeper {
 
   private initialTimer: ReturnType<typeof setTimeout> | null = null;
   private intervalTimer: ReturnType<typeof setInterval> | null = null;
+  private running = false;
 
   private sweepState: SweepState;
 
@@ -151,6 +152,79 @@ export class ReviewSweeper {
   }
 
   async runSweep(): Promise<void> {
-    // stub — implemented in Task 5
+    if (this.running) {
+      this.logger.debug('Sweep already running, skipping');
+      return;
+    }
+
+    if (this.client.state !== 'connected') {
+      this.logger.debug('Client not connected, skipping sweep');
+      return;
+    }
+
+    this.running = true;
+    const now = new Date();
+    let archived = 0;
+    let errors = 0;
+
+    try {
+      const messages = await this.client.fetchAllMessages(this.reviewConfig.folder);
+
+      const readCount = messages.filter((m) => m.flags.has('\\Seen')).length;
+      this.sweepState.totalMessages = messages.length;
+      this.sweepState.readMessages = readCount;
+      this.sweepState.unreadMessages = messages.length - readCount;
+
+      for (const msg of messages) {
+        if (!isEligibleForSweep(msg, this.reviewConfig.sweep, now)) {
+          continue;
+        }
+
+        const dest = resolveSweepDestination(msg, this.rules, this.reviewConfig.defaultArchiveFolder);
+        const folder = dest.type === 'delete' ? this.trashFolder : dest.folder;
+        const emailMsg = reviewMessageToEmailMessage(msg);
+
+        try {
+          await this.client.moveMessage(msg.uid, folder, this.reviewConfig.folder);
+
+          const result = {
+            success: true as const,
+            messageUid: msg.uid,
+            messageId: msg.envelope.messageId,
+            action: dest.type === 'delete' ? 'delete' : 'move',
+            folder,
+            rule: '',
+            timestamp: new Date(),
+          };
+          this.activityLog.logActivity(result, emailMsg, null, 'sweep');
+          archived++;
+        } catch (err) {
+          const error = err instanceof Error ? err.message : String(err);
+          this.logger.error({ uid: msg.uid, error }, 'Failed to move message during sweep');
+
+          const result = {
+            success: false as const,
+            messageUid: msg.uid,
+            messageId: msg.envelope.messageId,
+            action: dest.type === 'delete' ? 'delete' : 'move',
+            folder,
+            rule: '',
+            timestamp: new Date(),
+            error,
+          };
+          this.activityLog.logActivity(result, emailMsg, null, 'sweep');
+          errors++;
+        }
+      }
+    } catch (err) {
+      this.logger.error({ err }, 'Sweep fetch failed');
+    } finally {
+      this.running = false;
+      this.sweepState.lastSweep = {
+        completedAt: new Date().toISOString(),
+        messagesArchived: archived,
+        errors,
+      };
+    }
   }
 }
