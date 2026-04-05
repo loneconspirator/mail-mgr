@@ -522,6 +522,34 @@ describe('ImapClient', () => {
     });
   });
 
+  describe('fetchMessagesRaw', () => {
+    it('fetches messages from flow and returns array', async () => {
+      const messages = [
+        { uid: 1, flags: new Set(), envelope: {} },
+        { uid: 2, flags: new Set(['\\Seen']), envelope: {} },
+      ];
+      mockFlow = createMockFlow({
+        fetch: vi.fn(function* () {
+          yield* messages;
+        } as unknown as ImapFlowLike['fetch']),
+      }) as typeof mockFlow;
+      factory = vi.fn(() => mockFlow);
+      client = new ImapClient(TEST_CONFIG, factory);
+
+      await client.connect();
+      const results = await client.fetchMessagesRaw('1:*', { uid: true, flags: true });
+
+      expect(results).toHaveLength(2);
+      expect(mockFlow.fetch).toHaveBeenCalledWith('1:*', { uid: true, flags: true }, { uid: true });
+    });
+
+    it('throws when not connected', async () => {
+      await expect(
+        client.fetchMessagesRaw('1:*', { uid: true }),
+      ).rejects.toThrow('Not connected');
+    });
+  });
+
   describe('UID dedup', () => {
     it('fetchNewMessages only returns messages above sinceUid', async () => {
       const messages = [

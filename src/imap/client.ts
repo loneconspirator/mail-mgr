@@ -157,6 +157,15 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     return null;
   }
 
+  async fetchMessagesRaw(range: string, query: Record<string, unknown>): Promise<unknown[]> {
+    if (!this.flow) throw new Error('Not connected');
+    const results: unknown[] = [];
+    for await (const msg of this.flow.fetch(range, query, { uid: true })) {
+      results.push(msg);
+    }
+    return results;
+  }
+
   /**
    * Fetch envelopes for messages newer than the given UID.
    * Returns raw fetch results for parsing with parseMessage().
