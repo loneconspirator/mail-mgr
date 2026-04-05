@@ -46,6 +46,32 @@ function parseAddressList(raw: ImapAddressObject[] | undefined): EmailAddress[] 
   return raw.map(parseAddress);
 }
 
+export interface ReviewMessage {
+  uid: number;
+  flags: Set<string>;
+  internalDate: Date;
+  envelope: {
+    from: EmailAddress;
+    to: EmailAddress[];
+    cc: EmailAddress[];
+    subject: string;
+    messageId: string;
+  };
+}
+
+export function reviewMessageToEmailMessage(rm: ReviewMessage): EmailMessage {
+  return {
+    uid: rm.uid,
+    messageId: rm.envelope.messageId,
+    from: rm.envelope.from,
+    to: rm.envelope.to,
+    cc: rm.envelope.cc,
+    subject: rm.envelope.subject,
+    date: rm.internalDate,
+    flags: rm.flags,
+  };
+}
+
 export function parseMessage(fetched: ImapFetchResult): EmailMessage {
   const envelope = fetched.envelope;
 

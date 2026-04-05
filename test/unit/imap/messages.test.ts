@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseMessage, type ImapFetchResult } from '../../../src/imap/index.js';
+import { parseMessage, reviewMessageToEmailMessage, type ImapFetchResult, type ReviewMessage } from '../../../src/imap/index.js';
 
 function makeFetchResult(overrides: Partial<ImapFetchResult> = {}): ImapFetchResult {
   return {
@@ -189,5 +189,63 @@ describe('parseMessage', () => {
     expect(result.to).toEqual([]);
     expect(result.cc).toEqual([]);
     expect(result.date).toEqual(new Date(0));
+  });
+});
+
+function makeReviewMessage(overrides: Partial<ReviewMessage> = {}): ReviewMessage {
+  return {
+    uid: 100,
+    flags: new Set(['\\Seen']),
+    internalDate: new Date('2026-03-15T08:00:00Z'),
+    envelope: {
+      from: { name: 'Alice', address: 'alice@example.com' },
+      to: [{ name: 'Bob', address: 'bob@example.com' }],
+      cc: [],
+      subject: 'Review test',
+      messageId: '<review-1@example.com>',
+    },
+    ...overrides,
+  };
+}
+
+describe('reviewMessageToEmailMessage', () => {
+  it('maps envelope fields to EmailMessage', () => {
+    const rm = makeReviewMessage();
+    const em = reviewMessageToEmailMessage(rm);
+
+    expect(em.uid).toBe(100);
+    expect(em.messageId).toBe('<review-1@example.com>');
+    expect(em.from).toEqual({ name: 'Alice', address: 'alice@example.com' });
+    expect(em.to).toEqual([{ name: 'Bob', address: 'bob@example.com' }]);
+    expect(em.cc).toEqual([]);
+    expect(em.subject).toBe('Review test');
+    expect(em.date).toEqual(new Date('2026-03-15T08:00:00Z'));
+    expect(em.flags).toEqual(new Set(['\\Seen']));
+  });
+
+  it('handles empty envelope fields', () => {
+    const rm = makeReviewMessage({
+      envelope: {
+        from: { name: '', address: '' },
+        to: [],
+        cc: [],
+        subject: '',
+        messageId: '',
+      },
+    });
+    const em = reviewMessageToEmailMessage(rm);
+
+    expect(em.from).toEqual({ name: '', address: '' });
+    expect(em.to).toEqual([]);
+    expect(em.subject).toBe('');
+    expect(em.messageId).toBe('');
+  });
+
+  it('uses internalDate for the date field', () => {
+    const d = new Date('2026-01-01T00:00:00Z');
+    const rm = makeReviewMessage({ internalDate: d });
+    const em = reviewMessageToEmailMessage(rm);
+
+    expect(em.date).toEqual(d);
   });
 });
