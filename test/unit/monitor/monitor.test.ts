@@ -375,4 +375,38 @@ describe('Monitor', () => {
 
     await client.disconnect();
   });
+
+  it('skip action leaves message in INBOX with no IMAP move', async () => {
+    const rule = makeRule({
+      id: 'skip-rule',
+      match: { sender: '*@example.com' },
+      action: { type: 'skip' },
+    });
+    const config = makeConfig([rule]);
+    const flow = makeMockFlow();
+
+    const fetchResult = makeFetchResult(1, 'alice@example.com', 'Leave me');
+    (flow.fetch as ReturnType<typeof vi.fn>).mockReturnValue({
+      async *[Symbol.asyncIterator]() {
+        yield fetchResult;
+      },
+    });
+
+    const client = new ImapClient(config.imap, () => flow);
+    const monitor = new Monitor(config, { imapClient: client, activityLog, logger: silentLogger });
+
+    await client.connect();
+    await monitor.processNewMessages();
+
+    expect(flow.messageMove).not.toHaveBeenCalled();
+
+    const entries = activityLog.getRecentActivity();
+    expect(entries).toHaveLength(1);
+    expect(entries[0].action).toBe('skip');
+    expect(entries[0].folder).toBeNull();
+    expect(entries[0].source).toBe('arrival');
+    expect(entries[0].rule_id).toBe('skip-rule');
+
+    await client.disconnect();
+  });
 });
