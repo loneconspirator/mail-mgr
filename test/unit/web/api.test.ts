@@ -321,3 +321,253 @@ describe('PUT /api/config/imap', () => {
     expect(res.statusCode).toBe(400);
   });
 });
+
+// --- Review Status (I6) ---
+
+describe('GET /api/review/status', () => {
+  it('returns correct shape with sweeper state', async () => {
+    const deps = makeDeps(makeConfig());
+    deps.sweeper = {
+      getState() {
+        return {
+          folder: 'Review',
+          totalMessages: 5,
+          unreadMessages: 2,
+          readMessages: 3,
+          nextSweepAt: '2026-01-01T06:00:00.000Z',
+          lastSweep: {
+            completedAt: '2026-01-01T00:00:00.000Z',
+            messagesArchived: 1,
+            errors: 0,
+          },
+        };
+      },
+    } as any;
+    const app = buildServer(deps);
+
+    const res = await app.inject({ method: 'GET', url: '/api/review/status' });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.folder).toBe('Review');
+    expect(body.totalMessages).toBe(5);
+    expect(body.unreadMessages).toBe(2);
+    expect(body.readMessages).toBe(3);
+    expect(body.nextSweepAt).toBe('2026-01-01T06:00:00.000Z');
+    expect(body.lastSweep).toEqual({
+      completedAt: '2026-01-01T00:00:00.000Z',
+      messagesArchived: 1,
+      errors: 0,
+    });
+  });
+
+  it('returns nulls before first sweep (no sweeper)', async () => {
+    const deps = makeDeps(makeConfig());
+    // No sweeper attached
+    const app = buildServer(deps);
+
+    const res = await app.inject({ method: 'GET', url: '/api/review/status' });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.folder).toBe('Review');
+    expect(body.totalMessages).toBe(0);
+    expect(body.unreadMessages).toBe(0);
+    expect(body.readMessages).toBe(0);
+    expect(body.nextSweepAt).toBeNull();
+    expect(body.lastSweep).toBeNull();
+  });
+});
+
+// --- Review Config (I7) ---
+
+describe('GET /api/config/review', () => {
+  it('returns review config with defaults', async () => {
+    const app = buildServer(makeDeps(makeConfig()));
+    const res = await app.inject({ method: 'GET', url: '/api/config/review' });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.folder).toBe('Review');
+    expect(body.defaultArchiveFolder).toBe('MailingLists');
+    expect(body.trashFolder).toBe('Trash');
+    expect(body.sweep.intervalHours).toBe(6);
+    expect(body.sweep.readMaxAgeDays).toBe(7);
+    expect(body.sweep.unreadMaxAgeDays).toBe(14);
+  });
+});
+
+describe('PUT /api/config/review', () => {
+  it('updates review config and triggers restart', async () => {
+    let reviewChanged = false;
+    const deps = makeDeps(makeConfig());
+    deps.configRepo.onReviewConfigChange(async () => { reviewChanged = true; });
+    const app = buildServer(deps);
+
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/config/review',
+      payload: {
+        folder: 'CustomReview',
+        defaultArchiveFolder: 'Archive',
+        trashFolder: 'Deleted',
+        sweep: { intervalHours: 12, readMaxAgeDays: 3, unreadMaxAgeDays: 7 },
+      },
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.folder).toBe('CustomReview');
+    expect(body.sweep.intervalHours).toBe(12);
+    expect(reviewChanged).toBe(true);
+  });
+
+  it('rejects invalid review config', async () => {
+    const app = buildServer(makeDeps(makeConfig()));
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/config/review',
+      payload: { folder: '', sweep: { intervalHours: -1 } },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe('Validation failed');
+  });
+});
+
+// --- Rule CRUD accepts all four action types (I8) ---
+
+describe('Rule CRUD with all action types', () => {
+  it('accepts move action', async () => {
+    const app = buildServer(makeDeps(makeConfig()));
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/rules',
+      payload: {
+        name: 'Move Rule', match: { sender: '*@test.com' },
+        action: { type: 'move', folder: 'Archive' }, enabled: true, order: 0,
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().action.type).toBe('move');
+  });
+
+  it('accepts review action without folder', async () => {
+    const app = buildServer(makeDeps(makeConfig()));
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/rules',
+      payload: {
+        name: 'Review Rule', match: { sender: '*@test.com' },
+        action: { type: 'review' }, enabled: true, order: 0,
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().action.type).toBe('review');
+  });
+
+  it('accepts review action with folder', async () => {
+    const app = buildServer(makeDeps(makeConfig()));
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/rules',
+      payload: {
+        name: 'Review Rule', match: { sender: '*@test.com' },
+        action: { type: 'review', folder: 'CustomArchive' }, enabled: true, order: 0,
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().action).toEqual({ type: 'review', folder: 'CustomArchive' });
+  });
+
+  it('accepts skip action', async () => {
+    const app = buildServer(makeDeps(makeConfig()));
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/rules',
+      payload: {
+        name: 'Skip Rule', match: { sender: '*@test.com' },
+        action: { type: 'skip' }, enabled: true, order: 0,
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().action.type).toBe('skip');
+  });
+
+  it('accepts delete action', async () => {
+    const app = buildServer(makeDeps(makeConfig()));
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/rules',
+      payload: {
+        name: 'Delete Rule', match: { sender: '*@test.com' },
+        action: { type: 'delete' }, enabled: true, order: 0,
+      },
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json().action.type).toBe('delete');
+  });
+});
+
+// --- Activity returns source field (I9) ---
+
+describe('GET /api/activity source field', () => {
+  it('returns source field in activity entries', async () => {
+    const deps = makeDeps(makeConfig());
+    const app = buildServer(deps);
+
+    // Log an activity entry with source 'arrival'
+    deps.activityLog.logActivity(
+      {
+        success: true,
+        messageUid: 1,
+        messageId: 'msg-1@test.com',
+        action: 'move',
+        folder: 'Archive',
+        rule: 'rule-1',
+        timestamp: new Date('2026-01-01T00:00:00Z'),
+      },
+      {
+        uid: 1,
+        from: { name: 'Test', address: 'test@test.com' },
+        to: [{ name: '', address: 'me@test.com' }],
+        cc: [],
+        subject: 'Test',
+        date: new Date(),
+        flags: new Set(),
+        internalDate: new Date(),
+      },
+      { id: 'rule-1', name: 'Test Rule', match: { sender: '*@test.com' }, action: { type: 'move', folder: 'Archive' }, enabled: true, order: 0 },
+      'arrival',
+    );
+
+    // Log a sweep-sourced entry
+    deps.activityLog.logActivity(
+      {
+        success: true,
+        messageUid: 2,
+        messageId: 'msg-2@test.com',
+        action: 'move',
+        folder: 'Archive',
+        rule: '',
+        timestamp: new Date('2026-01-01T01:00:00Z'),
+      },
+      {
+        uid: 2,
+        from: { name: 'Test2', address: 'test2@test.com' },
+        to: [{ name: '', address: 'me@test.com' }],
+        cc: [],
+        subject: 'Test 2',
+        date: new Date(),
+        flags: new Set(),
+        internalDate: new Date(),
+      },
+      null,
+      'sweep',
+    );
+
+    const res = await app.inject({ method: 'GET', url: '/api/activity' });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body).toHaveLength(2);
+    // Most recent first
+    expect(body[0].source).toBe('sweep');
+    expect(body[1].source).toBe('arrival');
+  });
+});

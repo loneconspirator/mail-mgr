@@ -10,6 +10,8 @@ import { registerRuleRoutes } from './routes/rules.js';
 import { registerActivityRoutes } from './routes/activity.js';
 import { registerStatusRoutes } from './routes/status.js';
 import { registerImapConfigRoutes } from './routes/imap-config.js';
+import { registerReviewRoutes } from './routes/review.js';
+import { registerReviewConfigRoutes } from './routes/review-config.js';
 
 export interface ServerDeps {
   configRepo: ConfigRepository;
@@ -46,6 +48,8 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   registerActivityRoutes(app, deps);
   registerStatusRoutes(app, deps);
   registerImapConfigRoutes(app, deps);
+  registerReviewRoutes(app, deps);
+  registerReviewConfigRoutes(app, deps);
 
   return app;
 }
