@@ -30,6 +30,16 @@ function clearApp() {
   if (activityTimer) { clearInterval(activityTimer); activityTimer = null; }
 }
 
+function formatRuleAction(action: Rule['action']): string {
+  switch (action.type) {
+    case 'move': return `→ ${'folder' in action ? action.folder : ''}`;
+    case 'review': return 'folder' in action && action.folder ? `→ Review → ${action.folder}` : '→ Review';
+    case 'skip': return '— Inbox';
+    case 'delete': return '✕ Delete';
+    default: return (action as any).type;
+  }
+}
+
 // --- Navigation ---
 function initNav() {
   document.querySelectorAll('.nav-btn').forEach(btn => {
@@ -82,7 +92,7 @@ async function renderRules() {
       tr.dataset.id = rule.id;
 
       const matchStr = Object.entries(rule.match).map(([k, v]) => `${k}: ${v}`).join(', ');
-      const actionStr = 'folder' in rule.action ? `${rule.action.type} → ${rule.action.folder}` : rule.action.type;
+      const actionStr = formatRuleAction(rule.action);
 
       const toggleLabel = document.createElement('label');
       toggleLabel.className = 'toggle';
@@ -140,13 +150,44 @@ function openRuleModal(rule?: Rule) {
     <div class="form-group"><label>Name</label><input id="m-name" value="${rule?.name || ''}" /></div>
     <div class="form-group"><label>Match Sender</label><input id="m-sender" value="${rule?.match?.sender || ''}" placeholder="*@example.com" /></div>
     <div class="form-group"><label>Match Subject</label><input id="m-subject" value="${rule?.match?.subject || ''}" placeholder="*newsletter*" /></div>
-    <div class="form-group"><label>Action</label><select id="m-action-type"><option value="move">Move</option></select></div>
-    <div class="form-group"><label>Folder</label><input id="m-folder" value="${rule?.action && 'folder' in rule.action ? rule.action.folder || '' : ''}" placeholder="Archive" /></div>
+    <div class="form-group"><label>Action</label><select id="m-action-type">
+      <option value="move">Archive to folder</option>
+      <option value="review">Route to Review</option>
+      <option value="skip">Leave in Inbox</option>
+      <option value="delete">Delete</option>
+    </select></div>
+    <div class="form-group" id="m-folder-group"><label>Folder</label><input id="m-folder" value="${rule?.action && 'folder' in rule.action ? rule.action.folder || '' : ''}" placeholder="Archive" /></div>
     <div class="form-actions">
       <button class="btn" id="m-cancel">Cancel</button>
       <button class="btn btn-primary" id="m-save">${isEdit ? 'Save' : 'Create'}</button>
     </div>
   `;
+
+  const actionSelect = document.getElementById('m-action-type') as HTMLSelectElement;
+  const folderGroup = document.getElementById('m-folder-group') as HTMLElement;
+  const folderInput = document.getElementById('m-folder') as HTMLInputElement;
+
+  const updateFolderVisibility = () => {
+    const actionType = actionSelect.value;
+    if (actionType === 'move') {
+      folderGroup.style.display = '';
+      folderInput.required = true;
+      folderInput.placeholder = 'Archive';
+    } else if (actionType === 'review') {
+      folderGroup.style.display = '';
+      folderInput.required = false;
+      folderInput.placeholder = 'Optional — override archive folder';
+    } else {
+      folderGroup.style.display = 'none';
+      folderInput.required = false;
+    }
+  };
+
+  if (rule) {
+    actionSelect.value = rule.action.type;
+  }
+  updateFolderVisibility();
+  actionSelect.addEventListener('change', updateFolderVisibility);
 
   overlay.append(modal);
   document.body.append(overlay);
@@ -158,18 +199,31 @@ function openRuleModal(rule?: Rule) {
     const sender = (document.getElementById('m-sender') as HTMLInputElement).value.trim();
     const subject = (document.getElementById('m-subject') as HTMLInputElement).value.trim();
     const folder = (document.getElementById('m-folder') as HTMLInputElement).value.trim();
+    const actionType = (document.getElementById('m-action-type') as HTMLSelectElement).value;
 
-    if (!name || !folder) { toast('Name and folder are required', true); return; }
+    if (!name) { toast('Name is required', true); return; }
+    if (actionType === 'move' && !folder) { toast('Folder is required for move action', true); return; }
 
     const match: Record<string, string> = {};
     if (sender) match.sender = sender;
     if (subject) match.subject = subject;
     if (!sender && !subject) { toast('At least one match field is required', true); return; }
 
+    let action: Rule['action'];
+    if (actionType === 'move') {
+      action = { type: 'move', folder };
+    } else if (actionType === 'review') {
+      action = folder ? { type: 'review', folder } : { type: 'review' };
+    } else if (actionType === 'delete') {
+      action = { type: 'delete' };
+    } else {
+      action = { type: 'skip' };
+    }
+
     const payload = {
       name,
       match,
-      action: { type: 'move' as const, folder },
+      action,
       enabled: rule?.enabled ?? true,
       order: rule?.order ?? 0,
     };
@@ -217,12 +271,27 @@ async function renderActivity() {
       for (const e of entries) {
         const tr = document.createElement('tr');
         const time = new Date(e.timestamp).toLocaleString();
+
+        // K6: sweep badge for sweep-sourced entries
+        const ruleCell = e.source === 'sweep'
+          ? h('td', {}, h('span', { className: 'badge-sweep' }, '[sweep]'), e.ruleName ?? '')
+          : h('td', {}, e.ruleName ?? '');
+
+        // K7: formatted action display
+        let actionDisplay: string;
+        switch (e.action) {
+          case 'skip': actionDisplay = '— Inbox'; break;
+          case 'delete': actionDisplay = '✕ Trash'; break;
+          case 'review': actionDisplay = '→ Review'; break;
+          default: actionDisplay = e.folder ? `→ ${e.folder}` : e.action; break;
+        }
+
         tr.append(
           h('td', {}, time),
           h('td', {}, e.from ?? ''),
           h('td', {}, e.subject ?? ''),
-          h('td', {}, e.ruleName ?? ''),
-          h('td', {}, e.action),
+          ruleCell,
+          h('td', {}, actionDisplay),
           h('td', {}, e.folder ?? ''),
         );
         tbody.append(tr);
@@ -262,7 +331,12 @@ async function renderSettings() {
   app.innerHTML = '<p>Loading...</p>';
 
   try {
-    const [imapCfg, status] = await Promise.all([api.config.getImap(), api.status.get()]);
+    const [imapCfg, status, reviewStatus, reviewConfig] = await Promise.all([
+      api.config.getImap(),
+      api.status.get(),
+      api.review.status().catch(() => null),
+      api.config.getReview().catch(() => null),
+    ]);
     app.innerHTML = '';
 
     const card = h('div', { className: 'settings-card' });
@@ -306,6 +380,57 @@ async function renderSettings() {
         renderSettings();
       } catch (e: any) { toast(e.message, true); }
     });
+
+    // K8: Review Status panel
+    if (reviewStatus) {
+      const reviewCard = h('div', { className: 'settings-card' });
+      const nextSweep = reviewStatus.nextSweepAt
+        ? new Date(reviewStatus.nextSweepAt).toLocaleString()
+        : 'Not scheduled';
+      let lastSweepHtml = '<p class="sweep-info">No sweeps yet</p>';
+      if (reviewStatus.lastSweep) {
+        const completedAt = new Date(reviewStatus.lastSweep.completedAt).toLocaleString();
+        lastSweepHtml = `<dl class="sweep-info">
+          <dt>Completed:</dt><dd>${completedAt}</dd>
+          <dt>Archived:</dt><dd>${reviewStatus.lastSweep.messagesArchived}</dd>
+          <dt>Errors:</dt><dd>${reviewStatus.lastSweep.errors}</dd>
+        </dl>`;
+      }
+      reviewCard.innerHTML = `
+        <h2>Review Status</h2>
+        <p style="margin-bottom:0.5rem">Folder: <strong>${reviewStatus.folder}</strong></p>
+        <div class="review-stats">
+          <div class="stat-item"><div class="stat-value">${reviewStatus.totalMessages}</div><div class="stat-label">Total</div></div>
+          <div class="stat-item"><div class="stat-value">${reviewStatus.readMessages}</div><div class="stat-label">Read</div></div>
+          <div class="stat-item"><div class="stat-value">${reviewStatus.unreadMessages}</div><div class="stat-label">Unread</div></div>
+        </div>
+        <p class="sweep-info"><dt>Next sweep:</dt><dd>${nextSweep}</dd></p>
+        <h3 style="margin-top:1rem;font-size:0.95rem">Last Sweep</h3>
+        ${lastSweepHtml}
+      `;
+      app.append(reviewCard);
+    } else {
+      const reviewCard = h('div', { className: 'settings-card' });
+      reviewCard.innerHTML = '<h2>Review Status</h2><p class="sweep-info">Unable to load review status.</p>';
+      app.append(reviewCard);
+    }
+
+    // K9: Sweep Settings (read-only)
+    if (reviewConfig) {
+      const sweepCard = h('div', { className: 'settings-card' });
+      sweepCard.innerHTML = `
+        <h2>Sweep Settings</h2>
+        <dl class="sweep-info">
+          <dt>Review Folder:</dt><dd>${reviewConfig.folder}</dd><br/>
+          <dt>Archive Folder:</dt><dd>${reviewConfig.defaultArchiveFolder}</dd><br/>
+          <dt>Trash Folder:</dt><dd>${reviewConfig.trashFolder}</dd><br/>
+          <dt>Sweep Interval:</dt><dd>${reviewConfig.sweep.intervalHours} hours</dd><br/>
+          <dt>Read Max Age:</dt><dd>${reviewConfig.sweep.readMaxAgeDays} days</dd><br/>
+          <dt>Unread Max Age:</dt><dd>${reviewConfig.sweep.unreadMaxAgeDays} days</dd>
+        </dl>
+      `;
+      app.append(sweepCard);
+    }
 
   } catch (e: any) {
     app.innerHTML = '';
