@@ -4,7 +4,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { stringify as stringifyYaml } from 'yaml';
 import { ConfigRepository } from '../../../src/config/repository.js';
-import type { Config } from '../../../src/config/index.js';
+import type { Config, ReviewConfig } from '../../../src/config/index.js';
 
 function makeConfig(rules: Config['rules'] = []): Config {
   return {
@@ -196,5 +196,58 @@ describe('ConfigRepository - onChange listener', () => {
 
     expect(calls).toHaveLength(1);
     expect(calls[0].imap.host).toBe('new.host.com');
+  });
+});
+
+describe('ConfigRepository - review config', () => {
+  it('getReviewConfig returns defaults when no review section in config', () => {
+    const repo = writeAndLoad(makeConfig());
+    const review = repo.getReviewConfig();
+    expect(review.folder).toBe('Review');
+    expect(review.defaultArchiveFolder).toBe('MailingLists');
+    expect(review.trashFolder).toBe('Trash');
+    expect(review.sweep.intervalHours).toBe(6);
+  });
+
+  it('updateReviewConfig merges partial input and persists', async () => {
+    const repo = writeAndLoad(makeConfig());
+    const updated = await repo.updateReviewConfig({ folder: 'CustomReview' });
+    expect(updated.folder).toBe('CustomReview');
+    expect(updated.defaultArchiveFolder).toBe('MailingLists');
+    expect(updated.trashFolder).toBe('Trash');
+    expect(updated.sweep.intervalHours).toBe(6);
+
+    // Verify in-memory state
+    expect(repo.getReviewConfig().folder).toBe('CustomReview');
+
+    // Verify persistence by loading from disk
+    const repo2 = new ConfigRepository(configPath);
+    expect(repo2.getReviewConfig().folder).toBe('CustomReview');
+  });
+
+  it('updateReviewConfig rejects invalid input', async () => {
+    const repo = writeAndLoad(makeConfig());
+    await expect(repo.updateReviewConfig({ folder: '' } as any)).rejects.toThrow();
+  });
+
+  it('onReviewConfigChange listener is notified on update', async () => {
+    const repo = writeAndLoad(makeConfig());
+    const calls: ReviewConfig[] = [];
+    repo.onReviewConfigChange((config) => { calls.push(config); return Promise.resolve(); });
+
+    await repo.updateReviewConfig({ folder: 'Notified' });
+
+    expect(calls).toHaveLength(1);
+    expect(calls[0].folder).toBe('Notified');
+  });
+
+  it('updateReviewConfig merges sweep sub-object', async () => {
+    const repo = writeAndLoad(makeConfig());
+    const updated = await repo.updateReviewConfig({
+      sweep: { intervalHours: 12, readMaxAgeDays: 7, unreadMaxAgeDays: 14 },
+    });
+    expect(updated.sweep.intervalHours).toBe(12);
+    expect(updated.sweep.readMaxAgeDays).toBe(7);
+    expect(updated.sweep.unreadMaxAgeDays).toBe(14);
   });
 });
