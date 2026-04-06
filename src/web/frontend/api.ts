@@ -1,10 +1,10 @@
 // API wrapper — all fetch calls to the backend
 
-import type { Rule, ImapConfig } from '../../shared/types.js';
-import type { ActivityEntry, StatusResponse } from '../../shared/types.js';
+import type { Rule, ImapConfig, ReviewConfig } from '../../shared/types.js';
+import type { ActivityEntry, StatusResponse, ReviewStatusResponse } from '../../shared/types.js';
 
 // Re-export for frontend consumers
-export type { Rule, ImapConfig, ActivityEntry, StatusResponse };
+export type { Rule, ImapConfig, ReviewConfig, ActivityEntry, StatusResponse, ReviewStatusResponse };
 
 async function request<T>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -33,8 +33,13 @@ export const api = {
   status: {
     get: () => request<StatusResponse>('/api/status'),
   },
+  review: {
+    status: () => request<ReviewStatusResponse>('/api/review/status'),
+  },
   config: {
     getImap: () => request<ImapConfig>('/api/config/imap'),
     updateImap: (cfg: ImapConfig) => request<ImapConfig>('/api/config/imap', { method: 'PUT', body: JSON.stringify(cfg) }),
+    getReview: () => request<ReviewConfig>('/api/config/review'),
+    updateReview: (cfg: Partial<ReviewConfig>) => request<ReviewConfig>('/api/config/review', { method: 'PUT', body: JSON.stringify(cfg) }),
   },
 };
