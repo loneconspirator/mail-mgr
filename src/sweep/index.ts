@@ -22,8 +22,10 @@ export function resolveSweepDestination(
   rules: Rule[],
   defaultArchiveFolder: string,
 ): SweepResult {
-  // Filter out skip rules, then evaluate
-  const candidates = rules.filter((r) => r.action.type !== 'skip');
+  // Filter out skip rules and review rules without a folder (no useful sweep destination)
+  const candidates = rules.filter(
+    (r) => r.action.type !== 'skip' && !(r.action.type === 'review' && !r.action.folder),
+  );
   const emailMsg = reviewMessageToEmailMessage(message);
   const matched = evaluateRules(candidates, emailMsg);
 

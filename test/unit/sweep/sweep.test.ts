@@ -134,12 +134,24 @@ describe('resolveSweepDestination', () => {
     expect(result.matchedRule).toEqual(rule);
   });
 
-  it('returns default archive folder when review rule without folder matches', () => {
+  it('filters out review rule without folder and falls through to default', () => {
     const msg = makeReviewMessage();
     const rule = makeRule({ action: { type: 'review' } });
     const result = resolveSweepDestination(msg, [rule], defaultArchiveFolder);
     expect(result.destination).toEqual({ type: 'move', folder: 'MailingLists' });
-    expect(result.matchedRule).toEqual(rule);
+    expect(result.matchedRule).toBeNull();
+  });
+
+  it('folder-less review rule does not block lower-priority move rule', () => {
+    const msg = makeReviewMessage();
+    const moveRule = makeRule({ id: 'move-rule', order: 2, action: { type: 'move', folder: 'Archive/Lists' } });
+    const rules = [
+      makeRule({ id: 'review-rule', order: 1, action: { type: 'review' } }),
+      moveRule,
+    ];
+    const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
+    expect(result.destination).toEqual({ type: 'move', folder: 'Archive/Lists' });
+    expect(result.matchedRule).toEqual(moveRule);
   });
 
   it('filters out skip rules', () => {
