@@ -112,64 +112,74 @@ describe('resolveSweepDestination', () => {
 
   it('returns move rule folder when move rule matches', () => {
     const msg = makeReviewMessage();
-    const rules = [makeRule({ action: { type: 'move', folder: 'Archive/OSS' } })];
-    const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
-    expect(result).toEqual({ type: 'move', folder: 'Archive/OSS' });
+    const rule = makeRule({ action: { type: 'move', folder: 'Archive/OSS' } });
+    const result = resolveSweepDestination(msg, [rule], defaultArchiveFolder);
+    expect(result.destination).toEqual({ type: 'move', folder: 'Archive/OSS' });
+    expect(result.matchedRule).toEqual(rule);
   });
 
   it('returns trash destination when delete rule matches', () => {
     const msg = makeReviewMessage();
-    const rules = [makeRule({ action: { type: 'delete' } })];
-    const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
-    expect(result).toEqual({ type: 'delete' });
+    const rule = makeRule({ action: { type: 'delete' } });
+    const result = resolveSweepDestination(msg, [rule], defaultArchiveFolder);
+    expect(result.destination).toEqual({ type: 'delete' });
+    expect(result.matchedRule).toEqual(rule);
   });
 
   it('returns review rule folder when review rule with folder matches', () => {
     const msg = makeReviewMessage();
-    const rules = [makeRule({ action: { type: 'review', folder: 'Review/Important' } })];
-    const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
-    expect(result).toEqual({ type: 'move', folder: 'Review/Important' });
+    const rule = makeRule({ action: { type: 'review', folder: 'Review/Important' } });
+    const result = resolveSweepDestination(msg, [rule], defaultArchiveFolder);
+    expect(result.destination).toEqual({ type: 'move', folder: 'Review/Important' });
+    expect(result.matchedRule).toEqual(rule);
   });
 
   it('returns default archive folder when review rule without folder matches', () => {
     const msg = makeReviewMessage();
-    const rules = [makeRule({ action: { type: 'review' } })];
-    const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
-    expect(result).toEqual({ type: 'move', folder: 'MailingLists' });
+    const rule = makeRule({ action: { type: 'review' } });
+    const result = resolveSweepDestination(msg, [rule], defaultArchiveFolder);
+    expect(result.destination).toEqual({ type: 'move', folder: 'MailingLists' });
+    expect(result.matchedRule).toEqual(rule);
   });
 
   it('filters out skip rules', () => {
     const msg = makeReviewMessage();
+    const moveRule = makeRule({ id: 'move-rule', order: 1, action: { type: 'move', folder: 'Archive' } });
     const rules = [
       makeRule({ id: 'skip-rule', order: 0, action: { type: 'skip' } }),
-      makeRule({ id: 'move-rule', order: 1, action: { type: 'move', folder: 'Archive' } }),
+      moveRule,
     ];
     const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
-    expect(result).toEqual({ type: 'move', folder: 'Archive' });
+    expect(result.destination).toEqual({ type: 'move', folder: 'Archive' });
+    expect(result.matchedRule).toEqual(moveRule);
   });
 
   it('returns default archive folder when no rule matches', () => {
     const msg = makeReviewMessage();
     const rules = [makeRule({ match: { sender: '*@other.com' } })];
     const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
-    expect(result).toEqual({ type: 'move', folder: 'MailingLists' });
+    expect(result.destination).toEqual({ type: 'move', folder: 'MailingLists' });
+    expect(result.matchedRule).toBeNull();
   });
 
   it('respects rule priority ordering', () => {
     const msg = makeReviewMessage();
+    const firstRule = makeRule({ id: 'r1', order: 1, action: { type: 'move', folder: 'First' } });
     const rules = [
       makeRule({ id: 'r2', order: 2, action: { type: 'move', folder: 'Second' } }),
-      makeRule({ id: 'r1', order: 1, action: { type: 'move', folder: 'First' } }),
+      firstRule,
     ];
     const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
-    expect(result).toEqual({ type: 'move', folder: 'First' });
+    expect(result.destination).toEqual({ type: 'move', folder: 'First' });
+    expect(result.matchedRule).toEqual(firstRule);
   });
 
   it('skip-only rules fall through to default archive', () => {
     const msg = makeReviewMessage();
     const rules = [makeRule({ action: { type: 'skip' } })];
     const result = resolveSweepDestination(msg, rules, defaultArchiveFolder);
-    expect(result).toEqual({ type: 'move', folder: 'MailingLists' });
+    expect(result.destination).toEqual({ type: 'move', folder: 'MailingLists' });
+    expect(result.matchedRule).toBeNull();
   });
 });
 

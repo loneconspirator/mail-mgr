@@ -12,31 +12,36 @@ export type SweepDestination =
   | { type: 'move'; folder: string }
   | { type: 'delete' };
 
+export interface SweepResult {
+  destination: SweepDestination;
+  matchedRule: Rule | null;
+}
+
 export function resolveSweepDestination(
   message: ReviewMessage,
   rules: Rule[],
   defaultArchiveFolder: string,
-): SweepDestination {
+): SweepResult {
   // Filter out skip rules, then evaluate
   const candidates = rules.filter((r) => r.action.type !== 'skip');
   const emailMsg = reviewMessageToEmailMessage(message);
   const matched = evaluateRules(candidates, emailMsg);
 
   if (!matched) {
-    return { type: 'move', folder: defaultArchiveFolder };
+    return { destination: { type: 'move', folder: defaultArchiveFolder }, matchedRule: null };
   }
 
   switch (matched.action.type) {
     case 'move':
-      return { type: 'move', folder: matched.action.folder };
+      return { destination: { type: 'move', folder: matched.action.folder }, matchedRule: matched };
     case 'delete':
-      return { type: 'delete' };
+      return { destination: { type: 'delete' }, matchedRule: matched };
     case 'review': {
       const folder = matched.action.folder ?? defaultArchiveFolder;
-      return { type: 'move', folder };
+      return { destination: { type: 'move', folder }, matchedRule: matched };
     }
     default:
-      return { type: 'move', folder: defaultArchiveFolder };
+      return { destination: { type: 'move', folder: defaultArchiveFolder }, matchedRule: matched };
   }
 }
 
@@ -180,7 +185,7 @@ export class ReviewSweeper {
           continue;
         }
 
-        const dest = resolveSweepDestination(msg, this.rules, this.reviewConfig.defaultArchiveFolder);
+        const { destination: dest, matchedRule } = resolveSweepDestination(msg, this.rules, this.reviewConfig.defaultArchiveFolder);
         const folder = dest.type === 'delete' ? this.trashFolder : dest.folder;
         const emailMsg = reviewMessageToEmailMessage(msg);
 
@@ -193,10 +198,10 @@ export class ReviewSweeper {
             messageId: msg.envelope.messageId,
             action: dest.type === 'delete' ? 'delete' : 'move',
             folder,
-            rule: '',
+            rule: matchedRule?.name ?? '',
             timestamp: new Date(),
           };
-          this.activityLog.logActivity(result, emailMsg, null, 'sweep');
+          this.activityLog.logActivity(result, emailMsg, matchedRule, 'sweep');
           archived++;
         } catch (err) {
           const error = err instanceof Error ? err.message : String(err);
@@ -208,11 +213,11 @@ export class ReviewSweeper {
             messageId: msg.envelope.messageId,
             action: dest.type === 'delete' ? 'delete' : 'move',
             folder,
-            rule: '',
+            rule: matchedRule?.name ?? '',
             timestamp: new Date(),
             error,
           };
-          this.activityLog.logActivity(result, emailMsg, null, 'sweep');
+          this.activityLog.logActivity(result, emailMsg, matchedRule, 'sweep');
           errors++;
         }
       }
