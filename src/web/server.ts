@@ -5,6 +5,7 @@ import type { FastifyInstance } from 'fastify';
 import type { ConfigRepository } from '../config/index.js';
 import type { ActivityLog } from '../log/index.js';
 import type { Monitor } from '../monitor/index.js';
+import type { ReviewSweeper } from '../sweep/index.js';
 import { registerRuleRoutes } from './routes/rules.js';
 import { registerActivityRoutes } from './routes/activity.js';
 import { registerStatusRoutes } from './routes/status.js';
@@ -14,6 +15,7 @@ export interface ServerDeps {
   configRepo: ConfigRepository;
   activityLog: ActivityLog;
   monitor: Monitor;
+  sweeper?: ReviewSweeper;
   /** Override static files root for testing (defaults to dist/public) */
   staticRoot?: string;
 }
