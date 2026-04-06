@@ -132,17 +132,17 @@ describe('executeAction', () => {
     expect(moveMessage).toHaveBeenCalledWith(42, 'Review');
   });
 
-  it('review action uses rule-specific folder when provided', async () => {
+  it('review action always routes to review folder even when rule has folder field', async () => {
     const ctx = makeCtx();
     const moveMessage = vi.mocked(ctx.client.moveMessage);
-    const rule = makeRule({ action: { type: 'review', folder: 'Review/Important' } });
+    const rule = makeRule({ action: { type: 'review', folder: 'MailingLists' } });
 
     const result = await executeAction(ctx, makeMessage(), rule);
 
     expect(result.success).toBe(true);
     expect(result.action).toBe('review');
-    expect(result.folder).toBe('Review/Important');
-    expect(moveMessage).toHaveBeenCalledWith(42, 'Review/Important');
+    expect(result.folder).toBe('Review');
+    expect(moveMessage).toHaveBeenCalledWith(42, 'Review');
   });
 
   it('skip action returns success without any IMAP calls', async () => {

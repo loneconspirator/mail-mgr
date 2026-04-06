@@ -40,8 +40,7 @@ export async function executeAction(
     case 'move':
       return executeMove(ctx.client, message, action.folder, base);
     case 'review': {
-      const folder = action.folder ?? ctx.reviewFolder;
-      return executeMove(ctx.client, message, folder, base).then((r) => ({ ...r, action: 'review' }));
+      return executeMove(ctx.client, message, ctx.reviewFolder, base).then((r) => ({ ...r, action: 'review' }));
     }
     case 'skip':
       return { ...base, success: true, action: 'skip' };
