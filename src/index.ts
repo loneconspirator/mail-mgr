@@ -34,14 +34,13 @@ async function main(): Promise<void> {
   let imapClient = new ImapClient(config.imap, createImapFlow);
   let monitor = new Monitor(config, { imapClient, activityLog, logger });
 
-  // H1: Create ReviewSweeper with resolved trash folder
-  const trashFolder = config.review.trashFolder;
+  // H1: Create ReviewSweeper (trash folder resolved after IMAP connect)
   let sweeper = new ReviewSweeper({
     client: imapClient,
     activityLog,
     rules: config.rules,
     reviewConfig: config.review,
-    trashFolder,
+    trashFolder: config.review.trashFolder,
     logger,
   });
 
@@ -54,12 +53,14 @@ async function main(): Promise<void> {
   configRepo.onReviewConfigChange(async () => {
     const updatedConfig = configRepo.getConfig();
     sweeper.stop();
+    const reviewTrash = await imapClient.getSpecialUseFolder('\\Trash')
+      ?? updatedConfig.review.trashFolder;
     sweeper = new ReviewSweeper({
       client: imapClient,
       activityLog,
       rules: updatedConfig.rules,
       reviewConfig: updatedConfig.review,
-      trashFolder: updatedConfig.review.trashFolder,
+      trashFolder: reviewTrash,
       logger,
     });
     sweeper.start();
@@ -72,15 +73,17 @@ async function main(): Promise<void> {
     const newClient = new ImapClient(newConfig.imap, createImapFlow);
     imapClient = newClient;
     monitor = new Monitor(newConfig, { imapClient: newClient, activityLog, logger });
+    await monitor.start();
+    const newTrash = await newClient.getSpecialUseFolder('\\Trash')
+      ?? newConfig.review.trashFolder;
     sweeper = new ReviewSweeper({
       client: newClient,
       activityLog,
       rules: newConfig.rules,
       reviewConfig: newConfig.review,
-      trashFolder: newConfig.review.trashFolder,
+      trashFolder: newTrash,
       logger,
     });
-    await monitor.start();
     sweeper.start();
   });
 
@@ -95,8 +98,18 @@ async function main(): Promise<void> {
   await app.listen({ port: config.server.port, host: config.server.host });
   logger.info('mail-mgr listening on %s:%d', config.server.host, config.server.port);
 
-  // H4: Start sweeper after monitor
+  // H4: Start sweeper after monitor (resolve trash folder now that IMAP is connected)
   await monitor.start();
+  const resolvedTrash = await imapClient.getSpecialUseFolder('\\Trash')
+    ?? config.review.trashFolder;
+  sweeper = new ReviewSweeper({
+    client: imapClient,
+    activityLog,
+    rules: config.rules,
+    reviewConfig: config.review,
+    trashFolder: resolvedTrash,
+    logger,
+  });
   sweeper.start();
 }
 
