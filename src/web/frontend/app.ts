@@ -1,5 +1,6 @@
 import { api } from './api.js';
 import type { Rule, ActivityEntry, ImapConfig } from './api.js';
+import { renderFolderPicker } from './folder-picker.js';
 
 // --- State ---
 let currentPage = 'rules';
@@ -156,30 +157,33 @@ function openRuleModal(rule?: Rule) {
       <option value="skip">Leave in Inbox</option>
       <option value="delete">Delete</option>
     </select></div>
-    <div class="form-group" id="m-folder-group"><label>Folder</label><input id="m-folder" value="${rule?.action && 'folder' in rule.action ? rule.action.folder || '' : ''}" placeholder="Archive" /></div>
+    <div class="form-group" id="m-folder-group"><label>Folder</label><div id="m-folder-picker"></div></div>
     <div class="form-actions">
       <button class="btn" id="m-cancel">Cancel</button>
       <button class="btn btn-primary" id="m-save">${isEdit ? 'Save' : 'Create'}</button>
     </div>
   `;
 
+  let selectedFolder = rule?.action && 'folder' in rule.action ? rule.action.folder || '' : '';
+
   const actionSelect = document.getElementById('m-action-type') as HTMLSelectElement;
   const folderGroup = document.getElementById('m-folder-group') as HTMLElement;
-  const folderInput = document.getElementById('m-folder') as HTMLInputElement;
 
+  let pickerRendered = false;
   const updateFolderVisibility = () => {
     const actionType = actionSelect.value;
-    if (actionType === 'move') {
+    if (actionType === 'move' || actionType === 'review') {
       folderGroup.style.display = '';
-      folderInput.required = true;
-      folderInput.placeholder = 'Archive';
-    } else if (actionType === 'review') {
-      folderGroup.style.display = '';
-      folderInput.required = false;
-      folderInput.placeholder = 'Optional — override archive folder';
+      if (!pickerRendered) {
+        pickerRendered = true;
+        renderFolderPicker({
+          container: document.getElementById('m-folder-picker')!,
+          currentValue: selectedFolder,
+          onSelect: (path) => { selectedFolder = path; },
+        });
+      }
     } else {
       folderGroup.style.display = 'none';
-      folderInput.required = false;
     }
   };
 
@@ -198,7 +202,7 @@ function openRuleModal(rule?: Rule) {
     const name = (document.getElementById('m-name') as HTMLInputElement).value.trim();
     const sender = (document.getElementById('m-sender') as HTMLInputElement).value.trim();
     const subject = (document.getElementById('m-subject') as HTMLInputElement).value.trim();
-    const folder = (document.getElementById('m-folder') as HTMLInputElement).value.trim();
+    const folder = selectedFolder;
     const actionType = (document.getElementById('m-action-type') as HTMLSelectElement).value;
 
     if (!name) { toast('Name is required', true); return; }
