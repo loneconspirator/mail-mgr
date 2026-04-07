@@ -6,6 +6,7 @@ import { Monitor } from './monitor/index.js';
 import { ReviewSweeper } from './sweep/index.js';
 import { ImapClient } from './imap/index.js';
 import type { ImapFlowLike } from './imap/index.js';
+import { FolderCache } from './folders/index.js';
 import { ImapFlow } from 'imapflow';
 import pino from 'pino';
 
@@ -32,6 +33,7 @@ async function main(): Promise<void> {
   activityLog.startAutoPrune();
 
   let imapClient = new ImapClient(config.imap, createImapFlow);
+  let folderCache = new FolderCache({ imapClient, ttlMs: 300_000 });
   let monitor = new Monitor(config, { imapClient, activityLog, logger });
 
   // H1: Create ReviewSweeper (trash folder resolved after IMAP connect)
@@ -72,6 +74,7 @@ async function main(): Promise<void> {
     await monitor.stop();
     const newClient = new ImapClient(newConfig.imap, createImapFlow);
     imapClient = newClient;
+    folderCache = new FolderCache({ imapClient: newClient, ttlMs: 300_000 });
     monitor = new Monitor(newConfig, { imapClient: newClient, activityLog, logger });
     await monitor.start();
     const newTrash = await newClient.getSpecialUseFolder('\\Trash')
@@ -87,12 +90,13 @@ async function main(): Promise<void> {
     sweeper.start();
   });
 
-  // H5: Pass sweeper to buildServer
+  // H5: Pass sweeper and folder cache to buildServer
   const app = buildServer({
     configRepo,
     activityLog,
     monitor,
     sweeper,
+    getFolderCache: () => folderCache,
   });
 
   await app.listen({ port: config.server.port, host: config.server.host });
