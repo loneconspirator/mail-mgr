@@ -28,11 +28,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   1. GET /api/folders returns the full IMAP folder hierarchy with nested structure
   2. Folder list is served from cache on repeated requests and refreshes on demand or after TTL expires
   3. Saving a rule with a nonexistent destination folder shows a warning to the user
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 01-01: TBD
-- [ ] 01-02: TBD
+- [ ] 01-01-PLAN.md — FolderCache, ImapClient listFolders, folder API route (FOLD-01, FOLD-02)
+- [ ] 01-02-PLAN.md — Rule save folder validation warnings (FOLD-03)
 
 ### Phase 2: Tree Picker
 **Goal**: Users select destination folders from a visual tree instead of typing paths by hand
@@ -102,7 +102,7 @@ Note: Phase 5 has no dependency on Phases 2-4 and could run in parallel if inser
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Folder Discovery | 0/0 | Not started | - |
+| 1. Folder Discovery | 0/2 | Planning complete | - |
 | 2. Tree Picker | 0/0 | Not started | - |
 | 3. Batch Filing Engine | 0/0 | Not started | - |
 | 4. Batch Progress UI | 0/0 | Not started | - |
