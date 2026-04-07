@@ -63,7 +63,7 @@ function makeDeps(config: Config): ServerDeps {
   return {
     configRepo,
     activityLog,
-    monitor: {
+    getMonitor: () => ({
       getState() {
         return {
           connectionStatus: 'connected',
@@ -71,7 +71,8 @@ function makeDeps(config: Config): ServerDeps {
           messagesProcessed: 42,
         };
       },
-    } as any,
+    }) as any,
+    getSweeper: () => undefined,
     getFolderCache: () => mockFolderCache as any,
   };
 }
@@ -335,7 +336,7 @@ describe('PUT /api/config/imap', () => {
 describe('GET /api/review/status', () => {
   it('returns correct shape with sweeper state', async () => {
     const deps = makeDeps(makeConfig());
-    deps.sweeper = {
+    deps.getSweeper = () => ({
       getState() {
         return {
           folder: 'Review',
@@ -350,7 +351,7 @@ describe('GET /api/review/status', () => {
           },
         };
       },
-    } as any;
+    }) as any;
     const app = buildServer(deps);
 
     const res = await app.inject({ method: 'GET', url: '/api/review/status' });

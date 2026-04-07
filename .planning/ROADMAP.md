@@ -31,8 +31,8 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 2 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — FolderCache, ImapClient listFolders, folder API route (FOLD-01, FOLD-02)
-- [ ] 01-02-PLAN.md — Rule save folder validation warnings (FOLD-03)
+- [x] 01-01-PLAN.md — FolderCache, ImapClient listFolders, folder API route (FOLD-01, FOLD-02)
+- [x] 01-02-PLAN.md — Rule save folder validation warnings (FOLD-03)
 
 ### Phase 2: Tree Picker
 **Goal**: Users select destination folders from a visual tree instead of typing paths by hand

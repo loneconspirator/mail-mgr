@@ -90,12 +90,12 @@ async function main(): Promise<void> {
     sweeper.start();
   });
 
-  // H5: Pass sweeper and folder cache to buildServer
+  // H5: Pass getter functions so routes always read the current instance
   const app = buildServer({
     configRepo,
     activityLog,
-    monitor,
-    sweeper,
+    getMonitor: () => monitor,
+    getSweeper: () => sweeper,
     getFolderCache: () => folderCache,
   });
 

@@ -18,8 +18,8 @@ import { registerFolderRoutes } from './routes/folders.js';
 export interface ServerDeps {
   configRepo: ConfigRepository;
   activityLog: ActivityLog;
-  monitor: Monitor;
-  sweeper?: ReviewSweeper;
+  getMonitor: () => Monitor;
+  getSweeper: () => ReviewSweeper | undefined;
   getFolderCache: () => FolderCache;
   /** Override static files root for testing (defaults to dist/public) */
   staticRoot?: string;

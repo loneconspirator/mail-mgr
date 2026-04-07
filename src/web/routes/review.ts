@@ -4,7 +4,8 @@ import type { ReviewStatusResponse } from '../../shared/types.js';
 
 export function registerReviewRoutes(app: FastifyInstance, deps: ServerDeps): void {
   app.get('/api/review/status', async (): Promise<ReviewStatusResponse> => {
-    if (!deps.sweeper) {
+    const sweeper = deps.getSweeper();
+    if (!sweeper) {
       return {
         folder: 'Review',
         totalMessages: 0,
@@ -14,6 +15,6 @@ export function registerReviewRoutes(app: FastifyInstance, deps: ServerDeps): vo
         lastSweep: null,
       };
     }
-    return deps.sweeper.getState();
+    return sweeper.getState();
   });
 }
