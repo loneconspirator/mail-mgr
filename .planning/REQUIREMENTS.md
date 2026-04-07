@@ -65,31 +65,31 @@
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOLD-01 | — | Pending |
-| FOLD-02 | — | Pending |
-| FOLD-03 | — | Pending |
-| FOLD-04 | — | Pending |
-| PICK-01 | — | Pending |
-| PICK-02 | — | Pending |
-| PICK-03 | — | Pending |
-| BATC-01 | — | Pending |
-| BATC-02 | — | Pending |
-| BATC-03 | — | Pending |
-| BATC-04 | — | Pending |
-| BATC-05 | — | Pending |
-| BATC-06 | — | Pending |
-| BATC-07 | — | Pending |
-| CONF-01 | — | Pending |
-| CONF-02 | — | Pending |
-| CONF-03 | — | Pending |
-| CONF-04 | — | Pending |
-| CONF-05 | — | Pending |
+| FOLD-01 | Phase 1 | Pending |
+| FOLD-02 | Phase 1 | Pending |
+| FOLD-03 | Phase 1 | Pending |
+| FOLD-04 | Phase 4 | Pending |
+| PICK-01 | Phase 2 | Pending |
+| PICK-02 | Phase 2 | Pending |
+| PICK-03 | Phase 2 | Pending |
+| BATC-01 | Phase 3 | Pending |
+| BATC-02 | Phase 3 | Pending |
+| BATC-03 | Phase 3 | Pending |
+| BATC-04 | Phase 4 | Pending |
+| BATC-05 | Phase 3 | Pending |
+| BATC-06 | Phase 3 | Pending |
+| BATC-07 | Phase 4 | Pending |
+| CONF-01 | Phase 5 | Pending |
+| CONF-02 | Phase 5 | Pending |
+| CONF-03 | Phase 5 | Pending |
+| CONF-04 | Phase 5 | Pending |
+| CONF-05 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 19 total
-- Mapped to phases: 0
-- Unmapped: 19 ⚠️
+- Mapped to phases: 19
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-06*
-*Last updated: 2026-04-06 after initial definition*
+*Last updated: 2026-04-06 after roadmap creation*
