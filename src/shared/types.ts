@@ -63,3 +63,21 @@ export interface StatusResponse {
   lastProcessedAt: string | null;
   messagesProcessed: number;
 }
+
+// IMAP folder hierarchy node (converted from imapflow ListTreeResponse)
+export interface FolderNode {
+  path: string;
+  name: string;
+  delimiter: string;
+  flags: string[];
+  specialUse?: string;
+  disabled?: boolean;
+  children: FolderNode[];
+}
+
+// GET /api/folders response
+export interface FolderTreeResponse {
+  folders: FolderNode[];
+  cachedAt: string;
+  stale: boolean;
+}

@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import type { ImapConfig } from '../config/index.js';
 import type { ReviewMessage, EmailAddress } from './messages.js';
+import type { FolderNode } from '../shared/types.js';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
 
@@ -24,6 +25,7 @@ export interface ImapFlowLike {
   mailboxCreate(path: string | string[]): Promise<unknown>;
   fetch(range: string, query: Record<string, unknown>, options?: { uid?: boolean }): AsyncIterable<unknown>;
   list(options?: Record<string, unknown>): Promise<unknown[]>;
+  listTree(options?: Record<string, unknown>): Promise<unknown>;
   noop(): Promise<void>;
   on(event: string, listener: (...args: unknown[]) => void): this;
   removeAllListeners(event?: string): this;
@@ -253,6 +255,49 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
         messageId: msg.envelope?.messageId ?? '',
       },
     };
+  }
+
+  /** List all IMAP folders as a nested tree of FolderNode. */
+  async listFolders(): Promise<FolderNode[]> {
+    if (!this.flow) throw new Error('Not connected');
+    const tree = await this.flow.listTree() as { folders?: unknown[] };
+    return this.transformTree(tree.folders ?? []);
+  }
+
+  private transformTree(nodes: unknown[]): FolderNode[] {
+    const result: FolderNode[] = [];
+    for (const raw of nodes) {
+      const node = raw as {
+        root?: boolean;
+        path?: string;
+        name?: string;
+        delimiter?: string;
+        flags?: Set<string>;
+        specialUse?: string;
+        disabled?: boolean;
+        folders?: unknown[];
+      };
+      if (node.root) {
+        // Skip root nodes, return their children directly
+        result.push(...this.transformTree(node.folders ?? []));
+        continue;
+      }
+      const folderNode: FolderNode = {
+        path: node.path ?? '',
+        name: node.name ?? '',
+        delimiter: node.delimiter ?? '/',
+        flags: Array.from(node.flags ?? new Set()),
+        children: this.transformTree(node.folders ?? []),
+      };
+      if (node.specialUse) {
+        folderNode.specialUse = node.specialUse;
+      }
+      if (node.disabled) {
+        folderNode.disabled = node.disabled;
+      }
+      result.push(folderNode);
+    }
+    return result;
   }
 
   private detectIdleSupport(flow: ImapFlowLike): void {

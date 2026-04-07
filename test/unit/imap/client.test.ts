@@ -22,6 +22,7 @@ function createMockFlow(overrides: Partial<ImapFlowLike> = {}): ImapFlowLike {
     noop: vi.fn(async () => {}),
     getMailboxLock: vi.fn(async () => ({ release: vi.fn() })),
     list: vi.fn(async () => []),
+    listTree: vi.fn(async () => ({ folders: [] })),
     on(event: string, listener: (...args: unknown[]) => void) {
       if (!listeners.has(event)) listeners.set(event, []);
       listeners.get(event)!.push(listener);
@@ -710,6 +711,129 @@ describe('ImapClient', () => {
       expect(results).toHaveLength(2);
 
       await c.disconnect();
+    });
+  });
+
+  describe('listFolders', () => {
+    it('calls flow.listTree() and returns FolderNode[]', async () => {
+      const treeResponse = {
+        root: true,
+        folders: [
+          {
+            path: 'INBOX',
+            name: 'INBOX',
+            delimiter: '/',
+            flags: new Set(['\\HasNoChildren']),
+            specialUse: '\\Inbox',
+            folders: [],
+          },
+        ],
+      };
+      mockFlow = createMockFlow({
+        listTree: vi.fn(async () => treeResponse),
+      }) as typeof mockFlow;
+      factory = vi.fn(() => mockFlow);
+      client = new ImapClient(TEST_CONFIG, factory);
+
+      await client.connect();
+      const result = await client.listFolders();
+
+      expect(mockFlow.listTree).toHaveBeenCalled();
+      expect(result).toHaveLength(1);
+      expect(result[0].path).toBe('INBOX');
+      expect(result[0].specialUse).toBe('\\Inbox');
+    });
+
+    it('converts Set flags to string arrays', async () => {
+      const treeResponse = {
+        root: true,
+        folders: [
+          {
+            path: 'Archive',
+            name: 'Archive',
+            delimiter: '/',
+            flags: new Set(['\\HasChildren', '\\Archive']),
+            folders: [],
+          },
+        ],
+      };
+      mockFlow = createMockFlow({
+        listTree: vi.fn(async () => treeResponse),
+      }) as typeof mockFlow;
+      factory = vi.fn(() => mockFlow);
+      client = new ImapClient(TEST_CONFIG, factory);
+
+      await client.connect();
+      const result = await client.listFolders();
+
+      expect(Array.isArray(result[0].flags)).toBe(true);
+      expect(result[0].flags).toContain('\\HasChildren');
+      expect(result[0].flags).toContain('\\Archive');
+    });
+
+    it('maps nested folders to children recursively', async () => {
+      const treeResponse = {
+        root: true,
+        folders: [
+          {
+            path: 'Archive',
+            name: 'Archive',
+            delimiter: '/',
+            flags: new Set<string>(),
+            folders: [
+              {
+                path: 'Archive/2024',
+                name: '2024',
+                delimiter: '/',
+                flags: new Set<string>(),
+                folders: [],
+              },
+            ],
+          },
+        ],
+      };
+      mockFlow = createMockFlow({
+        listTree: vi.fn(async () => treeResponse),
+      }) as typeof mockFlow;
+      factory = vi.fn(() => mockFlow);
+      client = new ImapClient(TEST_CONFIG, factory);
+
+      await client.connect();
+      const result = await client.listFolders();
+
+      expect(result[0].children).toHaveLength(1);
+      expect(result[0].children[0].path).toBe('Archive/2024');
+      expect(result[0].children[0].name).toBe('2024');
+    });
+
+    it('throws Not connected when flow is null', async () => {
+      await expect(client.listFolders()).rejects.toThrow('Not connected');
+    });
+
+    it('omits disabled property when falsy', async () => {
+      const treeResponse = {
+        root: true,
+        folders: [
+          {
+            path: 'INBOX',
+            name: 'INBOX',
+            delimiter: '/',
+            flags: new Set<string>(),
+            disabled: false,
+            folders: [],
+          },
+        ],
+      };
+      mockFlow = createMockFlow({
+        listTree: vi.fn(async () => treeResponse),
+      }) as typeof mockFlow;
+      factory = vi.fn(() => mockFlow);
+      client = new ImapClient(TEST_CONFIG, factory);
+
+      await client.connect();
+      const result = await client.listFolders();
+
+      expect(result[0].disabled).toBeUndefined();
     });
   });
 });
