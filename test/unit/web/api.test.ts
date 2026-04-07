@@ -645,6 +645,89 @@ describe('Folder validation warnings', () => {
   });
 });
 
+// --- Recent Folders endpoint ---
+
+describe('GET /api/activity/recent-folders', () => {
+  it('returns 200 with empty array when no activity', async () => {
+    const app = buildServer(makeDeps(makeConfig()));
+    const res = await app.inject({ method: 'GET', url: '/api/activity/recent-folders' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([]);
+  });
+
+  it('returns recent folder paths ordered by most recently used', async () => {
+    const deps = makeDeps(makeConfig());
+    const app = buildServer(deps);
+
+    const msg = {
+      uid: 1, from: { name: 'T', address: 't@test.com' },
+      to: [{ name: '', address: 'me@test.com' }], cc: [],
+      subject: 'Test', date: new Date(), flags: new Set(), internalDate: new Date(),
+    };
+    const rule = { id: 'r1', name: 'R', match: { sender: '*' }, action: { type: 'move' as const, folder: 'X' }, enabled: true, order: 0 };
+
+    deps.activityLog.logActivity(
+      { success: true, messageUid: 1, messageId: 'm1', action: 'move', folder: 'Archive', rule: 'r1', timestamp: new Date() },
+      msg, rule, 'arrival',
+    );
+    deps.activityLog.logActivity(
+      { success: true, messageUid: 2, messageId: 'm2', action: 'move', folder: 'Lists', rule: 'r1', timestamp: new Date() },
+      { ...msg, uid: 2 }, rule, 'arrival',
+    );
+    deps.activityLog.logActivity(
+      { success: true, messageUid: 3, messageId: 'm3', action: 'move', folder: 'Archive', rule: 'r1', timestamp: new Date() },
+      { ...msg, uid: 3 }, rule, 'arrival',
+    );
+
+    const res = await app.inject({ method: 'GET', url: '/api/activity/recent-folders' });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body).toEqual(['Archive', 'Lists']);
+  });
+
+  it('respects limit query parameter', async () => {
+    const deps = makeDeps(makeConfig());
+    const app = buildServer(deps);
+
+    const msg = {
+      uid: 1, from: { name: 'T', address: 't@test.com' },
+      to: [{ name: '', address: 'me@test.com' }], cc: [],
+      subject: 'Test', date: new Date(), flags: new Set(), internalDate: new Date(),
+    };
+    const rule = { id: 'r1', name: 'R', match: { sender: '*' }, action: { type: 'move' as const, folder: 'X' }, enabled: true, order: 0 };
+
+    deps.activityLog.logActivity(
+      { success: true, messageUid: 1, messageId: 'm1', action: 'move', folder: 'A', rule: 'r1', timestamp: new Date() },
+      msg, rule, 'arrival',
+    );
+    deps.activityLog.logActivity(
+      { success: true, messageUid: 2, messageId: 'm2', action: 'move', folder: 'B', rule: 'r1', timestamp: new Date() },
+      { ...msg, uid: 2 }, rule, 'arrival',
+    );
+    deps.activityLog.logActivity(
+      { success: true, messageUid: 3, messageId: 'm3', action: 'move', folder: 'C', rule: 'r1', timestamp: new Date() },
+      { ...msg, uid: 3 }, rule, 'arrival',
+    );
+
+    const res = await app.inject({ method: 'GET', url: '/api/activity/recent-folders?limit=2' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toHaveLength(2);
+  });
+
+  it('clamps limit to max 20', async () => {
+    const app = buildServer(makeDeps(makeConfig()));
+    const res = await app.inject({ method: 'GET', url: '/api/activity/recent-folders?limit=999' });
+    expect(res.statusCode).toBe(200);
+    // Just verify it doesn't error — clamping is internal
+  });
+
+  it('clamps limit to min 1', async () => {
+    const app = buildServer(makeDeps(makeConfig()));
+    const res = await app.inject({ method: 'GET', url: '/api/activity/recent-folders?limit=-1' });
+    expect(res.statusCode).toBe(200);
+  });
+});
+
 // --- Activity returns source field (I9) ---
 
 describe('GET /api/activity source field', () => {

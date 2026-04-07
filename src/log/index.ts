@@ -132,6 +132,20 @@ export class ActivityLog {
   }
 
   /**
+   * Return distinct folder paths from recent successful actions, ordered by most recently used.
+   */
+  getRecentFolders(limit: number = 5): string[] {
+    const rows = this.db.prepare(
+      `SELECT folder FROM activity
+       WHERE folder IS NOT NULL AND folder != '' AND success = 1
+       GROUP BY folder
+       ORDER BY MAX(id) DESC
+       LIMIT ?`
+    ).all(limit) as Array<{ folder: string }>;
+    return rows.map(r => r.folder);
+  }
+
+  /**
    * Remove entries older than the specified number of days.
    */
   prune(days: number = PRUNE_DAYS): number {
