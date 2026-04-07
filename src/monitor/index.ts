@@ -103,14 +103,18 @@ export class Monitor {
 
       for (const raw of fetched) {
         const message = parseMessage(raw as ImapFetchResult);
-        if (message.uid > this.lastUid) {
-          this.lastUid = message.uid;
-          this.activityLog.setState('lastUid', String(this.lastUid));
+        try {
+          await this.processMessage(message);
+          if (message.uid > this.lastUid) {
+            this.lastUid = message.uid;
+            this.activityLog.setState('lastUid', String(this.lastUid));
+          }
+        } catch (err) {
+          this.logger.error({ err, uid: message.uid }, 'Error processing message');
         }
-        await this.processMessage(message);
       }
     } catch (err) {
-      this.logger.error({ err }, 'Error fetching/processing messages');
+      this.logger.error({ err }, 'Error fetching messages');
     } finally {
       this.processing = false;
     }

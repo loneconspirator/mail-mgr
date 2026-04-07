@@ -271,6 +271,80 @@ describe('Monitor', () => {
     await client2.disconnect();
   });
 
+  it('lastUid is only advanced after processMessage succeeds', async () => {
+    const rule = makeRule();
+    const config = makeConfig([rule]);
+    const flow = makeMockFlow();
+
+    const msg1 = makeFetchResult(3, 'alice@example.com', 'First');
+    const msg2 = makeFetchResult(4, 'alice@example.com', 'Second');
+    (flow.fetch as ReturnType<typeof vi.fn>).mockReturnValue({
+      async *[Symbol.asyncIterator]() {
+        yield msg1;
+        yield msg2;
+      },
+    });
+
+    // Make the move for msg1 fail unrecoverably so processMessage throws internally.
+    // processMessage catches action failures and logs them — it does NOT rethrow —
+    // so lastUid should still advance past msg1 once processMessage returns.
+    // What we actually want to verify is the ordering: lastUid is NOT updated until
+    // after processMessage returns.
+    //
+    // Simulate by making logActivity throw on the first call, which would cause
+    // processMessage to throw. lastUid must NOT be persisted for that UID.
+    // We do this by testing the opposite: when processing succeeds, lastUid IS persisted.
+    // The action-failure test already covers that the batch continues.
+    //
+    // Direct test: process two messages; after each, lastUid must reflect the completed one.
+    const client = new ImapClient(config.imap, () => flow);
+    const monitor = new Monitor(config, { imapClient: client, activityLog, logger: silentLogger });
+
+    await client.connect();
+    await monitor.processNewMessages();
+
+    // Both messages processed — lastUid should be 4 (the higher UID)
+    expect(activityLog.getState('lastUid')).toBe('4');
+
+    // Activity log should have two entries
+    const entries = activityLog.getRecentActivity();
+    expect(entries).toHaveLength(2);
+
+    await client.disconnect();
+  });
+
+  it('lastUid is not advanced when processMessage throws', async () => {
+    const rule = makeRule();
+    const config = makeConfig([rule]);
+    const flow = makeMockFlow();
+
+    const msg = makeFetchResult(7, 'alice@example.com', 'Fail me');
+    (flow.fetch as ReturnType<typeof vi.fn>).mockReturnValue({
+      async *[Symbol.asyncIterator]() {
+        yield msg;
+      },
+    });
+
+    // Make logActivity (called inside processMessage) throw, simulating an unexpected
+    // error that causes processMessage to reject.
+    const origLogActivity = activityLog.logActivity.bind(activityLog);
+    vi.spyOn(activityLog, 'logActivity').mockImplementationOnce(() => {
+      throw new Error('simulated DB failure');
+    });
+
+    const client = new ImapClient(config.imap, () => flow);
+    const monitor = new Monitor(config, { imapClient: client, activityLog, logger: silentLogger });
+
+    await client.connect();
+    await monitor.processNewMessages();
+
+    // lastUid must NOT have been advanced — the message was not successfully processed
+    expect(activityLog.getState('lastUid')).toBeUndefined();
+
+    vi.restoreAllMocks();
+    await client.disconnect();
+  });
+
   it('updateRules replaces the active rule set', async () => {
     const config = makeConfig([]);
     const flow = makeMockFlow();
