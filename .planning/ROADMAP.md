@@ -42,11 +42,11 @@ Plans:
   1. Rule editor modal shows an interactive folder tree instead of a text input for destination
   2. Nested folders expand and collapse to navigate the hierarchy
   3. Recently-used folders appear at the top of the picker for quick access
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 02-01: TBD
-- [ ] 02-02: TBD
+- [ ] 02-01-PLAN.md — Recent-folders backend endpoint and frontend API client (PICK-03)
+- [ ] 02-02-PLAN.md — Folder picker component, modal integration, and CSS (PICK-01, PICK-02, PICK-03)
 
 ### Phase 3: Batch Filing Engine
 **Goal**: Users can apply rules retroactively to existing messages in any folder, with dry-run preview and cancellation
@@ -103,7 +103,7 @@ Note: Phase 5 has no dependency on Phases 2-4 and could run in parallel if inser
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Folder Discovery | 0/2 | Planning complete | - |
-| 2. Tree Picker | 0/0 | Not started | - |
+| 2. Tree Picker | 0/2 | Planning complete | - |
 | 3. Batch Filing Engine | 0/0 | Not started | - |
 | 4. Batch Progress UI | 0/0 | Not started | - |
 | 5. Config & Cleanup | 0/0 | Not started | - |
