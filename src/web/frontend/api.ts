@@ -9,8 +9,10 @@ export type { Rule, ImapConfig, ReviewConfig, ActivityEntry, StatusResponse, Rev
 export type { BatchStatusResponse, DryRunResponse, DryRunGroup };
 
 async function request<T>(url: string, opts?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (opts?.body) headers['Content-Type'] = 'application/json';
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     ...opts,
   });
   if (!res.ok) {
