@@ -7,6 +7,7 @@ import { ReviewSweeper } from './sweep/index.js';
 import { ImapClient } from './imap/index.js';
 import type { ImapFlowLike } from './imap/index.js';
 import { FolderCache } from './folders/index.js';
+import { BatchEngine } from './batch/index.js';
 import { ImapFlow } from 'imapflow';
 import pino from 'pino';
 
@@ -46,9 +47,20 @@ async function main(): Promise<void> {
     logger,
   });
 
+  // H1b: Create BatchEngine for retroactive rule application
+  let batchEngine = new BatchEngine({
+    client: imapClient,
+    activityLog,
+    rules: config.rules,
+    reviewFolder: config.review.folder,
+    trashFolder: config.review.trashFolder,
+    logger,
+  });
+
   configRepo.onRulesChange((rules) => {
     monitor.updateRules(rules);
     sweeper.updateRules(rules);
+    batchEngine.updateRules(rules);
   });
 
   // H2: Restart sweeper when review config changes
@@ -87,6 +99,14 @@ async function main(): Promise<void> {
       trashFolder: newTrash,
       logger,
     });
+    batchEngine = new BatchEngine({
+      client: newClient,
+      activityLog,
+      rules: newConfig.rules,
+      reviewFolder: newConfig.review.folder,
+      trashFolder: newConfig.review.trashFolder,
+      logger,
+    });
     sweeper.start();
   });
 
@@ -97,6 +117,7 @@ async function main(): Promise<void> {
     getMonitor: () => monitor,
     getSweeper: () => sweeper,
     getFolderCache: () => folderCache,
+    getBatchEngine: () => batchEngine,
   });
 
   await app.listen({ port: config.server.port, host: config.server.host });
