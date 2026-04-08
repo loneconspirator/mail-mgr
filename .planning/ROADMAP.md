@@ -45,7 +45,7 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 02-01-PLAN.md — Recent-folders backend endpoint and frontend API client (PICK-03)
+- [x] 02-01-PLAN.md — Recent-folders backend endpoint and frontend API client (PICK-03)
 - [ ] 02-02-PLAN.md — Folder picker component, modal integration, and CSS (PICK-01, PICK-02, PICK-03)
 
 ### Phase 3: Batch Filing Engine
