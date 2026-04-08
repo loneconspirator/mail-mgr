@@ -346,4 +346,43 @@ describe('ActivityLog', () => {
       expect(entries[0].source).toBe('arrival');
     });
   });
+
+  describe('batch source', () => {
+    it('logs with batch source and inserts correctly', () => {
+      log.logActivity(makeResult(), makeMessage(), makeRule(), 'batch');
+      const entries = log.getRecentActivity();
+      expect(entries).toHaveLength(1);
+      expect(entries[0].source).toBe('batch');
+    });
+
+    it('getRecentActivity returns batch entries with correct source field', () => {
+      log.logActivity(makeResult({ messageUid: 1 }), makeMessage({ uid: 1 }), makeRule(), 'arrival');
+      log.logActivity(makeResult({ messageUid: 2 }), makeMessage({ uid: 2 }), makeRule(), 'batch');
+      log.logActivity(makeResult({ messageUid: 3 }), makeMessage({ uid: 3 }), makeRule(), 'sweep');
+
+      const entries = log.getRecentActivity();
+      expect(entries).toHaveLength(3);
+      expect(entries[0].source).toBe('sweep');
+      expect(entries[1].source).toBe('batch');
+      expect(entries[2].source).toBe('arrival');
+    });
+  });
+
+  describe('database indexes', () => {
+    it('creates idx_activity_source index after migration', () => {
+      const db = (log as any).db;
+      const indexes = db.prepare(
+        "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='activity' AND name='idx_activity_source'"
+      ).all();
+      expect(indexes).toHaveLength(1);
+    });
+
+    it('creates idx_activity_folder_success index after migration', () => {
+      const db = (log as any).db;
+      const indexes = db.prepare(
+        "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='activity' AND name='idx_activity_folder_success'"
+      ).all();
+      expect(indexes).toHaveLength(1);
+    });
+  });
 });
