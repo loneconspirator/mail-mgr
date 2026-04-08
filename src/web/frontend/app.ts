@@ -166,6 +166,9 @@ function openRuleModal(rule?: Rule) {
 
   let selectedFolder = rule?.action && 'folder' in rule.action ? rule.action.folder || '' : '';
 
+  overlay.append(modal);
+  document.body.append(overlay);
+
   const actionSelect = document.getElementById('m-action-type') as HTMLSelectElement;
   const folderGroup = document.getElementById('m-folder-group') as HTMLElement;
 
@@ -192,9 +195,6 @@ function openRuleModal(rule?: Rule) {
   }
   updateFolderVisibility();
   actionSelect.addEventListener('change', updateFolderVisibility);
-
-  overlay.append(modal);
-  document.body.append(overlay);
 
   overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
   document.getElementById('m-cancel')!.addEventListener('click', () => overlay.remove());

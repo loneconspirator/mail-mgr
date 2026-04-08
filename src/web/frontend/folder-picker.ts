@@ -67,9 +67,9 @@ export async function renderFolderPicker(opts: FolderPickerOptions): Promise<voi
   let recentFolders: string[] = []
 
   try {
-    if (cachedFolders && cachedRecent && Date.now() - cachedAt < CACHE_TTL) {
+    if (cachedFolders && Date.now() - cachedAt < CACHE_TTL) {
       folders = cachedFolders
-      recentFolders = cachedRecent
+      recentFolders = await api.activity.recentFolders()
     } else {
       const [treeRes, recent] = await Promise.all([
         api.folders.list(),
@@ -78,7 +78,6 @@ export async function renderFolderPicker(opts: FolderPickerOptions): Promise<voi
       folders = treeRes.folders
       recentFolders = recent
       cachedFolders = folders
-      cachedRecent = recentFolders
       cachedAt = Date.now()
     }
 
@@ -104,6 +103,8 @@ export async function renderFolderPicker(opts: FolderPickerOptions): Promise<voi
 
 function renderPickerContent(state: PickerState, folders: FolderNode[], recentFolders: string[]): void {
   const container = state.container
+  const pickerEl = container.querySelector('.folder-picker')
+  const prevScroll = pickerEl ? pickerEl.scrollTop : 0
   container.innerHTML = ''
 
   const picker = h('div', { className: 'folder-picker' })
@@ -138,6 +139,7 @@ function renderPickerContent(state: PickerState, folders: FolderNode[], recentFo
   picker.append(allSection)
 
   container.append(picker)
+  picker.scrollTop = prevScroll
 }
 
 function renderTreeNode(node: FolderNode, depth: number, state: PickerState): HTMLElement {
