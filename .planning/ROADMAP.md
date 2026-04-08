@@ -57,12 +57,12 @@ Plans:
   2. Dry-run mode shows what would be moved without executing any IMAP operations
   3. Batch processing moves messages in chunks with per-message error isolation (one failure does not abort the job)
   4. User can cancel a running batch and it stops after the current chunk completes
-**Plans**: TBD
+**Plans**: 3 plans
 
 Plans:
-- [ ] 03-01: TBD
-- [ ] 03-02: TBD
-- [ ] 03-03: TBD
+- [ ] 03-01-PLAN.md — BatchEngine core class with TDD: dry-run, chunked execution, cancellation, error isolation (BATC-01, BATC-02, BATC-03, BATC-05, BATC-06)
+- [ ] 03-02-PLAN.md — API routes, activity log source update, database indexing, ServerDeps wiring (BATC-01, BATC-03, BATC-05, BATC-06)
+- [ ] 03-03-PLAN.md — Frontend batch page: folder selection, dry-run preview, execution progress, results summary (BATC-01, BATC-05, BATC-06)
 
 ### Phase 4: Batch Progress UI
 **Goal**: Users see real-time progress during batch filing and a summary report when it completes
@@ -104,6 +104,6 @@ Note: Phase 5 has no dependency on Phases 2-4 and could run in parallel if inser
 |-------|----------------|--------|-----------|
 | 1. Folder Discovery | 0/2 | Planning complete | - |
 | 2. Tree Picker | 0/2 | Planning complete | - |
-| 3. Batch Filing Engine | 0/0 | Not started | - |
+| 3. Batch Filing Engine | 0/3 | Planning complete | - |
 | 4. Batch Progress UI | 0/0 | Not started | - |
 | 5. Config & Cleanup | 0/0 | Not started | - |
