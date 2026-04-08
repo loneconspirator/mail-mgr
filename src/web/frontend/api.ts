@@ -2,9 +2,11 @@
 
 import type { Rule, ImapConfig, ReviewConfig } from '../../shared/types.js';
 import type { ActivityEntry, StatusResponse, ReviewStatusResponse, FolderTreeResponse } from '../../shared/types.js';
+import type { BatchStatusResponse, DryRunResponse, DryRunGroup } from '../../shared/types.js';
 
 // Re-export for frontend consumers
 export type { Rule, ImapConfig, ReviewConfig, ActivityEntry, StatusResponse, ReviewStatusResponse, FolderTreeResponse };
+export type { BatchStatusResponse, DryRunResponse, DryRunGroup };
 
 async function request<T>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -45,5 +47,11 @@ export const api = {
   },
   folders: {
     list: () => request<FolderTreeResponse>('/api/folders'),
+  },
+  batch: {
+    dryRun: (sourceFolder: string) => request<DryRunResponse>('/api/batch/dry-run', { method: 'POST', body: JSON.stringify({ sourceFolder }) }),
+    execute: (sourceFolder: string) => request<{ status: string }>('/api/batch/execute', { method: 'POST', body: JSON.stringify({ sourceFolder }) }),
+    cancel: () => request<{ status: string }>('/api/batch/cancel', { method: 'POST' }),
+    status: () => request<BatchStatusResponse>('/api/batch/status'),
   },
 };

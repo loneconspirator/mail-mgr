@@ -1,10 +1,11 @@
 import { api } from './api.js';
-import type { Rule, ActivityEntry, ImapConfig } from './api.js';
+import type { Rule, ActivityEntry, ImapConfig, BatchStatusResponse, DryRunGroup } from './api.js';
 import { renderFolderPicker } from './folder-picker.js';
 
 // --- State ---
 let currentPage = 'rules';
 let activityTimer: ReturnType<typeof setInterval> | null = null;
+let batchPollTimer: ReturnType<typeof setInterval> | null = null;
 
 // --- Helpers ---
 function $(sel: string): HTMLElement { return document.querySelector(sel)!; }
@@ -29,6 +30,7 @@ function toast(msg: string, isError = false) {
 function clearApp() {
   $('#app').innerHTML = '';
   if (activityTimer) { clearInterval(activityTimer); activityTimer = null; }
+  if (batchPollTimer) { clearInterval(batchPollTimer); batchPollTimer = null; }
 }
 
 function formatRuleAction(action: Rule['action']): string {
@@ -58,6 +60,7 @@ function navigate(page: string) {
   if (page === 'rules') renderRules();
   else if (page === 'activity') renderActivity();
   else if (page === 'settings') renderSettings();
+  else if (page === 'batch') renderBatch();
 }
 
 // --- Rules Page ---
@@ -276,10 +279,15 @@ async function renderActivity() {
         const tr = document.createElement('tr');
         const time = new Date(e.timestamp).toLocaleString();
 
-        // K6: sweep badge for sweep-sourced entries
-        const ruleCell = e.source === 'sweep'
-          ? h('td', {}, h('span', { className: 'badge-sweep' }, '[sweep]'), e.ruleName ?? '')
-          : h('td', {}, e.ruleName ?? '');
+        // K6: sweep/batch badge for sourced entries
+        let ruleCell: HTMLElement;
+        if (e.source === 'sweep') {
+          ruleCell = h('td', {}, h('span', { className: 'badge-sweep' }, '[sweep]'), e.ruleName ?? '');
+        } else if (e.source === 'batch') {
+          ruleCell = h('td', {}, h('span', { className: 'badge-batch' }, '[batch]'), e.ruleName ?? '');
+        } else {
+          ruleCell = h('td', {}, e.ruleName ?? '');
+        }
 
         // K7: formatted action display
         let actionDisplay: string;
@@ -440,6 +448,46 @@ async function renderSettings() {
     app.innerHTML = '';
     app.append(h('div', { className: 'empty' }, `Failed to load settings: ${e.message}`));
   }
+}
+
+// --- Batch Page ---
+async function renderBatch(): Promise<void> {
+  const app = $('#app');
+  app.innerHTML = '<p>Loading batch...</p>';
+  try {
+    const state = await api.batch.status();
+    if (state.status === 'executing') {
+      renderBatchExecuting(app, state);
+    } else if (state.status === 'previewing' && state.dryRunResults) {
+      renderBatchPreview(app, state.sourceFolder!, state.dryRunResults, state.totalMessages);
+    } else if (state.status === 'completed' || state.status === 'cancelled' || state.status === 'error') {
+      renderBatchResults(app, state);
+    } else {
+      renderBatchIdle(app);
+    }
+  } catch {
+    renderBatchIdle(app);
+  }
+}
+
+function renderBatchIdle(app: HTMLElement): void {
+  app.innerHTML = '';
+  app.append(h('div', { className: 'settings-card' },
+    h('h2', {}, 'Batch Filing'),
+    h('p', {}, 'Select a source folder to apply all rules against its messages.'),
+  ));
+}
+
+function renderBatchPreview(app: HTMLElement, _folder: string, _groups: DryRunGroup[], _total: number): void {
+  app.innerHTML = 'Preview placeholder';
+}
+
+function renderBatchExecuting(app: HTMLElement, _state: BatchStatusResponse): void {
+  app.innerHTML = 'Executing placeholder';
+}
+
+function renderBatchResults(app: HTMLElement, _state: BatchStatusResponse): void {
+  app.innerHTML = 'Results placeholder';
 }
 
 // --- Init ---
