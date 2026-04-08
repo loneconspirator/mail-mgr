@@ -64,6 +64,16 @@ export class ActivityLog {
     } catch {
       // Column already exists — nothing to do.
     }
+    try {
+      this.db.exec(`CREATE INDEX IF NOT EXISTS idx_activity_source ON activity(source)`);
+    } catch {
+      // Index already exists
+    }
+    try {
+      this.db.exec(`CREATE INDEX IF NOT EXISTS idx_activity_folder_success ON activity(folder, success)`);
+    } catch {
+      // Index already exists
+    }
   }
 
   /**
@@ -77,7 +87,7 @@ export class ActivityLog {
   /**
    * Log an action result with message and rule context.
    */
-  logActivity(result: ActionResult, message: EmailMessage, rule: Rule | null, source: 'arrival' | 'sweep' = 'arrival'): void {
+  logActivity(result: ActionResult, message: EmailMessage, rule: Rule | null, source: 'arrival' | 'sweep' | 'batch' = 'arrival'): void {
     const stmt = this.db.prepare(`
       INSERT INTO activity (
         timestamp, message_uid, message_id, message_from, message_to,

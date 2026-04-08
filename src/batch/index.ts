@@ -182,7 +182,7 @@ export class BatchEngine {
 
           try {
             const result = await executeAction(ctx, msg, matched);
-            this.deps.activityLog.logActivity(result, msg, matched, 'batch' as 'arrival' | 'sweep');
+            this.deps.activityLog.logActivity(result, msg, matched, 'batch');
 
             if (result.success) {
               this.state.moved++;
