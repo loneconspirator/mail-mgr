@@ -41,7 +41,11 @@ Declared values (must be multiples of 4):
 | 2xl | 48px | Empty state vertical padding |
 | 3xl | 64px | Page-level spacing (not currently used — reserve for batch results layout) |
 
-Exceptions: none
+Exceptions:
+
+| Name | Value | Justification |
+|------|-------|---------------|
+| Badge micro-padding | 0.1rem / 0.4rem (≈1.6px / 6.4px) | Sub-4px padding for inline badges — matches existing `badge-sweep` pattern in `styles.css`. Standard spacing values produce oversized badges at this font size (0.7rem). |
 
 > Source: existing `styles.css` values mapped to nearest 4px multiples. Current codebase uses `rem` values that approximate this scale (e.g., `0.5rem`=8px, `1rem`=16px, `1.5rem`=24px, `2rem`=32px, `3rem`=48px).
 
@@ -54,9 +58,9 @@ Exceptions: none
 | Body | 14px (0.9rem) | 400 | 1.5 |
 | Label | 13px (0.8rem) | 600 | 1.5 |
 | Heading | 18px (1.1rem) | 600 | 1.2 |
-| Display | 24px (1.5rem) | 700 | 1.2 |
+| Display | 24px (1.5rem) | 600 | 1.2 |
 
-> Source: existing `styles.css`. Body text uses `0.9rem`, labels use `0.8rem` at weight 600, headings use `1.1rem`, stat values use `1.5rem` at weight 700. This phase follows the same scale — no new sizes needed.
+> Source: existing `styles.css`. Body text uses `0.9rem`, labels use `0.8rem` at weight 600, headings use `1.1rem`, stat values use `1.5rem`. Display is differentiated from Heading by size (24px vs 18px), so both use weight 600. Two weights total: 400 (body) and 600 (emphasis).
 
 ---
 
@@ -163,7 +167,7 @@ Shown after batch completes, cancels, or errors (D-09).
 | Container | `.settings-card` |
 | Heading | `<h2>Batch Complete</h2>` or `<h2>Batch Cancelled</h2>` or `<h2>Batch Error</h2>` |
 | Status badge | `.status-badge` with connected/disconnected/connecting class reused for complete/error/cancelled |
-| Stats grid | Reuse `.review-stats` layout (3-column grid): Moved / Skipped / Errors, each with `.stat-value` (24px/700) and `.stat-label` (13px/600 uppercase) |
+| Stats grid | Reuse `.review-stats` layout (3-column grid): Moved / Skipped / Errors, each with `.stat-value` (24px/600) and `.stat-label` (13px/600 uppercase) |
 | Remaining count | Shown only on cancellation: "Remaining: {n} messages not processed" at 14px/400, color #888 |
 | Action | "New Batch" button (`.btn.btn-primary`) — resets to source folder selector |
 
@@ -287,7 +291,7 @@ Activity log entries with `source='batch'` display a badge, mirroring the existi
 .dry-run-group-header {
   display: flex;
   align-items: center;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 1rem;
   cursor: pointer;
   font-size: 0.9rem;
   border-radius: 3px;
@@ -320,7 +324,7 @@ Activity log entries with `source='batch'` display a badge, mirroring the existi
 .dry-run-group-messages {
   max-height: 200px;
   overflow-y: auto;
-  margin: 0 0.75rem 0.5rem;
+  margin: 0 1rem 0.5rem;
 }
 
 .dry-run-group-messages table {
