@@ -1,8 +1,7 @@
 import type { ImapClient, ReviewMessage } from '../imap/index.js';
 import { reviewMessageToEmailMessage } from '../imap/index.js';
 import { evaluateRules } from '../rules/index.js';
-import { executeAction } from '../actions/index.js';
-import type { ActionContext } from '../actions/index.js';
+import type { ActionResult } from '../actions/index.js';
 import type { ActivityLog } from '../log/index.js';
 import type { Rule } from '../config/index.js';
 import pinoLib from 'pino';
@@ -16,7 +15,6 @@ export interface BatchDeps {
   client: ImapClient;
   activityLog: ActivityLog;
   rules: Rule[];
-  reviewFolder: string;
   trashFolder: string;
   logger?: pino.Logger;
 }
@@ -155,12 +153,6 @@ export class BatchEngine {
       const messages = await this.deps.client.fetchAllMessages(sourceFolder);
       this.state.totalMessages = messages.length;
 
-      const ctx: ActionContext = {
-        client: this.deps.client,
-        reviewFolder: this.deps.reviewFolder,
-        trashFolder: this.deps.trashFolder,
-      };
-
       for (let i = 0; i < messages.length; i += CHUNK_SIZE) {
         if (this.cancelRequested) {
           this.state.status = 'cancelled';
@@ -180,21 +172,44 @@ export class BatchEngine {
             continue;
           }
 
-          try {
-            const result = await executeAction(ctx, msg, matched);
-            this.deps.activityLog.logActivity(result, msg, matched, 'batch');
+          const destination = this.resolveDestination(matched);
+          const shouldSkip = destination === 'Skip';
+          const actionType = shouldSkip ? 'skip' : matched.action.type === 'delete' ? 'delete' : 'move';
 
-            if (result.success) {
-              this.state.moved++;
+          try {
+            if (shouldSkip) {
+              this.state.skipped++;
             } else {
-              this.state.errors++;
+              await this.deps.client.moveMessage(msg.uid, destination, sourceFolder);
+              this.state.moved++;
             }
+
+            const result: ActionResult = {
+              success: true,
+              messageUid: msg.uid,
+              messageId: msg.messageId,
+              action: actionType,
+              folder: destination,
+              rule: matched.id,
+              timestamp: new Date(),
+            };
+            this.deps.activityLog.logActivity(result, msg, matched, 'batch');
           } catch (err) {
             this.state.errors++;
-            this.logger.error(
-              { uid: raw.uid, error: err instanceof Error ? err.message : String(err) },
-              'Batch message failed',
-            );
+            const error = err instanceof Error ? err.message : String(err);
+            this.logger.error({ uid: raw.uid, error }, 'Batch message failed');
+
+            const result: ActionResult = {
+              success: false,
+              messageUid: msg.uid,
+              messageId: msg.messageId,
+              action: actionType,
+              folder: destination,
+              rule: matched.id,
+              timestamp: new Date(),
+              error,
+            };
+            this.deps.activityLog.logActivity(result, msg, matched, 'batch');
           }
 
           this.state.processed++;
@@ -246,7 +261,7 @@ export class BatchEngine {
       case 'move':
         return rule.action.folder;
       case 'review':
-        return this.deps.reviewFolder;
+        return rule.action.folder ?? 'Skip';
       case 'delete':
         return this.deps.trashFolder;
       case 'skip':

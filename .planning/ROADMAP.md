@@ -60,9 +60,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 03-01-PLAN.md — BatchEngine core class with TDD: dry-run, chunked execution, cancellation, error isolation (BATC-01, BATC-02, BATC-03, BATC-05, BATC-06)
-- [ ] 03-02-PLAN.md — API routes, activity log source update, database indexing, ServerDeps wiring (BATC-01, BATC-03, BATC-05, BATC-06)
-- [ ] 03-03-PLAN.md — Frontend batch page: folder selection, dry-run preview, execution progress, results summary (BATC-01, BATC-05, BATC-06)
+- [x] 03-01-PLAN.md — BatchEngine core class with TDD: dry-run, chunked execution, cancellation, error isolation (BATC-01, BATC-02, BATC-03, BATC-05, BATC-06)
+- [x] 03-02-PLAN.md — API routes, activity log source update, database indexing, ServerDeps wiring (BATC-01, BATC-03, BATC-05, BATC-06)
+- [x] 03-03-PLAN.md — Frontend batch page: folder selection, dry-run preview, execution progress, results summary (BATC-01, BATC-05, BATC-06)
 
 ### Phase 4: Batch Progress UI
 **Goal**: Users see real-time progress during batch filing and a summary report when it completes

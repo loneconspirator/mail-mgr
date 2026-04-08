@@ -29,6 +29,9 @@ Retroactive rule application engine. Users select a source folder, the system ap
 - **D-09:** After cancellation, show partial results summary with moved/skipped/remaining counts.
 - **D-10:** Already-moved messages stay moved after cancellation. No undo in v1 (BATC-08 is v2).
 
+### Destination Resolution
+- **D-15:** Batch uses sweep-style destination resolution, not monitor-style. Review rules with a folder move to that folder (their final destination). Review rules without a folder are skipped — the message stays in the source folder. Rationale: the review folder is a transient triage queue; batch-processing an archive folder should not move manually-filed messages into a default archive. Bias toward leaving messages where they are when no explicit destination exists.
+
 ### Job Lifecycle
 - **D-11:** Batch and monitor share the single IMAP connection. Batch yields between chunks so monitor can process new mail.
 - **D-12:** One batch at a time — UI disables start while a batch is active.

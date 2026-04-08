@@ -52,7 +52,6 @@ async function main(): Promise<void> {
     client: imapClient,
     activityLog,
     rules: config.rules,
-    reviewFolder: config.review.folder,
     trashFolder: config.review.trashFolder,
     logger,
   });
@@ -103,7 +102,6 @@ async function main(): Promise<void> {
       client: newClient,
       activityLog,
       rules: newConfig.rules,
-      reviewFolder: newConfig.review.folder,
       trashFolder: newConfig.review.trashFolder,
       logger,
     });

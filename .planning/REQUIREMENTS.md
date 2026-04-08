@@ -21,7 +21,7 @@
 ### Batch Filing
 
 - [ ] **BATC-01**: User can batch-file messages in a selected source folder against one, multiple, or all rules
-- [ ] **BATC-02**: Batch evaluation uses sweep-style rule matching (first-match-wins across selected rules) without age constraints
+- [ ] **BATC-02**: Batch evaluation uses sweep-style destination resolution (first-match-wins, review rules resolve to their final folder not the review folder, review rules without a folder are skipped) without age constraints
 - [ ] **BATC-03**: Batch processing uses chunked IMAP moves with per-message error isolation
 - [ ] **BATC-04**: Real-time progress reported to UI via Server-Sent Events
 - [ ] **BATC-05**: User can cancel a running batch (stops after current chunk completes)

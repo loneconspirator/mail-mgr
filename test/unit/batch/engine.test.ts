@@ -4,22 +4,16 @@ import type { ImapClient, ReviewMessage } from '../../../src/imap/index.js';
 import type { ActivityLog } from '../../../src/log/index.js';
 import pino from 'pino';
 
-vi.mock('../../../src/actions/index.js', () => ({
-  executeAction: vi.fn(),
-}));
-
 vi.mock('../../../src/rules/index.js', () => ({
   evaluateRules: vi.fn(),
 }));
 
 import { BatchEngine } from '../../../src/batch/index.js';
 import type { BatchDeps, BatchState, DryRunGroup } from '../../../src/batch/index.js';
-import { executeAction } from '../../../src/actions/index.js';
 import { evaluateRules } from '../../../src/rules/index.js';
 
 const silentLogger = pino({ level: 'silent' });
 
-const mockedExecuteAction = vi.mocked(executeAction);
 const mockedEvaluateRules = vi.mocked(evaluateRules);
 
 function makeReviewMessage(overrides: Partial<ReviewMessage> = {}): ReviewMessage {
@@ -70,7 +64,6 @@ function makeDeps(overrides: Partial<BatchDeps> = {}): BatchDeps {
     client: makeMockClient(),
     activityLog: makeMockActivityLog(),
     rules: [makeRule()],
-    reviewFolder: 'Review',
     trashFolder: 'Trash',
     logger: silentLogger,
     ...overrides,
@@ -212,22 +205,13 @@ describe('BATC-01: evaluates all messages', () => {
     (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
     const rule = makeRule();
     mockedEvaluateRules.mockReturnValue(rule);
-    mockedExecuteAction.mockResolvedValue({
-      success: true,
-      messageUid: 1,
-      messageId: '<msg-1@example.com>',
-      action: 'move',
-      folder: 'Archive/Lists',
-      rule: 'rule-1',
-      timestamp: new Date(),
-    });
 
     const engine = new BatchEngine(deps);
     await engine.execute('TestFolder');
 
     expect(deps.client.fetchAllMessages).toHaveBeenCalledWith('TestFolder');
     expect(mockedEvaluateRules).toHaveBeenCalledTimes(2);
-    expect(mockedExecuteAction).toHaveBeenCalledTimes(2);
+    expect(deps.client.moveMessage).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -236,27 +220,13 @@ describe('BATC-02: first-match-wins without age constraints', () => {
     const deps = makeDeps();
     const messages = makeMessages(1);
     (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
-    const firstRule = makeRule({ id: 'first', name: 'First Rule', order: 1 });
-    // evaluateRules already implements first-match-wins, so it returns the first rule
+    const firstRule = makeRule({ id: 'first', name: 'First Rule', order: 1, action: { type: 'move', folder: 'Archive/Lists' } });
     mockedEvaluateRules.mockReturnValue(firstRule);
-    mockedExecuteAction.mockResolvedValue({
-      success: true,
-      messageUid: 1,
-      messageId: '<msg-1@example.com>',
-      action: 'move',
-      folder: 'Archive/Lists',
-      rule: 'first',
-      timestamp: new Date(),
-    });
 
     const engine = new BatchEngine(deps);
     await engine.execute('TestFolder');
 
-    expect(mockedExecuteAction).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.anything(),
-      firstRule,
-    );
+    expect(deps.client.moveMessage).toHaveBeenCalledWith(1, 'Archive/Lists', 'TestFolder');
   });
 
   it('processes all messages regardless of age (no isEligibleForSweep)', async () => {
@@ -311,16 +281,10 @@ describe('BATC-03: chunked execution with per-message error isolation', () => {
     (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
     const rule = makeRule();
     mockedEvaluateRules.mockReturnValue(rule);
-    mockedExecuteAction
-      .mockResolvedValueOnce({
-        success: true, messageUid: 1, messageId: '<msg-1>', action: 'move',
-        folder: 'Archive/Lists', rule: 'rule-1', timestamp: new Date(),
-      })
+    (deps.client.moveMessage as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error('IMAP timeout'))
-      .mockResolvedValueOnce({
-        success: true, messageUid: 3, messageId: '<msg-3>', action: 'move',
-        folder: 'Archive/Lists', rule: 'rule-1', timestamp: new Date(),
-      });
+      .mockResolvedValueOnce(undefined);
 
     const engine = new BatchEngine(deps);
     await engine.execute('TestFolder');
@@ -346,16 +310,13 @@ describe('BATC-03: chunked execution with per-message error isolation', () => {
     expect(state.skipped).toBe(5);
   });
 
-  it('counts failed action results as errors', async () => {
+  it('counts failed moves as errors', async () => {
     const deps = makeDeps();
     const messages = makeMessages(1);
     (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
     const rule = makeRule();
     mockedEvaluateRules.mockReturnValue(rule);
-    mockedExecuteAction.mockResolvedValue({
-      success: false, messageUid: 1, messageId: '<msg-1>', action: 'move',
-      folder: 'Archive/Lists', rule: 'rule-1', timestamp: new Date(), error: 'Failed',
-    });
+    (deps.client.moveMessage as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Move failed'));
 
     const engine = new BatchEngine(deps);
     await engine.execute('TestFolder');
@@ -407,10 +368,6 @@ describe('BATC-05: cancel stops after current chunk', () => {
     (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
     const rule = makeRule();
     mockedEvaluateRules.mockReturnValue(rule);
-    mockedExecuteAction.mockResolvedValue({
-      success: true, messageUid: 1, messageId: '<msg-1>', action: 'move',
-      folder: 'Archive/Lists', rule: 'rule-1', timestamp: new Date(),
-    });
 
     const engine = new BatchEngine(deps);
 
@@ -433,7 +390,7 @@ describe('BATC-05: cancel stops after current chunk', () => {
 });
 
 describe('BATC-06: dry-run mode', () => {
-  it('dryRun does NOT call executeAction', async () => {
+  it('dryRun does NOT call moveMessage', async () => {
     const deps = makeDeps();
     const messages = makeMessages(3);
     (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
@@ -442,7 +399,7 @@ describe('BATC-06: dry-run mode', () => {
     const engine = new BatchEngine(deps);
     await engine.dryRun('TestFolder');
 
-    expect(mockedExecuteAction).not.toHaveBeenCalled();
+    expect(deps.client.moveMessage).not.toHaveBeenCalled();
   });
 
   it('dryRun returns DryRunGroup[] with destination, action, count, messages', async () => {
@@ -553,19 +510,59 @@ describe('BatchEngine logActivity', () => {
     (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
     const rule = makeRule();
     mockedEvaluateRules.mockReturnValue(rule);
-    mockedExecuteAction.mockResolvedValue({
-      success: true, messageUid: 1, messageId: '<msg-1@example.com>',
-      action: 'move', folder: 'Archive/Lists', rule: 'rule-1', timestamp: new Date(),
-    });
 
     const engine = new BatchEngine(deps);
     await engine.execute('TestFolder');
 
     expect(deps.activityLog.logActivity).toHaveBeenCalledWith(
-      expect.anything(),
+      expect.objectContaining({ success: true, action: 'move', folder: 'Archive/Lists' }),
       expect.anything(),
       rule,
       'batch',
     );
+  });
+});
+
+describe('BatchEngine review rule resolution', () => {
+  it('review rules with folder resolve to that folder, not the review folder', async () => {
+    const deps = makeDeps();
+    const messages = makeMessages(1);
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
+    const reviewRule = makeRule({ name: 'Review Rule', action: { type: 'review', folder: 'Newsletters' } });
+    mockedEvaluateRules.mockReturnValue(reviewRule);
+
+    const engine = new BatchEngine(deps);
+    await engine.execute('TestFolder');
+
+    expect(deps.client.moveMessage).toHaveBeenCalledWith(1, 'Newsletters', 'TestFolder');
+  });
+
+  it('review rules without folder are skipped (message stays in source folder)', async () => {
+    const deps = makeDeps();
+    const messages = makeMessages(1);
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
+    const reviewRule = makeRule({ name: 'Review Rule', action: { type: 'review' } });
+    mockedEvaluateRules.mockReturnValue(reviewRule);
+
+    const engine = new BatchEngine(deps);
+    await engine.execute('TestFolder');
+
+    expect(deps.client.moveMessage).not.toHaveBeenCalled();
+    const state = engine.getState();
+    expect(state.skipped).toBe(1);
+    expect(state.moved).toBe(0);
+  });
+
+  it('dry-run shows final destination for review rules, not review folder', async () => {
+    const deps = makeDeps();
+    const messages = makeMessages(1);
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
+    const reviewRule = makeRule({ name: 'Review Rule', action: { type: 'review', folder: 'Newsletters' } });
+    mockedEvaluateRules.mockReturnValue(reviewRule);
+
+    const engine = new BatchEngine(deps);
+    const groups = await engine.dryRun('TestFolder');
+
+    expect(groups[0].destination).toBe('Newsletters');
   });
 });
