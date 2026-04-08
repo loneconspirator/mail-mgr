@@ -28,8 +28,8 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 
 ### Active
 
-- [ ] Folder taxonomy discovery from IMAP server (list available folders with hierarchy)
-- [ ] Tree picker UI component for folder selection in rule editor
+- ✓ Folder taxonomy discovery from IMAP server (list available folders with hierarchy) — v0.3 Phase 1
+- ✓ Tree picker UI component for folder selection in rule editor — v0.3 Phase 2
 - [ ] Retroactive batch filing (apply a rule to existing messages in a folder)
 - [ ] Batch filing progress reporting and interruptibility
 - [ ] Default archive destination configurable per-stream
@@ -53,7 +53,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - **Mail client:** Mac Mail (folders only, no tags/labels)
 - **Database:** SQLite via better-sqlite3
 - **Web UI:** Vanilla HTML/CSS/JS SPA served by Fastify
-- **Testing:** Vitest with 230+ tests (unit + integration)
+- **Testing:** Vitest with 284+ tests (unit + integration)
 - **Architecture:** Monitor loop polls IMAP, evaluates rules, executes actions, logs activity. Sweep runs periodically on Review folder. Web server exposes REST API for UI.
 - **Key insight:** Folder structure is owned by the mail client/IMAP server, not this application. The system discovers what folders exist and uses them — it does not create or manage them.
 - **User's email history:** 20 years of accumulated mail with inconsistent organization. The folder taxonomy needs to work with what exists, not impose a new structure.
@@ -69,8 +69,8 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Folder taxonomy discovered from server, not managed in app | User manages folders in Mac Mail; app should reflect reality, not duplicate management | — Pending |
-| Tree picker for folder selection | Current text input doesn't show available folders; visual hierarchy aids rule creation | — Pending |
+| Folder taxonomy discovered from server, not managed in app | User manages folders in Mac Mail; app should reflect reality, not duplicate management | ✓ Good |
+| Tree picker for folder selection | Current text input doesn't show available folders; visual hierarchy aids rule creation | ✓ Good |
 | Retroactive batch filing included in Tier 3 | User needs to reorganize existing mail into taxonomy — critical for 20 years of accumulated email | — Pending |
 | v0.2 cleanup folded into Tier 3 | Sweep settings UI and stale sweeper ref are small fixes that belong with the next milestone | — Pending |
 | First-match-wins rule evaluation | Simple, predictable, easy to reason about ordering | ✓ Good |
@@ -95,4 +95,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-07 — Phase 1 (Folder Discovery) complete: IMAP folder hierarchy API with caching, folder validation warnings on rule save*
+*Last updated: 2026-04-07 — Phase 2 (Tree Picker) complete: interactive folder picker replaces text input in rule editor, with expand/collapse tree, recent folders, selection state*
