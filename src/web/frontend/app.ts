@@ -472,22 +472,290 @@ async function renderBatch(): Promise<void> {
 
 function renderBatchIdle(app: HTMLElement): void {
   app.innerHTML = '';
-  app.append(h('div', { className: 'settings-card' },
+  let selectedFolder = '';
+
+  const card = h('div', { className: 'settings-card' });
+  card.append(
     h('h2', {}, 'Batch Filing'),
-    h('p', {}, 'Select a source folder to apply all rules against its messages.'),
-  ));
+    h('p', { style: 'color:#444;margin-bottom:1rem' }, 'Select a source folder to apply all rules against its messages.'),
+  );
+
+  const pickerDiv = document.createElement('div');
+  card.append(pickerDiv);
+
+  const btn = document.createElement('button');
+  btn.className = 'btn btn-primary';
+  btn.textContent = 'Preview Dry Run';
+  btn.disabled = true;
+  btn.style.marginTop = '1rem';
+  card.append(btn);
+
+  renderFolderPicker({
+    container: pickerDiv,
+    currentValue: '',
+    onSelect: (folder: string) => {
+      selectedFolder = folder;
+      btn.disabled = !folder;
+    },
+  });
+
+  btn.addEventListener('click', () => {
+    if (selectedFolder) startDryRun(app, selectedFolder);
+  });
+
+  // Check if batch is already running
+  api.batch.status().then((state) => {
+    if (state.status === 'executing' || state.status === 'dry-running') {
+      const info = h('p', { style: 'color:#888;margin-top:0.5rem;font-size:0.9rem' }, 'A batch is already running.');
+      card.insertBefore(info, btn);
+      btn.disabled = true;
+    }
+  }).catch(() => { /* ignore */ });
+
+  app.append(card);
 }
 
-function renderBatchPreview(app: HTMLElement, _folder: string, _groups: DryRunGroup[], _total: number): void {
-  app.innerHTML = 'Preview placeholder';
+async function startDryRun(app: HTMLElement, folder: string): Promise<void> {
+  app.innerHTML = '';
+  const card = h('div', { className: 'settings-card' });
+  const loadingText = h('div', { className: 'loading-pulse' });
+  loadingText.append(document.createTextNode('Evaluating rules against '), h('strong', {}, folder), document.createTextNode('...'));
+  card.append(loadingText);
+  app.append(card);
+
+  try {
+    const response = await api.batch.dryRun(folder);
+    const totalMessages = response.results.reduce((sum, g) => sum + g.count, 0);
+    renderBatchPreview(app, folder, response.results, totalMessages);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    toast('Dry run failed: ' + message + '. Check your IMAP connection and try again.', true);
+    renderBatchIdle(app);
+  }
 }
 
-function renderBatchExecuting(app: HTMLElement, _state: BatchStatusResponse): void {
-  app.innerHTML = 'Executing placeholder';
+function renderBatchPreview(app: HTMLElement, folder: string, groups: DryRunGroup[], totalMessages: number): void {
+  app.innerHTML = '';
+
+  const card = h('div', { className: 'settings-card' });
+  card.append(h('h2', {}, 'Dry Run Preview'));
+
+  // Separate no-match group
+  const matchGroups = groups.filter(g => g.action !== 'skip' || g.destination !== '');
+  const noMatchGroup = groups.find(g => g.action === 'skip' && g.destination === '');
+  const matchedCount = matchGroups.reduce((sum, g) => sum + g.count, 0);
+
+  const summary = h('p', { style: 'margin:0.5rem 0 1rem;font-size:0.9rem;color:#444' });
+  summary.textContent = matchedCount + ' of ' + totalMessages + ' messages matched';
+  card.append(summary);
+
+  // Render match groups
+  for (const group of matchGroups) {
+    card.append(buildDryRunGroup(group, false));
+  }
+
+  // Render no-match group last
+  if (noMatchGroup) {
+    card.append(buildDryRunGroup(noMatchGroup, true));
+  }
+
+  // Action bar
+  const actionBar = h('div', { style: 'display:flex;justify-content:space-between;margin-top:1rem' });
+
+  const backBtn = h('button', { className: 'btn' }, 'Back');
+  backBtn.addEventListener('click', () => renderBatchIdle(app));
+
+  const runBtn = h('button', { className: 'btn btn-primary' }, 'Run Batch');
+  runBtn.addEventListener('click', () => startExecute(app, folder));
+
+  actionBar.append(backBtn, runBtn);
+  card.append(actionBar);
+
+  app.append(card);
 }
 
-function renderBatchResults(app: HTMLElement, _state: BatchStatusResponse): void {
-  app.innerHTML = 'Results placeholder';
+function buildDryRunGroup(group: DryRunGroup, isNoMatch: boolean): HTMLElement {
+  const wrapper = h('div', { className: isNoMatch ? 'dry-run-group no-match' : 'dry-run-group' });
+
+  const header = h('div', { className: 'dry-run-group-header' });
+  const toggle = h('span', { className: 'dry-run-group-toggle' }, '\u25B6');
+
+  const name = h('span', { className: 'dry-run-group-name' });
+  name.textContent = isNoMatch ? 'No match (stay in folder)' : group.destination;
+
+  const count = h('span', { className: 'dry-run-group-count' });
+  count.textContent = '(' + group.count + ')';
+
+  header.append(toggle, name, count);
+
+  const messagesDiv = h('div', { className: 'dry-run-group-messages' });
+  messagesDiv.style.display = 'none';
+
+  const table = document.createElement('table');
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  headRow.append(h('th', {}, 'From'), h('th', {}, 'Subject'), h('th', {}, 'Rule'));
+  thead.append(headRow);
+  table.append(thead);
+
+  const tbody = document.createElement('tbody');
+  for (const msg of group.messages) {
+    const tr = document.createElement('tr');
+    const fromCell = h('td', {});
+    fromCell.textContent = msg.from;
+    const subjectCell = h('td', { style: 'max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap' });
+    subjectCell.textContent = msg.subject;
+    const ruleCell = h('td', {});
+    ruleCell.textContent = msg.ruleName;
+    tr.append(fromCell, subjectCell, ruleCell);
+    tbody.append(tr);
+  }
+  table.append(tbody);
+  messagesDiv.append(table);
+
+  let expanded = false;
+  header.addEventListener('click', () => {
+    expanded = !expanded;
+    toggle.textContent = expanded ? '\u25BC' : '\u25B6';
+    messagesDiv.style.display = expanded ? '' : 'none';
+  });
+
+  wrapper.append(header, messagesDiv);
+  return wrapper;
+}
+
+async function startExecute(app: HTMLElement, folder: string): Promise<void> {
+  try {
+    await api.batch.execute(folder);
+    const state = await api.batch.status();
+    renderBatchExecuting(app, state);
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message.includes('409') || message.toLowerCase().includes('already')) {
+      toast('A batch is already running. Wait for it to complete or cancel it first.', true);
+    } else {
+      toast('Batch error: ' + message, true);
+    }
+  }
+}
+
+function renderBatchExecuting(app: HTMLElement, state: BatchStatusResponse): void {
+  app.innerHTML = '';
+
+  const card = h('div', { className: 'settings-card' });
+  card.append(h('h2', {}, 'Batch Running'));
+
+  const progressText = h('p', { style: 'font-size:0.9rem;color:#444' });
+  progressText.textContent = state.processed + ' of ' + state.totalMessages + ' messages processed';
+  card.append(progressText);
+
+  const progressBar = h('div', { className: 'progress-bar' });
+  const progressFill = h('div', { className: 'progress-bar-fill' });
+  const pct = state.totalMessages > 0 ? (state.processed / state.totalMessages * 100) : 0;
+  progressFill.style.width = pct + '%';
+  progressBar.append(progressFill);
+  card.append(progressBar);
+
+  const counts = h('div', { className: 'batch-counts' });
+  const movedSpan = h('span', {});
+  movedSpan.textContent = 'Moved: ' + state.moved;
+  const skippedSpan = h('span', {});
+  skippedSpan.textContent = 'Skipped: ' + state.skipped;
+  const errorsSpan = h('span', { className: state.errors > 0 ? 'error-count' : '' });
+  errorsSpan.textContent = 'Errors: ' + state.errors;
+  counts.append(movedSpan, skippedSpan, errorsSpan);
+  card.append(counts);
+
+  const cancelBtn = h('button', { className: 'btn btn-danger' }, 'Cancel Batch');
+  cancelBtn.style.marginTop = '1rem';
+  cancelBtn.addEventListener('click', async () => {
+    cancelBtn.textContent = 'Cancelling...';
+    cancelBtn.setAttribute('disabled', 'true');
+    try {
+      await api.batch.cancel();
+    } catch { /* ignore */ }
+  });
+  card.append(cancelBtn);
+
+  app.append(card);
+
+  // Start polling
+  batchPollTimer = setInterval(async () => {
+    try {
+      const s = await api.batch.status();
+      if (s.status === 'executing') {
+        // Update progress in place
+        progressText.textContent = s.processed + ' of ' + s.totalMessages + ' messages processed';
+        const newPct = s.totalMessages > 0 ? (s.processed / s.totalMessages * 100) : 0;
+        progressFill.style.width = newPct + '%';
+        movedSpan.textContent = 'Moved: ' + s.moved;
+        skippedSpan.textContent = 'Skipped: ' + s.skipped;
+        errorsSpan.textContent = 'Errors: ' + s.errors;
+        errorsSpan.className = s.errors > 0 ? 'error-count' : '';
+      } else {
+        if (batchPollTimer) { clearInterval(batchPollTimer); batchPollTimer = null; }
+        renderBatchResults(app, s);
+      }
+    } catch {
+      // Poll error — keep trying
+    }
+  }, 2000);
+}
+
+function renderBatchResults(app: HTMLElement, state: BatchStatusResponse): void {
+  app.innerHTML = '';
+  if (batchPollTimer) { clearInterval(batchPollTimer); batchPollTimer = null; }
+
+  const card = h('div', { className: 'settings-card' });
+
+  let headingText: string;
+  let badgeClass: string;
+  if (state.status === 'completed') {
+    headingText = 'Batch Complete';
+    badgeClass = 'status-badge connected';
+  } else if (state.status === 'cancelled') {
+    headingText = 'Batch Cancelled';
+    badgeClass = 'status-badge connecting';
+  } else {
+    headingText = 'Batch Error';
+    badgeClass = 'status-badge disconnected';
+  }
+
+  const heading = h('h2', {});
+  heading.append(document.createTextNode(headingText + ' '), h('span', { className: badgeClass }, state.status));
+  card.append(heading);
+
+  // Stats grid
+  const stats = h('div', { className: 'review-stats' });
+
+  const movedItem = h('div', { className: 'stat-item' });
+  movedItem.append(h('div', { className: 'stat-value' }, String(state.moved)), h('div', { className: 'stat-label' }, 'MOVED'));
+
+  const skippedItem = h('div', { className: 'stat-item' });
+  skippedItem.append(h('div', { className: 'stat-value' }, String(state.skipped)), h('div', { className: 'stat-label' }, 'SKIPPED'));
+
+  const errorsItem = h('div', { className: 'stat-item' });
+  const errorsValue = h('div', { className: 'stat-value' }, String(state.errors));
+  if (state.errors > 0) errorsValue.style.color = '#dc2626';
+  errorsItem.append(errorsValue, h('div', { className: 'stat-label' }, 'ERRORS'));
+
+  stats.append(movedItem, skippedItem, errorsItem);
+  card.append(stats);
+
+  // Remaining count for cancelled
+  if (state.status === 'cancelled') {
+    const remaining = state.totalMessages - state.processed;
+    const remainingText = h('p', { style: 'font-size:0.9rem;color:#888;margin-top:0.5rem' });
+    remainingText.textContent = 'Remaining: ' + remaining + ' messages not processed';
+    card.append(remainingText);
+  }
+
+  const newBatchBtn = h('button', { className: 'btn btn-primary' }, 'New Batch');
+  newBatchBtn.style.marginTop = '1rem';
+  newBatchBtn.addEventListener('click', () => renderBatchIdle(app));
+  card.append(newBatchBtn);
+
+  app.append(card);
 }
 
 // --- Init ---
