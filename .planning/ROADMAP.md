@@ -73,11 +73,11 @@ Plans:
   3. Config reload no longer leaves a stale sweeper reference in ServerDeps
   4. User can toggle message cursor persistence on/off in settings
   5. Rules with blank names auto-generate a description from their match criteria and action
-**Plans**: TBD
+**Plans**: 2 plans
 
 Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
+- [ ] 04-01-PLAN.md — Optional rule name schema change, behavior description generator, rule table display update (CONF-05)
+- [ ] 04-02-PLAN.md — Editable sweep settings card with tree pickers, stale sweeper fix, cursor toggle (CONF-01, CONF-02, CONF-03, CONF-04)
 
 ## Progress
 
@@ -90,4 +90,4 @@ Note: Phase 4 has no dependency on Phases 2-3 and could run in parallel if inser
 | 1. Folder Discovery | 0/2 | Planning complete | - |
 | 2. Tree Picker | 0/2 | Planning complete | - |
 | 3. Batch Filing Engine | 0/3 | Planning complete | - |
-| 4. Config & Cleanup | 0/0 | Not started | - |
+| 4. Config & Cleanup | 0/2 | Planning complete | - |
