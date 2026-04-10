@@ -1,8 +1,9 @@
 import type { ImapClient, ReviewMessage } from '../imap/index.js';
 import { reviewMessageToEmailMessage } from '../imap/index.js';
 import { evaluateRules } from '../rules/index.js';
-import { isEligibleForSweep, resolveSweepDestination } from '../sweep/index.js';
-import type { ActionResult } from '../actions/index.js';
+import { isEligibleForSweep, resolveSweepDestination, processSweepMessage } from '../sweep/index.js';
+import { executeAction } from '../actions/index.js';
+import type { ActionContext, ActionResult } from '../actions/index.js';
 import type { ActivityLog } from '../log/index.js';
 import type { Rule, ReviewConfig } from '../config/index.js';
 import pinoLib from 'pino';
@@ -196,41 +197,18 @@ export class BatchEngine {
               continue;
             }
 
-            const sweep = resolveSweepDestination(raw, this.deps.rules, this.deps.reviewConfig!.defaultArchiveFolder);
-            const folder = sweep.destination.type === 'delete' ? this.deps.trashFolder : sweep.destination.folder;
-            const actionType = sweep.destination.type === 'delete' ? 'delete' : 'move';
-
-            try {
-              await this.deps.client.moveMessage(msg.uid, folder, sourceFolder);
-              this.state.moved++;
-
-              const result: ActionResult = {
-                success: true,
-                messageUid: msg.uid,
-                messageId: msg.messageId,
-                action: actionType,
-                folder,
-                rule: sweep.matchedRule?.id ?? '',
-                timestamp: new Date(),
-              };
-              this.deps.activityLog.logActivity(result, msg, sweep.matchedRule, 'batch');
-            } catch (err) {
-              this.state.errors++;
-              const error = err instanceof Error ? err.message : String(err);
-              this.logger.error({ uid: raw.uid, error }, 'Batch message failed');
-
-              const result: ActionResult = {
-                success: false,
-                messageUid: msg.uid,
-                messageId: msg.messageId,
-                action: actionType,
-                folder,
-                rule: sweep.matchedRule?.id ?? '',
-                timestamp: new Date(),
-                error,
-              };
-              this.deps.activityLog.logActivity(result, msg, sweep.matchedRule, 'batch');
-            }
+            const sweepResult = await processSweepMessage(raw, {
+              client: this.deps.client,
+              activityLog: this.deps.activityLog,
+              rules: this.deps.rules,
+              defaultArchiveFolder: this.deps.reviewConfig!.defaultArchiveFolder,
+              trashFolder: this.deps.trashFolder,
+              sourceFolder,
+              source: 'batch',
+              logger: this.logger,
+            });
+            if (sweepResult.action === 'moved') this.state.moved++;
+            else this.state.errors++;
 
             this.state.processed++;
             continue;
@@ -245,6 +223,29 @@ export class BatchEngine {
             continue;
           }
 
+          // INBOX mode: delegate to executeAction for full action handling
+          if (mode === 'inbox') {
+            const ctx: ActionContext = {
+              client: this.deps.client,
+              reviewFolder: this.deps.reviewFolder!,
+              trashFolder: this.deps.trashFolder,
+              sourceFolder,
+            };
+            const result = await executeAction(ctx, msg, matched);
+            if (result.action === 'skip') {
+              this.state.skipped++;
+            } else if (result.success) {
+              this.state.moved++;
+            } else {
+              this.state.errors++;
+              this.logger.error({ uid: raw.uid, error: result.error }, 'Batch message failed');
+            }
+            this.deps.activityLog.logActivity(result, msg, matched, 'batch');
+            this.state.processed++;
+            continue;
+          }
+
+          // Generic mode: manual destination resolution
           const destination = this.resolveDestination(matched, sourceFolder);
           const shouldSkip = destination === 'Skip';
           const actionType = shouldSkip ? 'skip' : matched.action.type === 'delete' ? 'delete' : 'move';

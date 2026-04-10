@@ -11,15 +11,17 @@ vi.mock('../../../src/rules/index.js', () => ({
 vi.mock('../../../src/sweep/index.js', () => ({
   isEligibleForSweep: vi.fn(),
   resolveSweepDestination: vi.fn(),
+  processSweepMessage: vi.fn(),
 }));
 
 import { BatchEngine } from '../../../src/batch/index.js';
 import type { BatchDeps, BatchState, DryRunGroup } from '../../../src/batch/index.js';
 import { evaluateRules } from '../../../src/rules/index.js';
-import { isEligibleForSweep, resolveSweepDestination } from '../../../src/sweep/index.js';
+import { isEligibleForSweep, resolveSweepDestination, processSweepMessage } from '../../../src/sweep/index.js';
 
 const mockedIsEligible = vi.mocked(isEligibleForSweep);
 const mockedResolveSweep = vi.mocked(resolveSweepDestination);
+const mockedProcessSweepMessage = vi.mocked(processSweepMessage);
 
 const silentLogger = pino({ level: 'silent' });
 
@@ -668,36 +670,43 @@ describe('BatchEngine Review mode', () => {
     expect(state.skipped).toBe(1);
   });
 
-  it('eligible messages use resolveSweepDestination', async () => {
+  it('eligible messages use processSweepMessage', async () => {
     const deps = makeDeps();
     const messages = makeMessages(1);
     (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
     mockedIsEligible.mockReturnValue(true);
-    mockedResolveSweep.mockReturnValue({
-      destination: { type: 'move', folder: 'Archive/Lists' },
-      matchedRule: makeRule(),
-    });
+    mockedProcessSweepMessage.mockResolvedValue({ action: 'moved', destination: 'Archive/Lists' });
 
     const engine = new BatchEngine(deps);
     await engine.execute('Review');
 
-    expect(deps.client.moveMessage).toHaveBeenCalledWith(1, 'Archive/Lists', 'Review');
+    expect(mockedProcessSweepMessage).toHaveBeenCalledWith(
+      messages[0],
+      expect.objectContaining({
+        client: deps.client,
+        trashFolder: 'Trash',
+        sourceFolder: 'Review',
+        source: 'batch',
+        defaultArchiveFolder: 'MailingLists',
+      }),
+    );
+    const state = engine.getState();
+    expect(state.moved).toBe(1);
   });
 
-  it('eligible delete destination routes to trash', async () => {
+  it('eligible delete destination routes to trash via processSweepMessage', async () => {
     const deps = makeDeps();
     const messages = makeMessages(1);
     (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
     mockedIsEligible.mockReturnValue(true);
-    mockedResolveSweep.mockReturnValue({
-      destination: { type: 'delete' },
-      matchedRule: makeRule({ action: { type: 'delete' } }),
-    });
+    mockedProcessSweepMessage.mockResolvedValue({ action: 'moved', destination: 'Trash' });
 
     const engine = new BatchEngine(deps);
     await engine.execute('Review');
 
-    expect(deps.client.moveMessage).toHaveBeenCalledWith(1, 'Trash', 'Review');
+    expect(mockedProcessSweepMessage).toHaveBeenCalled();
+    const state = engine.getState();
+    expect(state.moved).toBe(1);
   });
 
   it('dry-run Review shows Not yet eligible for ineligible messages', async () => {
