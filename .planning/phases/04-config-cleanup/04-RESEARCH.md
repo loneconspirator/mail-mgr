@@ -287,17 +287,15 @@ name: z.string().optional(),
 | A2 | `cursorEnabled` state key name is appropriate | Code Examples | Low risk — just a naming choice for the state table key |
 | A3 | Shallow merge pitfall is real (sweep sub-object replaced entirely) | Pitfalls | HIGH risk — if merge is actually deep, frontend could send partial sweep objects. Verified it IS shallow from code. |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Is the stale sweeper reference (CONF-03) actually a bug?**
+1. **Is the stale sweeper reference (CONF-03) actually a bug?** (RESOLVED)
    - What we know: `getSweeper: () => sweeper` captures the `let sweeper` binding. Reassignment in `onReviewConfigChange` should be visible to the getter.
-   - What's unclear: Whether there's a timing window where routes could read the old instance during async rebuild (sweeper stopped but new one not yet assigned).
-   - Recommendation: Write a targeted test or add logging before/after reassignment. The timing gap between `sweeper.stop()` (line 70) and `sweeper = new ReviewSweeper(...)` (line 73) is the risk window — `getSweeper()` could return a stopped sweeper during this window.
+   - Resolution: YES, it is a real bug. The getter closure tracks the binding correctly, but there is an async gap between `sweeper.stop()` (line 70) and `sweeper = new ReviewSweeper(...)` (line 73) where `getSpecialUseFolder` awaits. During this window, `getSweeper()` returns the STOPPED old sweeper instance. Fix: set `sweeper = undefined` before the async gap so routes see undefined (which they already handle) instead of a stopped instance.
 
-2. **How should the cursor toggle be exposed in the UI?**
-   - What we know: It's a boolean setting stored in SQLite state table
-   - What's unclear: Should it be on the Sweep Settings card or a separate "Advanced" section?
-   - Recommendation: Add it as a checkbox in the Sweep Settings card with a brief explanation. Claude's discretion per CONTEXT.md.
+2. **How should the cursor toggle be exposed in the UI?** (RESOLVED)
+   - What we know: It's a boolean setting stored in SQLite state table.
+   - Resolution: Add as a checkbox on the Sweep Settings card with label "Enable message cursor (resume from last UID)". Per Claude's discretion in CONTEXT.md, keeping it on the same card avoids a separate "Advanced" section for a single toggle.
 
 ## Sources
 
@@ -324,7 +322,7 @@ name: z.string().optional(),
 - Standard stack: HIGH — no new dependencies, all existing
 - Architecture: HIGH — follows established patterns visible in codebase
 - Pitfalls: HIGH — all verified from actual code inspection
-- CONF-03 bug status: MEDIUM — getter pattern looks correct but timing gap needs investigation
+- CONF-03 bug status: HIGH — confirmed as real timing gap bug, resolution defined
 
 **Research date:** 2026-04-10
 **Valid until:** 2026-05-10 (stable — internal codebase patterns unlikely to change)
