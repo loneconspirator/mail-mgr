@@ -59,7 +59,7 @@ describe('executeAction', () => {
     expect(result.messageId).toBe('<msg-42@example.com>');
     expect(result.rule).toBe('test-rule');
     expect(result.timestamp).toBeInstanceOf(Date);
-    expect(moveMessage).toHaveBeenCalledWith(42, 'Archive/Test');
+    expect(moveMessage).toHaveBeenCalledWith(42, 'Archive/Test', undefined);
   });
 
   it('auto-creates folder and retries when move fails', async () => {
@@ -129,7 +129,7 @@ describe('executeAction', () => {
     expect(result.success).toBe(true);
     expect(result.action).toBe('review');
     expect(result.folder).toBe('Review');
-    expect(moveMessage).toHaveBeenCalledWith(42, 'Review');
+    expect(moveMessage).toHaveBeenCalledWith(42, 'Review', undefined);
   });
 
   it('review action always routes to review folder even when rule has folder field', async () => {
@@ -142,7 +142,7 @@ describe('executeAction', () => {
     expect(result.success).toBe(true);
     expect(result.action).toBe('review');
     expect(result.folder).toBe('Review');
-    expect(moveMessage).toHaveBeenCalledWith(42, 'Review');
+    expect(moveMessage).toHaveBeenCalledWith(42, 'Review', undefined);
   });
 
   it('skip action returns success without any IMAP calls', async () => {
@@ -170,6 +170,6 @@ describe('executeAction', () => {
     expect(result.success).toBe(true);
     expect(result.action).toBe('delete');
     expect(result.folder).toBe('Trash');
-    expect(moveMessage).toHaveBeenCalledWith(42, 'Trash');
+    expect(moveMessage).toHaveBeenCalledWith(42, 'Trash', undefined);
   });
 });

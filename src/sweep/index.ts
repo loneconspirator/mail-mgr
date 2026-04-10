@@ -58,6 +58,64 @@ export function isEligibleForSweep(
   return ageDays >= threshold;
 }
 
+export interface ProcessSweepMessageDeps {
+  client: ImapClient;
+  activityLog: ActivityLog;
+  rules: Rule[];
+  defaultArchiveFolder: string;
+  trashFolder: string;
+  sourceFolder: string;
+  source: 'sweep' | 'batch';
+  logger: pino.Logger;
+}
+
+export interface ProcessSweepMessageResult {
+  action: 'moved' | 'error';
+  destination: string;
+}
+
+/** Process a single ReviewMessage through the sweep pipeline: resolve destination, move, log activity. */
+export async function processSweepMessage(
+  msg: ReviewMessage,
+  deps: ProcessSweepMessageDeps,
+): Promise<ProcessSweepMessageResult> {
+  const { destination: dest, matchedRule } = resolveSweepDestination(msg, deps.rules, deps.defaultArchiveFolder);
+  const folder = dest.type === 'delete' ? deps.trashFolder : dest.folder;
+  const emailMsg = reviewMessageToEmailMessage(msg);
+
+  try {
+    await deps.client.moveMessage(msg.uid, folder, deps.sourceFolder);
+
+    const result = {
+      success: true as const,
+      messageUid: msg.uid,
+      messageId: msg.envelope.messageId,
+      action: dest.type === 'delete' ? 'delete' : 'move',
+      folder,
+      rule: matchedRule?.name ?? '',
+      timestamp: new Date(),
+    };
+    deps.activityLog.logActivity(result, emailMsg, matchedRule, deps.source);
+    return { action: 'moved', destination: folder };
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    deps.logger.error({ uid: msg.uid, error }, 'Failed to move message during sweep');
+
+    const result = {
+      success: false as const,
+      messageUid: msg.uid,
+      messageId: msg.envelope.messageId,
+      action: dest.type === 'delete' ? 'delete' : 'move',
+      folder,
+      rule: matchedRule?.name ?? '',
+      timestamp: new Date(),
+      error,
+    };
+    deps.activityLog.logActivity(result, emailMsg, matchedRule, deps.source);
+    return { action: 'error', destination: folder };
+  }
+}
+
 export interface SweepDeps {
   client: ImapClient;
   activityLog: ActivityLog;
@@ -187,41 +245,18 @@ export class ReviewSweeper {
           continue;
         }
 
-        const { destination: dest, matchedRule } = resolveSweepDestination(msg, this.rules, this.reviewConfig.defaultArchiveFolder);
-        const folder = dest.type === 'delete' ? this.trashFolder : dest.folder;
-        const emailMsg = reviewMessageToEmailMessage(msg);
-
-        try {
-          await this.client.moveMessage(msg.uid, folder, this.reviewConfig.folder);
-
-          const result = {
-            success: true as const,
-            messageUid: msg.uid,
-            messageId: msg.envelope.messageId,
-            action: dest.type === 'delete' ? 'delete' : 'move',
-            folder,
-            rule: matchedRule?.name ?? '',
-            timestamp: new Date(),
-          };
-          this.activityLog.logActivity(result, emailMsg, matchedRule, 'sweep');
-          archived++;
-        } catch (err) {
-          const error = err instanceof Error ? err.message : String(err);
-          this.logger.error({ uid: msg.uid, error }, 'Failed to move message during sweep');
-
-          const result = {
-            success: false as const,
-            messageUid: msg.uid,
-            messageId: msg.envelope.messageId,
-            action: dest.type === 'delete' ? 'delete' : 'move',
-            folder,
-            rule: matchedRule?.name ?? '',
-            timestamp: new Date(),
-            error,
-          };
-          this.activityLog.logActivity(result, emailMsg, matchedRule, 'sweep');
-          errors++;
-        }
+        const result = await processSweepMessage(msg, {
+          client: this.client,
+          activityLog: this.activityLog,
+          rules: this.rules,
+          defaultArchiveFolder: this.reviewConfig.defaultArchiveFolder,
+          trashFolder: this.trashFolder,
+          sourceFolder: this.reviewConfig.folder,
+          source: 'sweep',
+          logger: this.logger,
+        });
+        if (result.action === 'moved') archived++;
+        else errors++;
       }
     } catch (err) {
       this.logger.error({ err }, 'Sweep fetch failed');
