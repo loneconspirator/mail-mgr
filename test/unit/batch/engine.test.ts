@@ -8,9 +8,18 @@ vi.mock('../../../src/rules/index.js', () => ({
   evaluateRules: vi.fn(),
 }));
 
+vi.mock('../../../src/sweep/index.js', () => ({
+  isEligibleForSweep: vi.fn(),
+  resolveSweepDestination: vi.fn(),
+}));
+
 import { BatchEngine } from '../../../src/batch/index.js';
 import type { BatchDeps, BatchState, DryRunGroup } from '../../../src/batch/index.js';
 import { evaluateRules } from '../../../src/rules/index.js';
+import { isEligibleForSweep, resolveSweepDestination } from '../../../src/sweep/index.js';
+
+const mockedIsEligible = vi.mocked(isEligibleForSweep);
+const mockedResolveSweep = vi.mocked(resolveSweepDestination);
 
 const silentLogger = pino({ level: 'silent' });
 
@@ -66,6 +75,13 @@ function makeDeps(overrides: Partial<BatchDeps> = {}): BatchDeps {
     rules: [makeRule()],
     trashFolder: 'Trash',
     logger: silentLogger,
+    reviewFolder: 'Review',
+    reviewConfig: {
+      folder: 'Review',
+      defaultArchiveFolder: 'MailingLists',
+      trashFolder: 'Trash',
+      sweep: { intervalHours: 6, readMaxAgeDays: 7, unreadMaxAgeDays: 14 },
+    },
     ...overrides,
   };
 }
@@ -564,5 +580,152 @@ describe('BatchEngine review rule resolution', () => {
     const groups = await engine.dryRun('TestFolder');
 
     expect(groups[0].destination).toBe('Newsletters');
+  });
+});
+
+describe('BatchEngine INBOX mode', () => {
+  it('review actions route to review folder when source is INBOX', async () => {
+    const deps = makeDeps();
+    const messages = makeMessages(1);
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
+    const reviewRule = makeRule({ name: 'Review Rule', action: { type: 'review', folder: 'Newsletters' } });
+    mockedEvaluateRules.mockReturnValue(reviewRule);
+
+    const engine = new BatchEngine(deps);
+    await engine.execute('INBOX');
+
+    expect(deps.client.moveMessage).toHaveBeenCalledWith(1, 'Review', 'INBOX');
+  });
+
+  it('skip actions leave message in INBOX', async () => {
+    const deps = makeDeps();
+    const messages = makeMessages(1);
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
+    const skipRule = makeRule({ name: 'Skip Rule', action: { type: 'skip' } });
+    mockedEvaluateRules.mockReturnValue(skipRule);
+
+    const engine = new BatchEngine(deps);
+    await engine.execute('INBOX');
+
+    expect(deps.client.moveMessage).not.toHaveBeenCalled();
+    const state = engine.getState();
+    expect(state.skipped).toBe(1);
+  });
+
+  it('no-match messages stay in INBOX', async () => {
+    const deps = makeDeps();
+    const messages = makeMessages(1);
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
+    mockedEvaluateRules.mockReturnValue(null);
+
+    const engine = new BatchEngine(deps);
+    await engine.execute('INBOX');
+
+    expect(deps.client.moveMessage).not.toHaveBeenCalled();
+    const state = engine.getState();
+    expect(state.skipped).toBe(1);
+  });
+
+  it('move actions work normally in INBOX mode', async () => {
+    const deps = makeDeps();
+    const messages = makeMessages(1);
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
+    const moveRule = makeRule({ name: 'Move Rule', action: { type: 'move', folder: 'Archive/Lists' } });
+    mockedEvaluateRules.mockReturnValue(moveRule);
+
+    const engine = new BatchEngine(deps);
+    await engine.execute('INBOX');
+
+    expect(deps.client.moveMessage).toHaveBeenCalledWith(1, 'Archive/Lists', 'INBOX');
+  });
+
+  it('dry-run INBOX shows review folder for review actions', async () => {
+    const deps = makeDeps();
+    const messages = makeMessages(1);
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
+    const reviewRule = makeRule({ name: 'Review Rule', action: { type: 'review', folder: 'Newsletters' } });
+    mockedEvaluateRules.mockReturnValue(reviewRule);
+
+    const engine = new BatchEngine(deps);
+    const groups = await engine.dryRun('INBOX');
+
+    expect(groups[0].destination).toBe('Review');
+  });
+});
+
+describe('BatchEngine Review mode', () => {
+  it('ineligible messages are skipped', async () => {
+    const deps = makeDeps();
+    const messages = makeMessages(1);
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
+    mockedIsEligible.mockReturnValue(false);
+
+    const engine = new BatchEngine(deps);
+    await engine.execute('Review');
+
+    expect(deps.client.moveMessage).not.toHaveBeenCalled();
+    const state = engine.getState();
+    expect(state.skipped).toBe(1);
+  });
+
+  it('eligible messages use resolveSweepDestination', async () => {
+    const deps = makeDeps();
+    const messages = makeMessages(1);
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
+    mockedIsEligible.mockReturnValue(true);
+    mockedResolveSweep.mockReturnValue({
+      destination: { type: 'move', folder: 'Archive/Lists' },
+      matchedRule: makeRule(),
+    });
+
+    const engine = new BatchEngine(deps);
+    await engine.execute('Review');
+
+    expect(deps.client.moveMessage).toHaveBeenCalledWith(1, 'Archive/Lists', 'Review');
+  });
+
+  it('eligible delete destination routes to trash', async () => {
+    const deps = makeDeps();
+    const messages = makeMessages(1);
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
+    mockedIsEligible.mockReturnValue(true);
+    mockedResolveSweep.mockReturnValue({
+      destination: { type: 'delete' },
+      matchedRule: makeRule({ action: { type: 'delete' } }),
+    });
+
+    const engine = new BatchEngine(deps);
+    await engine.execute('Review');
+
+    expect(deps.client.moveMessage).toHaveBeenCalledWith(1, 'Trash', 'Review');
+  });
+
+  it('dry-run Review shows Not yet eligible for ineligible messages', async () => {
+    const deps = makeDeps();
+    const messages = makeMessages(1);
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
+    mockedIsEligible.mockReturnValue(false);
+
+    const engine = new BatchEngine(deps);
+    const groups = await engine.dryRun('Review');
+
+    expect(groups[0].action).toBe('skip');
+    expect(groups[0].destination).toBe('Not yet eligible');
+  });
+
+  it('dry-run Review shows resolved destination for eligible messages', async () => {
+    const deps = makeDeps();
+    const messages = makeMessages(1);
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
+    mockedIsEligible.mockReturnValue(true);
+    mockedResolveSweep.mockReturnValue({
+      destination: { type: 'move', folder: 'Archive/Lists' },
+      matchedRule: makeRule(),
+    });
+
+    const engine = new BatchEngine(deps);
+    const groups = await engine.dryRun('Review');
+
+    expect(groups[0].destination).toBe('Archive/Lists');
   });
 });

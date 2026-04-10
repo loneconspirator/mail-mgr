@@ -53,6 +53,8 @@ async function main(): Promise<void> {
     activityLog,
     rules: config.rules,
     trashFolder: config.review.trashFolder,
+    reviewFolder: config.review.folder,
+    reviewConfig: config.review,
     logger,
   });
 
@@ -103,6 +105,8 @@ async function main(): Promise<void> {
       activityLog,
       rules: newConfig.rules,
       trashFolder: newConfig.review.trashFolder,
+      reviewFolder: newConfig.review.folder,
+      reviewConfig: newConfig.review,
       logger,
     });
     sweeper.start();

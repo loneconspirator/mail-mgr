@@ -1,9 +1,10 @@
 import type { ImapClient, ReviewMessage } from '../imap/index.js';
 import { reviewMessageToEmailMessage } from '../imap/index.js';
 import { evaluateRules } from '../rules/index.js';
+import { isEligibleForSweep, resolveSweepDestination } from '../sweep/index.js';
 import type { ActionResult } from '../actions/index.js';
 import type { ActivityLog } from '../log/index.js';
-import type { Rule } from '../config/index.js';
+import type { Rule, ReviewConfig } from '../config/index.js';
 import pinoLib from 'pino';
 import type pino from 'pino';
 
@@ -17,6 +18,8 @@ export interface BatchDeps {
   rules: Rule[];
   trashFolder: string;
   logger?: pino.Logger;
+  reviewFolder?: string;
+  reviewConfig?: ReviewConfig;
 }
 
 export interface BatchState {
@@ -83,28 +86,46 @@ export class BatchEngine {
     try {
       const messages = await this.deps.client.fetchAllMessages(sourceFolder);
       this.state.totalMessages = messages.length;
+      const mode = this.getProcessingMode(sourceFolder);
 
       const groupMap = new Map<string, DryRunGroup>();
 
       for (const raw of messages) {
         const msg = reviewMessageToEmailMessage(raw);
-        const matched = evaluateRules(this.deps.rules, msg);
 
         let key: string;
         let destination: string;
         let action: string;
         let ruleName: string;
 
-        if (!matched) {
-          key = 'no-match';
-          destination = 'No match';
-          action = 'no-match';
-          ruleName = '';
+        if (mode === 'review') {
+          const eligible = isEligibleForSweep(raw, this.deps.reviewConfig!.sweep, new Date());
+          if (!eligible) {
+            key = 'skip:Not yet eligible';
+            destination = 'Not yet eligible';
+            action = 'skip';
+            ruleName = '';
+          } else {
+            const sweep = resolveSweepDestination(raw, this.deps.rules, this.deps.reviewConfig!.defaultArchiveFolder);
+            destination = sweep.destination.type === 'delete' ? this.deps.trashFolder : sweep.destination.folder;
+            action = sweep.destination.type === 'delete' ? 'delete' : 'move';
+            ruleName = sweep.matchedRule?.name ?? '';
+            key = `${action}:${destination}`;
+          }
         } else {
-          ruleName = matched.name;
-          action = matched.action.type;
-          destination = this.resolveDestination(matched);
-          key = `${action}:${destination}`;
+          const matched = evaluateRules(this.deps.rules, msg);
+
+          if (!matched) {
+            key = 'no-match';
+            destination = 'No match';
+            action = 'no-match';
+            ruleName = '';
+          } else {
+            ruleName = matched.name;
+            action = matched.action.type;
+            destination = this.resolveDestination(matched, sourceFolder);
+            key = `${action}:${destination}`;
+          }
         }
 
         let group = groupMap.get(key);
@@ -152,6 +173,7 @@ export class BatchEngine {
     try {
       const messages = await this.deps.client.fetchAllMessages(sourceFolder);
       this.state.totalMessages = messages.length;
+      const mode = this.getProcessingMode(sourceFolder);
 
       for (let i = 0; i < messages.length; i += CHUNK_SIZE) {
         if (this.cancelRequested) {
@@ -164,6 +186,57 @@ export class BatchEngine {
 
         for (const raw of chunk) {
           const msg = reviewMessageToEmailMessage(raw);
+
+          // Review mode: use sweep eligibility and destination resolution
+          if (mode === 'review') {
+            const eligible = isEligibleForSweep(raw, this.deps.reviewConfig!.sweep, new Date());
+            if (!eligible) {
+              this.state.skipped++;
+              this.state.processed++;
+              continue;
+            }
+
+            const sweep = resolveSweepDestination(raw, this.deps.rules, this.deps.reviewConfig!.defaultArchiveFolder);
+            const folder = sweep.destination.type === 'delete' ? this.deps.trashFolder : sweep.destination.folder;
+            const actionType = sweep.destination.type === 'delete' ? 'delete' : 'move';
+
+            try {
+              await this.deps.client.moveMessage(msg.uid, folder, sourceFolder);
+              this.state.moved++;
+
+              const result: ActionResult = {
+                success: true,
+                messageUid: msg.uid,
+                messageId: msg.messageId,
+                action: actionType,
+                folder,
+                rule: sweep.matchedRule?.id ?? '',
+                timestamp: new Date(),
+              };
+              this.deps.activityLog.logActivity(result, msg, sweep.matchedRule, 'batch');
+            } catch (err) {
+              this.state.errors++;
+              const error = err instanceof Error ? err.message : String(err);
+              this.logger.error({ uid: raw.uid, error }, 'Batch message failed');
+
+              const result: ActionResult = {
+                success: false,
+                messageUid: msg.uid,
+                messageId: msg.messageId,
+                action: actionType,
+                folder,
+                rule: sweep.matchedRule?.id ?? '',
+                timestamp: new Date(),
+                error,
+              };
+              this.deps.activityLog.logActivity(result, msg, sweep.matchedRule, 'batch');
+            }
+
+            this.state.processed++;
+            continue;
+          }
+
+          // Inbox and generic modes: use rule evaluation
           const matched = evaluateRules(this.deps.rules, msg);
 
           if (!matched) {
@@ -172,7 +245,7 @@ export class BatchEngine {
             continue;
           }
 
-          const destination = this.resolveDestination(matched);
+          const destination = this.resolveDestination(matched, sourceFolder);
           const shouldSkip = destination === 'Skip';
           const actionType = shouldSkip ? 'skip' : matched.action.type === 'delete' ? 'delete' : 'move';
 
@@ -256,7 +329,31 @@ export class BatchEngine {
     this.deps.rules = rules;
   }
 
-  private resolveDestination(rule: Rule): string {
+  private getProcessingMode(sourceFolder: string): 'inbox' | 'review' | 'generic' {
+    if (sourceFolder === 'INBOX') return 'inbox';
+    if (this.deps.reviewFolder && sourceFolder === this.deps.reviewFolder) return 'review';
+    return 'generic';
+  }
+
+  private resolveDestination(rule: Rule, sourceFolder: string): string {
+    const mode = this.getProcessingMode(sourceFolder);
+
+    if (mode === 'inbox') {
+      switch (rule.action.type) {
+        case 'review':
+          return this.deps.reviewFolder!;
+        case 'skip':
+          return 'Skip';
+        case 'move':
+          return rule.action.folder;
+        case 'delete':
+          return this.deps.trashFolder;
+        default:
+          return 'Unknown';
+      }
+    }
+
+    // Generic mode: current behavior
     switch (rule.action.type) {
       case 'move':
         return rule.action.folder;
