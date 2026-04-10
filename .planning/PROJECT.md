@@ -76,6 +76,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 | First-match-wins rule evaluation | Simple, predictable, easy to reason about ordering | ✓ Good |
 | SQLite for all persistence | Single-user system, no need for a database server | ✓ Good |
 | Vanilla JS frontend | No build tooling needed, fast iteration, simple deployment | ✓ Good |
+| Batch Progress UI phase dropped | SSE streaming, per-destination summaries, folder stats are gold plating — polling-based progress is sufficient | ✓ Good |
 
 ## Evolution
 

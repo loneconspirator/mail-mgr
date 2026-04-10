@@ -3,11 +3,11 @@ gsd_state_version: 1.0
 milestone: v0.3
 milestone_name: milestone
 status: executing
-stopped_at: Phase 3 context gathered
+stopped_at: Phase 4 (old Batch Progress UI) dropped from roadmap
 last_updated: "2026-04-08T23:53:52.581Z"
 last_activity: 2026-04-08
 progress:
-  total_phases: 5
+  total_phases: 4
   completed_phases: 3
   total_plans: 7
   completed_plans: 7

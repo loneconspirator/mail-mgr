@@ -2,7 +2,7 @@
 
 ## Overview
 
-This milestone transforms Mail Manager from a real-time routing engine into a full email organization system. The work follows a strict dependency chain: discover the folder hierarchy from IMAP, give users a visual picker for those folders, build a batch filing engine that can reorganize thousands of existing messages, wire up real-time progress reporting, and clean up configuration gaps carried over from v0.2. The folder taxonomy layer is the foundation — everything downstream consumes it.
+This milestone transforms Mail Manager from a real-time routing engine into a full email organization system. The work follows a strict dependency chain: discover the folder hierarchy from IMAP, give users a visual picker for those folders, build a batch filing engine that can reorganize thousands of existing messages, and clean up configuration gaps carried over from v0.2. The folder taxonomy layer is the foundation — everything downstream consumes it.
 
 ## Phases
 
@@ -15,8 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 1: Folder Discovery** - IMAP folder hierarchy exposed via cached API with validation
 - [ ] **Phase 2: Tree Picker** - Visual folder selector replaces text input in rule editor
 - [ ] **Phase 3: Batch Filing Engine** - Core engine for retroactive rule application with dry-run and cancellation
-- [ ] **Phase 4: Batch Progress UI** - Real-time progress reporting, folder stats, and batch summary display
-- [ ] **Phase 5: Config & Cleanup** - Editable sweep settings, per-stream archive defaults, and v0.2 bug fixes
+- [ ] **Phase 4: Config & Cleanup** - Editable sweep settings, per-stream archive defaults, and v0.2 bug fixes
 
 ## Phase Details
 
@@ -64,23 +63,9 @@ Plans:
 - [x] 03-02-PLAN.md — API routes, activity log source update, database indexing, ServerDeps wiring (BATC-01, BATC-03, BATC-05, BATC-06)
 - [x] 03-03-PLAN.md — Frontend batch page: folder selection, dry-run preview, execution progress, results summary (BATC-01, BATC-05, BATC-06)
 
-### Phase 4: Batch Progress UI
-**Goal**: Users see real-time progress during batch filing and a summary report when it completes
-**Depends on**: Phase 3
-**Requirements**: BATC-04, BATC-07, FOLD-04
-**Success Criteria** (what must be TRUE):
-  1. Batch progress updates stream to the browser in real time during a running job
-  2. Batch completion shows a summary report with moved/skipped/errored counts by destination
-  3. Folder statistics display message counts per folder (aids source folder selection for batch filing)
-**Plans**: TBD
-
-Plans:
-- [ ] 04-01: TBD
-- [ ] 04-02: TBD
-
-### Phase 5: Config & Cleanup
+### Phase 4: Config & Cleanup
 **Goal**: Users can edit sweep settings and archive defaults from the UI, and v0.2 bugs are resolved
-**Depends on**: Nothing (independent of Phases 1-4)
+**Depends on**: Nothing (independent of Phases 1-3)
 **Requirements**: CONF-01, CONF-02, CONF-03, CONF-04, CONF-05
 **Success Criteria** (what must be TRUE):
   1. Sweep settings (intervals, age thresholds, folder names) are editable in the web UI
@@ -91,19 +76,18 @@ Plans:
 **Plans**: TBD
 
 Plans:
-- [ ] 05-01: TBD
-- [ ] 05-02: TBD
+- [ ] 04-01: TBD
+- [ ] 04-02: TBD
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
-Note: Phase 5 has no dependency on Phases 2-4 and could run in parallel if inserted earlier.
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4
+Note: Phase 4 has no dependency on Phases 2-3 and could run in parallel if inserted earlier.
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Folder Discovery | 0/2 | Planning complete | - |
 | 2. Tree Picker | 0/2 | Planning complete | - |
 | 3. Batch Filing Engine | 0/3 | Planning complete | - |
-| 4. Batch Progress UI | 0/0 | Not started | - |
-| 5. Config & Cleanup | 0/0 | Not started | - |
+| 4. Config & Cleanup | 0/0 | Not started | - |

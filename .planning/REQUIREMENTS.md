@@ -10,7 +10,7 @@
 - [ ] **FOLD-01**: System discovers IMAP folder hierarchy via `listTree()` and exposes it at `GET /api/folders`
 - [ ] **FOLD-02**: Folder list is cached server-side with configurable TTL and manual refresh endpoint
 - [ ] **FOLD-03**: Rule save validates destination folder against cached folder list (warn, not block)
-- [ ] **FOLD-04**: Folder statistics show message counts per folder (via IMAP STATUS)
+- [x] ~~**FOLD-04**: Folder statistics show message counts per folder (via IMAP STATUS)~~ — Dropped: not needed for current workflows
 
 ### Tree Picker
 
@@ -23,10 +23,10 @@
 - [ ] **BATC-01**: User can batch-file messages in a selected source folder against one, multiple, or all rules
 - [ ] **BATC-02**: Batch evaluation uses sweep-style destination resolution (first-match-wins, review rules resolve to their final folder not the review folder, review rules without a folder are skipped) without age constraints
 - [ ] **BATC-03**: Batch processing uses chunked IMAP moves with per-message error isolation
-- [ ] **BATC-04**: Real-time progress reported to UI via Server-Sent Events
+- [x] ~~**BATC-04**: Real-time progress reported to UI via Server-Sent Events~~ — Dropped: polling-based progress sufficient
 - [ ] **BATC-05**: User can cancel a running batch (stops after current chunk completes)
 - [ ] **BATC-06**: Dry-run mode previews what a batch would do without executing moves
-- [ ] **BATC-07**: Batch summary report shown after completion (moved/skipped/errored counts by destination)
+- [x] ~~**BATC-07**: Batch summary report shown after completion (moved/skipped/errored counts by destination)~~ — Dropped: aggregate counts sufficient
 
 ### Config & Cleanup
 
@@ -68,27 +68,27 @@
 | FOLD-01 | Phase 1 | Pending |
 | FOLD-02 | Phase 1 | Pending |
 | FOLD-03 | Phase 1 | Pending |
-| FOLD-04 | Phase 4 | Pending |
+| FOLD-04 | — | Dropped |
 | PICK-01 | Phase 2 | Pending |
 | PICK-02 | Phase 2 | Pending |
 | PICK-03 | Phase 2 | Pending |
 | BATC-01 | Phase 3 | Pending |
 | BATC-02 | Phase 3 | Pending |
 | BATC-03 | Phase 3 | Pending |
-| BATC-04 | Phase 4 | Pending |
+| BATC-04 | — | Dropped |
 | BATC-05 | Phase 3 | Pending |
 | BATC-06 | Phase 3 | Pending |
-| BATC-07 | Phase 4 | Pending |
-| CONF-01 | Phase 5 | Pending |
-| CONF-02 | Phase 5 | Pending |
-| CONF-03 | Phase 5 | Pending |
-| CONF-04 | Phase 5 | Pending |
-| CONF-05 | Phase 5 | Pending |
+| BATC-07 | — | Dropped |
+| CONF-01 | Phase 4 | Pending |
+| CONF-02 | Phase 4 | Pending |
+| CONF-03 | Phase 4 | Pending |
+| CONF-04 | Phase 4 | Pending |
+| CONF-05 | Phase 4 | Pending |
 
 **Coverage:**
-- v1 requirements: 19 total
-- Mapped to phases: 19
-- Unmapped: 0
+- v1 requirements: 19 total (3 dropped)
+- Mapped to phases: 16
+- Dropped: 3 (BATC-04, BATC-07, FOLD-04)
 
 ---
 *Requirements defined: 2026-04-06*
