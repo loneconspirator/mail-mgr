@@ -1,6 +1,7 @@
 import { api } from './api.js';
 import type { Rule, ActivityEntry, ImapConfig, BatchStatusResponse, DryRunGroup } from './api.js';
 import { renderFolderPicker } from './folder-picker.js';
+import { formatRuleAction, generateBehaviorDescription } from './rule-display.js';
 
 // --- State ---
 let currentPage = 'rules';
@@ -31,16 +32,6 @@ function clearApp() {
   $('#app').innerHTML = '';
   if (activityTimer) { clearInterval(activityTimer); activityTimer = null; }
   if (batchPollTimer) { clearInterval(batchPollTimer); batchPollTimer = null; }
-}
-
-function formatRuleAction(action: Rule['action']): string {
-  switch (action.type) {
-    case 'move': return `→ ${'folder' in action ? action.folder : ''}`;
-    case 'review': return 'folder' in action && action.folder ? `→ Review → ${action.folder}` : '→ Review';
-    case 'skip': return '— Inbox';
-    case 'delete': return '✕ Delete';
-    default: return (action as any).type;
-  }
 }
 
 // --- Navigation ---
@@ -87,7 +78,7 @@ async function renderRules() {
 
     const table = document.createElement('table');
     table.innerHTML = `<thead><tr>
-      <th>Name</th><th>Match</th><th>Action</th><th>Enabled</th><th></th>
+      <th>Rule</th><th>Enabled</th><th></th>
     </tr></thead>`;
     const tbody = document.createElement('tbody');
 
@@ -95,8 +86,14 @@ async function renderRules() {
       const tr = document.createElement('tr');
       tr.dataset.id = rule.id;
 
-      const matchStr = Object.entries(rule.match).map(([k, v]) => `${k}: ${v}`).join(', ');
-      const actionStr = formatRuleAction(rule.action);
+      const behaviorDesc = generateBehaviorDescription(rule);
+      const ruleCell = h('td', { className: 'rule-description' });
+      const primarySpan = h('span', { className: 'rule-behavior' }, behaviorDesc);
+      ruleCell.append(primarySpan);
+      if (rule.name) {
+        const secondarySpan = h('span', { className: 'rule-name-secondary' }, rule.name);
+        ruleCell.append(secondarySpan);
+      }
 
       const toggleLabel = document.createElement('label');
       toggleLabel.className = 'toggle';
@@ -127,9 +124,7 @@ async function renderRules() {
       const actionsCell = h('td', {}, editBtn, document.createTextNode(' '), deleteBtn);
 
       tr.append(
-        h('td', {}, rule.name),
-        h('td', {}, matchStr),
-        h('td', {}, actionStr),
+        ruleCell,
         h('td', {}, toggleLabel),
         actionsCell,
       );

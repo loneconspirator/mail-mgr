@@ -479,3 +479,53 @@ describe('ruleSchema optional name', () => {
     expect(result.success).toBe(false);
   });
 });
+
+import { generateBehaviorDescription } from '../../../src/web/frontend/rule-display.js';
+import type { Rule } from '../../../src/config/schema.js';
+
+describe('generateBehaviorDescription', () => {
+  it('includes only populated match fields', () => {
+    const rule = {
+      id: 'r1', match: { sender: '*@github.com' },
+      action: { type: 'move' as const, folder: 'Notifications' },
+      enabled: true, order: 0,
+    } as Rule;
+    expect(generateBehaviorDescription(rule)).toBe('sender:*@github.com \u2192 Notifications');
+  });
+
+  it('includes sender and subject when both populated', () => {
+    const rule = {
+      id: 'r2', match: { sender: '*@github.com', subject: '*PR*' },
+      action: { type: 'move' as const, folder: 'Notifications' },
+      enabled: true, order: 0,
+    } as Rule;
+    expect(generateBehaviorDescription(rule)).toBe('sender:*@github.com, subject:*PR* \u2192 Notifications');
+  });
+
+  it('returns only action when no match fields populated', () => {
+    const rule = {
+      id: 'r3', match: {},
+      action: { type: 'review' as const },
+      enabled: true, order: 0,
+    } as Rule;
+    expect(generateBehaviorDescription(rule)).toBe('\u2192 Review');
+  });
+
+  it('includes all three match fields when populated', () => {
+    const rule = {
+      id: 'r4', match: { sender: 'a@b.com', recipient: 'c@d.com', subject: '*test*' },
+      action: { type: 'move' as const, folder: 'Archive' },
+      enabled: true, order: 0,
+    } as Rule;
+    expect(generateBehaviorDescription(rule)).toBe('sender:a@b.com, recipient:c@d.com, subject:*test* \u2192 Archive');
+  });
+
+  it('handles delete action', () => {
+    const rule = {
+      id: 'r5', match: { sender: '*@example.com' },
+      action: { type: 'delete' as const },
+      enabled: true, order: 0,
+    } as Rule;
+    expect(generateBehaviorDescription(rule)).toBe('sender:*@example.com \u2715 Delete');
+  });
+});

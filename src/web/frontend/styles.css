@@ -388,3 +388,6 @@ tr:last-child td { border-bottom: none; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
 .loading-pulse { animation: pulse 1.5s infinite; text-align: center; padding: 2rem 1rem; color: #888; font-size: 0.9rem; }
 .btn:disabled, .btn[disabled] { opacity: 0.5; cursor: not-allowed; pointer-events: none; }
+.rule-description { line-height: 1.4; }
+.rule-behavior { display: block; font-weight: normal; }
+.rule-name-secondary { display: block; font-size: 0.85em; color: #666; }
