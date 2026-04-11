@@ -1,9 +1,9 @@
 ---
 phase: 4
 slug: config-cleanup
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-10
 ---
 
@@ -58,7 +58,7 @@ created: 2026-04-10
 - [ ] Test for behavior description generation function (new pure function)
 - [ ] Test for stale sweeper scenario (config reload → getSweeper returns new instance)
 
-*Existing infrastructure partially covers requirements — Wave 0 fills gaps.*
+*Wave 0 strategy: TDD-within-task. Each plan task writes its own tests before implementation (tdd="true"). No separate Wave 0 plan needed.*
 
 ---
 
@@ -73,11 +73,11 @@ created: 2026-04-10
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references (TDD-within-task strategy)
+- [x] No watch-mode flags
+- [x] Feedback latency < 15s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-04-10
