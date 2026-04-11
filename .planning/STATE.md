@@ -80,6 +80,7 @@ None yet.
 |---|-------------|------|--------|-----------|
 | 260410-gm4 | Folder-aware batch processing for INBOX and Review | 2026-04-10 | b75a0bf | [260410-gm4](./quick/260410-gm4-folder-aware-batch-processing-for-inbox-/) |
 | 260410-h20 | Refactor BatchEngine to reuse executeAction and processSweepMessage | 2026-04-10 | f412d1f | [260410-h20](./quick/260410-h20-refactor-batchengine-to-reuse-executeact/) |
+| 260411-fmv | Rebuild BatchEngine on review config change | 2026-04-11 | c0c918d | [260411-fmv](./quick/260411-fmv-rebuild-batchengine-on-review-config-cha/) |
 
 ### Blockers/Concerns
 
@@ -88,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-11T17:25:42.393Z
-Stopped at: Completed 05-01-PLAN.md
+Last session: 2026-04-11T18:20:00Z
+Stopped at: Completed quick task 260411-fmv
 Resume file: None
