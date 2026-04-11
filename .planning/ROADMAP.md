@@ -76,8 +76,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 04-01-PLAN.md — Optional rule name schema change, behavior description generator, rule table display update (CONF-05)
-- [ ] 04-02-PLAN.md — Editable sweep settings card with tree pickers, stale sweeper fix, cursor toggle (CONF-01, CONF-02, CONF-03, CONF-04)
+- [x] 04-01-PLAN.md — Optional rule name schema change, behavior description generator, rule table display update (CONF-05)
+- [x] 04-02-PLAN.md — Editable sweep settings card with tree pickers, stale sweeper fix, cursor toggle (CONF-01, CONF-02, CONF-03, CONF-04)
 
 ## Progress
 
