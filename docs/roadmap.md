@@ -62,16 +62,51 @@ A system that separates **triage** from **retrieval**. Email arrives into one of
 
 ---
 
-## Tier 4: LLM Classification
+## Tier 4: Extended Matchers and Behavioral Learning
 
-**Handle what patterns can't.** Some mail can't be sorted by sender/recipient/subject globs alone. This tier adds LLM-based classification with privacy-conscious progressive disclosure.
+**Smarter deterministic rules, trained by watching the user.** This tier expands the rule matcher with new fields, tracks how the user manually organizes mail, and proposes new rules based on statistical patterns.
+
+### Product Requirements
+
+- **Extended rule match criteria:** Rules currently match on sender and subject globs. Add three new match fields:
+  - **Recipient:** Match on the recipient address (To, CC). Same glob syntax as sender matching.
+  - **Read status:** Match on whether the message is read or unread at evaluation time. Useful for sweep rules that treat read and unread messages differently.
+  - **Recipient visibility:** Match on how the recipient appears in the message headers. Categories: `direct` (in the To field), `cc` (in the CC field), `bcc` (recipient address not in To or CC — likely BCC or envelope-only delivery), `list` (message has List-Id or similar mailing list headers indicating list delivery). A rule can match one or more of these visibility types.
+
+- **UI updates for new fields:** Rule creation/editing surfaces the new match fields. Recipient and read status are straightforward additions. Recipient visibility is a multi-select (direct, cc, bcc, list).
+
+- **Move tracking:** The system detects when the user manually moves messages by periodically scanning folder contents and comparing against known state. For each detected move, log: sender, all recipients, mailing list headers, subject, read status, recipient visibility, source folder, destination folder. Key movements to track:
+  - Inbox → archive folders (user filing messages the system didn't catch)
+  - Inbox → Review (user demoting messages to batch processing)
+  - Review → archive folders (user filing during batch review)
+  - Review → Inbox (user promoting messages back to action-needed)
+  - Archive folders → Inbox (user pulling something back — indicates a rule may be filing too aggressively)
+
+- **Pattern detection:** Statistical analysis on logged moves to identify repeating patterns. If the user moves 5+ messages matching a common pattern (same sender, same recipient visibility, same destination), that's a candidate rule.
+
+- **Proposed rules:** The system surfaces detected patterns as rule proposals in the UI: "You've moved 8 emails from `noreply@rei.com` to Review — want me to do this automatically?" The user can approve (becomes a real rule), modify (adjust the pattern or destination), or dismiss.
+
+- **Rule effectiveness dashboard:** Which rules fire most often? Which rules has the user overridden by manually moving messages elsewhere? Are there messages sitting in Inbox that match a Review-stream profile?
+
+### Technical Guardrails
+
+- Recipient visibility detection must handle edge cases: messages delivered via mailing list that also CC the user directly, messages where the user's address appears in both To and CC, etc. When ambiguous, prefer the most visible category (direct > cc > list > bcc).
+- Move detection requires scanning multiple folders, which is expensive on IMAP. This should run infrequently (e.g., every few hours) and use IMAP CONDSTORE/QRESYNC if available to minimize data transfer.
+- Proposed rules must be conservative. A false positive (auto-filing something the user wanted to see) is much worse than a false negative (leaving something in Inbox). Set a high threshold for proposal confidence.
+- Move tracking state must be durable across restarts. The system needs to know what was where last time it checked.
+
+---
+
+## Tier 5: LLM Classification
+
+**Handle what patterns can't.** Some mail can't be sorted by deterministic rules alone. This tier adds LLM-based classification with privacy-conscious progressive disclosure, and LLM-driven rule suggestions.
 
 ### Product Requirements
 
 - **LLM-instructed rules:** Rules that use natural language instructions instead of glob patterns. Example: "Anything about upcoming outdoor trips → Activities." These are evaluated only when no deterministic rule matches.
 
 - **Progressive disclosure:** When the LLM evaluates a message, it receives information incrementally:
-  - Level 1: Envelope only (sender, recipients). Many messages can be classified on this alone.
+  - Level 1: Envelope only (sender, recipients, recipient visibility, mailing list headers). Many messages can be classified on metadata alone.
   - Level 2: Plus subject line.
   - Level 3: Plus body text. Most invasive; opt-in.
   The system stops at the first level that produces a confident classification.
@@ -80,7 +115,9 @@ A system that separates **triage** from **retrieval**. Email arrives into one of
   - Global maximum disclosure level (default: Level 2 — envelope + subject, no body).
   - Per-pattern caps using the same match syntax as deterministic rules. Example: anything to `mike+medical@example.com` capped at Level 1.
 
-- **Classification logging:** Every LLM classification logs which disclosure level was needed and what the LLM decided. This data informs future deterministic rule creation — if the LLM always files `sender@example.com` the same way, that should be a pattern rule.
+- **Classification logging:** Every LLM classification logs which disclosure level was needed and what the LLM decided. This data informs future deterministic rule creation.
+
+- **LLM-driven rule suggestions:** If the LLM consistently classifies messages that share a simple deterministic pattern (same sender, same list-id, same recipient visibility), the system suggests promoting it to a deterministic rule. This reduces LLM costs and improves speed.
 
 - **LLM configuration in UI:** API provider, model, key. Support for at least one provider (Anthropic or OpenAI-compatible).
 
@@ -92,30 +129,7 @@ A system that separates **triage** from **retrieval**. Email arrives into one of
 - The progressive disclosure levels should be implemented as a pipeline, not three separate API calls. The system should be able to short-circuit at any level.
 - The LLM needs to know the folder taxonomy (from Tier 3) to make useful classifications. The prompt should include the available folders and any descriptions the user has attached to them.
 - Rate limiting and retry logic for LLM API calls. A temporary API outage should not cause messages to pile up unprocessed — they should stay in Inbox and be retried on the next cycle.
-
----
-
-## Tier 5: Learning from Behavior
-
-**The system gets smarter.** Instead of only following rules the user writes, the system observes what the user does and proposes new rules.
-
-### Product Requirements
-
-- **Move tracking:** When the user moves a message in their mail client (Mac Mail or otherwise), the system detects it by periodically scanning folder contents and comparing against known state. For each detected move, log: sender, recipient, mailing list headers, subject, read status, source folder, destination folder.
-
-- **Pattern detection:** Statistical analysis on logged moves to identify repeating patterns. If the user moves 5+ messages from the same sender to the same folder, that's a candidate rule.
-
-- **Proposed rules:** The system surfaces detected patterns as rule proposals in the UI: "You've moved 8 emails from `noreply@rei.com` to Review — want me to do this automatically?" The user can approve (becomes a real rule), modify (adjust the pattern or destination), or dismiss.
-
-- **Promotion suggestions:** If an LLM-instructed rule consistently classifies messages that share a simple pattern (same sender, same list-id), the system suggests promoting it to a deterministic rule. This reduces LLM costs and improves speed.
-
-- **Rule effectiveness dashboard:** Which rules fire most often? Which rules has the user overridden by manually moving messages elsewhere? Are there messages sitting in Inbox that match a Review-stream profile?
-
-### Technical Guardrails
-
-- Move detection requires scanning multiple folders, which is expensive on IMAP. This should run infrequently (e.g., every few hours) and use IMAP CONDSTORE/QRESYNC if available to minimize data transfer.
-- Proposed rules must be conservative. A false positive (auto-filing something the user wanted to see) is much worse than a false negative (leaving something in Inbox). Set a high threshold for proposal confidence.
-- Move tracking state must be durable across restarts. The system needs to know what was where last time it checked.
+- LLM rule suggestions and behavioral rule suggestions (from Tier 4) should use the same proposal UI and workflow — approve, modify, or dismiss.
 
 ---
 
@@ -145,10 +159,10 @@ The tiers are ordered by impact and dependency:
 
 2. **Tier 3 (Folder Structure)** establishes the organizational backbone. Without an intentional taxonomy, the system doesn't know *where* things should go — it only knows individual rule destinations. The taxonomy gives the system (and later, the LLM) a coherent map of the archive.
 
-3. **Tier 4 (LLM Classification)** depends on the folder taxonomy existing. The LLM needs to know what folders are available and what they mean. It also depends on the two-stream model so it understands the routing dispositions.
+3. **Tier 4 (Extended Matchers and Behavioral Learning)** enriches the deterministic rule engine before introducing LLM complexity. Adding recipient, read status, and recipient visibility to matchers makes the existing rule system significantly more powerful — many messages that would require LLM classification can be handled deterministically with these fields. Move tracking and rule suggestions let the system learn from user behavior using pure statistical analysis, no external API dependencies. This tier also generates the behavioral data that makes Tier 5's LLM suggestions more informed.
 
-4. **Tier 5 (Learning)** depends on there being enough system behavior to learn from. It needs the folder taxonomy, the two-stream model, and ideally LLM classification data to make useful suggestions.
+4. **Tier 5 (LLM Classification)** depends on the folder taxonomy (Tier 3) and benefits from the extended matcher fields and behavioral data (Tier 4). The LLM needs to know what folders are available, what fields are matchable, and what the user's filing patterns look like. Progressive disclosure leverages the recipient visibility concept introduced in Tier 4. LLM rule suggestions complement the statistical suggestions from Tier 4 by catching patterns that require semantic understanding.
 
 5. **Tier 6 (Polish)** is genuinely optional. The system is fully functional after Tier 5. These are refinements.
 
-Each tier is independently deployable and useful. You could stop after Tier 2 and have a significantly better email experience than what exists today. You could stop after Tier 3 and have a well-organized archive. The LLM and learning capabilities are powerful but not prerequisites for daily value.
+Each tier is independently deployable and useful. You could stop after Tier 2 and have a significantly better email experience than what exists today. You could stop after Tier 3 and have a well-organized archive. Tier 4 makes the deterministic engine substantially smarter without any external dependencies. The LLM capabilities in Tier 5 are powerful but not prerequisites for daily value.
