@@ -221,13 +221,13 @@ function openRuleModal(rule?: Rule) {
       action = { type: 'skip' };
     }
 
-    const payload: Record<string, unknown> = {
+    const payload: Omit<Rule, 'id'> = {
       match,
       action,
       enabled: rule?.enabled ?? true,
       order: rule?.order ?? 0,
+      ...(name ? { name } : {}),
     };
-    if (name) payload.name = name;
 
     try {
       if (isEdit && rule) {
