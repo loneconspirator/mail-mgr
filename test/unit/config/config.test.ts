@@ -6,6 +6,7 @@ import { loadConfig, saveConfig, ensureConfig, substituteEnvVars } from '../../.
 import {
   configSchema,
   actionSchema,
+  ruleSchema,
   reviewActionSchema,
   skipActionSchema,
   deleteActionSchema,
@@ -446,5 +447,35 @@ describe('configSchema with review section', () => {
       ],
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe('ruleSchema optional name', () => {
+  const baseRule = {
+    id: 'test-1',
+    match: { sender: '*@github.com' },
+    action: { type: 'move' as const, folder: 'GH' },
+    order: 0,
+  };
+
+  it('accepts a rule with name omitted', () => {
+    const result = ruleSchema.safeParse(baseRule);
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.name).toBeUndefined();
+    }
+  });
+
+  it('accepts a rule with name present', () => {
+    const result = ruleSchema.safeParse({ ...baseRule, name: 'Test Rule' });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.name).toBe('Test Rule');
+    }
+  });
+
+  it('rejects a rule with no match fields', () => {
+    const result = ruleSchema.safeParse({ ...baseRule, match: {} });
+    expect(result.success).toBe(false);
   });
 });

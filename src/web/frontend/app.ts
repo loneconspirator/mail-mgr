@@ -116,7 +116,7 @@ async function renderRules() {
 
       const deleteBtn = h('button', { className: 'btn btn-sm btn-danger' }, 'Del');
       deleteBtn.addEventListener('click', async () => {
-        if (!confirm(`Delete rule "${rule.name}"?`)) return;
+        if (!confirm(`Delete rule "${rule.name || 'unnamed'}"?`)) return;
         try {
           await api.rules.delete(rule.id);
           toast('Rule deleted');
@@ -208,7 +208,6 @@ function openRuleModal(rule?: Rule) {
     const folder = selectedFolder;
     const actionType = (document.getElementById('m-action-type') as HTMLSelectElement).value;
 
-    if (!name) { toast('Name is required', true); return; }
     if (actionType === 'move' && !folder) { toast('Folder is required for move action', true); return; }
 
     const match: Record<string, string> = {};
@@ -227,13 +226,13 @@ function openRuleModal(rule?: Rule) {
       action = { type: 'skip' };
     }
 
-    const payload = {
-      name,
+    const payload: Record<string, unknown> = {
       match,
       action,
       enabled: rule?.enabled ?? true,
       order: rule?.order ?? 0,
     };
+    if (name) payload.name = name;
 
     try {
       if (isEdit) {

@@ -122,7 +122,7 @@ export class BatchEngine {
             action = 'no-match';
             ruleName = '';
           } else {
-            ruleName = matched.name;
+            ruleName = matched.name ?? '';
             action = matched.action.type;
             destination = this.resolveDestination(matched, sourceFolder);
             key = `${action}:${destination}`;
