@@ -38,7 +38,7 @@ async function main(): Promise<void> {
   let monitor = new Monitor(config, { imapClient, activityLog, logger });
 
   // H1: Create ReviewSweeper (trash folder resolved after IMAP connect)
-  let sweeper = new ReviewSweeper({
+  let sweeper: ReviewSweeper | undefined = new ReviewSweeper({
     client: imapClient,
     activityLog,
     rules: config.rules,
@@ -60,14 +60,15 @@ async function main(): Promise<void> {
 
   configRepo.onRulesChange((rules) => {
     monitor.updateRules(rules);
-    sweeper.updateRules(rules);
+    if (sweeper) sweeper.updateRules(rules);
     batchEngine.updateRules(rules);
   });
 
   // H2: Restart sweeper when review config changes
   configRepo.onReviewConfigChange(async () => {
     const updatedConfig = configRepo.getConfig();
-    sweeper.stop();
+    if (sweeper) sweeper.stop();
+    sweeper = undefined;  // Signal "rebuilding" to getSweeper() callers
     const reviewTrash = await imapClient.getSpecialUseFolder('\\Trash')
       ?? updatedConfig.review.trashFolder;
     sweeper = new ReviewSweeper({
@@ -83,7 +84,8 @@ async function main(): Promise<void> {
 
   // H3: Stop/rebuild sweeper alongside monitor on IMAP config change
   configRepo.onImapConfigChange(async (newConfig) => {
-    sweeper.stop();
+    if (sweeper) sweeper.stop();
+    sweeper = undefined;
     await monitor.stop();
     const newClient = new ImapClient(newConfig.imap, createImapFlow);
     imapClient = newClient;
