@@ -434,7 +434,7 @@ async function renderSettings() {
       let trashFolder = reviewConfig.trashFolder;
 
       // Load cursor state for the checkbox
-      const cursorState = await fetch('/api/settings/cursor').then(r => r.json()).catch(() => ({ enabled: true })) as { enabled: boolean };
+      const cursorState = await api.config.getCursor().catch(() => ({ enabled: true }));
 
       sweepCard.innerHTML = `
         <h2>Sweep Settings</h2>
@@ -486,11 +486,7 @@ async function renderSettings() {
           await api.config.updateReview(payload);
           // Save cursor toggle state
           const cursorChecked = (document.getElementById('sw-cursor') as HTMLInputElement).checked;
-          await fetch('/api/settings/cursor', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ enabled: cursorChecked }),
-          });
+          await api.config.setCursor(cursorChecked);
           toast('Sweep settings saved');
           renderSettings();
         } catch (e: unknown) {
@@ -597,8 +593,8 @@ function renderBatchPreview(app: HTMLElement, folder: string, groups: DryRunGrou
   card.append(h('h2', {}, 'Dry Run Preview'));
 
   // Separate no-match group
-  const matchGroups = groups.filter(g => g.action !== 'skip' || g.destination !== '');
-  const noMatchGroup = groups.find(g => g.action === 'skip' && g.destination === '');
+  const matchGroups = groups.filter(g => g.action !== 'no-match');
+  const noMatchGroup = groups.find(g => g.action === 'no-match');
   const matchedCount = matchGroups.reduce((sum, g) => sum + g.count, 0);
 
   const summary = h('p', { style: 'margin:0.5rem 0 1rem;font-size:0.9rem;color:#444' });

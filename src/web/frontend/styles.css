@@ -382,6 +382,7 @@ tr:last-child td { border-bottom: none; }
 .dry-run-group-messages { max-height: 200px; overflow-y: auto; margin: 0 1rem 0.5rem; }
 .dry-run-group-messages table { font-size: 0.85rem; box-shadow: none; border-radius: 0; }
 .dry-run-group.no-match .dry-run-group-name { color: #888; font-weight: 400; }
+.dry-run-group.no-match { margin-top: 0.5rem; border-top: 1px dashed #ccc; border-bottom: none; }
 .badge-batch { display: inline-block; font-size: 0.7rem; background: #fef3c7; color: #92400e; padding: 0.1rem 0.4rem; border-radius: 3px; margin-right: 0.3rem; font-weight: 600; }
 .batch-counts { display: flex; gap: 1rem; font-size: 0.85rem; color: #444; margin: 0.5rem 0; }
 .batch-counts .error-count { color: #dc2626; }

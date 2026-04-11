@@ -46,6 +46,8 @@ export const api = {
     updateImap: (cfg: ImapConfig) => request<ImapConfig>('/api/config/imap', { method: 'PUT', body: JSON.stringify(cfg) }),
     getReview: () => request<ReviewConfig>('/api/config/review'),
     updateReview: (cfg: Partial<ReviewConfig>) => request<ReviewConfig>('/api/config/review', { method: 'PUT', body: JSON.stringify(cfg) }),
+    getCursor: () => request<{ enabled: boolean }>('/api/settings/cursor'),
+    setCursor: (enabled: boolean) => request<void>('/api/settings/cursor', { method: 'PUT', body: JSON.stringify({ enabled }) }),
   },
   folders: {
     list: () => request<FolderTreeResponse>('/api/folders'),
