@@ -15,4 +15,16 @@ export function registerReviewConfigRoutes(app: FastifyInstance, deps: ServerDep
       return reply.status(400).send({ error: 'Validation failed', details: [err.message] });
     }
   });
+
+  // Cursor toggle settings
+  app.get('/api/settings/cursor', async () => {
+    const value = deps.activityLog.getState('cursorEnabled');
+    return { enabled: value !== 'false' };
+  });
+
+  app.put('/api/settings/cursor', async (request) => {
+    const body = request.body as { enabled: boolean };
+    deps.activityLog.setState('cursorEnabled', body.enabled ? 'true' : 'false');
+    return { enabled: body.enabled };
+  });
 }
