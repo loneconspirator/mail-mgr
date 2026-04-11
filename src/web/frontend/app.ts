@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import type { Rule, ActivityEntry, ImapConfig, BatchStatusResponse, DryRunGroup } from './api.js';
+import type { Rule, ActivityEntry, ImapConfig, ReviewConfig, BatchStatusResponse, DryRunGroup } from './api.js';
 import { renderFolderPicker } from './folder-picker.js';
 import { formatRuleAction, generateBehaviorDescription } from './rule-display.js';
 
@@ -421,21 +421,80 @@ async function renderSettings() {
       app.append(reviewCard);
     }
 
-    // K9: Sweep Settings (read-only)
+    // K9: Sweep Settings (editable) — per D-01, D-02
     if (reviewConfig) {
       const sweepCard = h('div', { className: 'settings-card' });
+
+      // Track selected folder values for tree pickers
+      let reviewFolder = reviewConfig.folder;
+      let archiveFolder = reviewConfig.defaultArchiveFolder;
+      let trashFolder = reviewConfig.trashFolder;
+
+      // Load cursor state for the checkbox
+      const cursorState = await fetch('/api/settings/cursor').then(r => r.json()).catch(() => ({ enabled: true })) as { enabled: boolean };
+
       sweepCard.innerHTML = `
         <h2>Sweep Settings</h2>
-        <dl class="sweep-info">
-          <dt>Review Folder:</dt><dd>${reviewConfig.folder}</dd><br/>
-          <dt>Archive Folder:</dt><dd>${reviewConfig.defaultArchiveFolder}</dd><br/>
-          <dt>Trash Folder:</dt><dd>${reviewConfig.trashFolder}</dd><br/>
-          <dt>Sweep Interval:</dt><dd>${reviewConfig.sweep.intervalHours} hours</dd><br/>
-          <dt>Read Max Age:</dt><dd>${reviewConfig.sweep.readMaxAgeDays} days</dd><br/>
-          <dt>Unread Max Age:</dt><dd>${reviewConfig.sweep.unreadMaxAgeDays} days</dd>
-        </dl>
+        <div class="form-group"><label>Review Folder</label><div id="sw-review-picker"></div></div>
+        <div class="form-group"><label>Archive Folder</label><div id="sw-archive-picker"></div></div>
+        <div class="form-group"><label>Trash Folder</label><div id="sw-trash-picker"></div></div>
+        <div class="form-group"><label>Sweep Interval (hours)</label><input id="sw-interval" type="number" min="1" value="${reviewConfig.sweep.intervalHours}" /></div>
+        <div class="form-group"><label>Read Max Age (days)</label><input id="sw-read-age" type="number" min="1" value="${reviewConfig.sweep.readMaxAgeDays}" /></div>
+        <div class="form-group"><label>Unread Max Age (days)</label><input id="sw-unread-age" type="number" min="1" value="${reviewConfig.sweep.unreadMaxAgeDays}" /></div>
+        <div class="form-group">
+          <label><input id="sw-cursor" type="checkbox" ${cursorState.enabled ? 'checked' : ''} /> Enable message cursor (resume from last UID)</label>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-primary" id="sw-save">Save Sweep Settings</button>
+        </div>
       `;
       app.append(sweepCard);
+
+      // Render tree pickers for folder fields
+      renderFolderPicker({
+        container: document.getElementById('sw-review-picker')!,
+        currentValue: reviewFolder,
+        onSelect: (path) => { reviewFolder = path; },
+      });
+      renderFolderPicker({
+        container: document.getElementById('sw-archive-picker')!,
+        currentValue: archiveFolder,
+        onSelect: (path) => { archiveFolder = path; },
+      });
+      renderFolderPicker({
+        container: document.getElementById('sw-trash-picker')!,
+        currentValue: trashFolder,
+        onSelect: (path) => { trashFolder = path; },
+      });
+
+      // Save handler — sends complete sweep sub-object to avoid shallow merge pitfall
+      document.getElementById('sw-save')!.addEventListener('click', async () => {
+        const payload: Partial<ReviewConfig> = {
+          folder: reviewFolder,
+          defaultArchiveFolder: archiveFolder,
+          trashFolder: trashFolder,
+          sweep: {
+            intervalHours: parseInt((document.getElementById('sw-interval') as HTMLInputElement).value, 10),
+            readMaxAgeDays: parseInt((document.getElementById('sw-read-age') as HTMLInputElement).value, 10),
+            unreadMaxAgeDays: parseInt((document.getElementById('sw-unread-age') as HTMLInputElement).value, 10),
+          },
+        };
+        try {
+          await api.config.updateReview(payload);
+          // Save cursor toggle state
+          const cursorChecked = (document.getElementById('sw-cursor') as HTMLInputElement).checked;
+          await fetch('/api/settings/cursor', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: cursorChecked }),
+          });
+          toast('Sweep settings saved');
+          renderSettings();
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : String(e);
+          toast(msg, true);
+        }
+      });
     }
 
   } catch (e: any) {
