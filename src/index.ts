@@ -80,6 +80,15 @@ async function main(): Promise<void> {
       logger,
     });
     sweeper.start();
+    batchEngine = new BatchEngine({
+      client: imapClient,
+      activityLog,
+      rules: updatedConfig.rules,
+      trashFolder: reviewTrash,
+      reviewFolder: updatedConfig.review.folder,
+      reviewConfig: updatedConfig.review,
+      logger,
+    });
   });
 
   // H3: Stop/rebuild sweeper alongside monitor on IMAP config change
@@ -106,7 +115,7 @@ async function main(): Promise<void> {
       client: newClient,
       activityLog,
       rules: newConfig.rules,
-      trashFolder: newConfig.review.trashFolder,
+      trashFolder: newTrash,
       reviewFolder: newConfig.review.folder,
       reviewConfig: newConfig.review,
       logger,
