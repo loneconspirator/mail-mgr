@@ -25,7 +25,7 @@
 - [ ] **BATC-03**: Batch processing uses chunked IMAP moves with per-message error isolation
 - [x] ~~**BATC-04**: Real-time progress reported to UI via Server-Sent Events~~ — Dropped: polling-based progress sufficient
 - [ ] **BATC-05**: User can cancel a running batch (stops after current chunk completes)
-- [ ] **BATC-06**: Dry-run mode previews what a batch would do without executing moves
+- [x] **BATC-06**: Dry-run mode previews what a batch would do without executing moves
 - [x] ~~**BATC-07**: Batch summary report shown after completion (moved/skipped/errored counts by destination)~~ — Dropped: aggregate counts sufficient
 
 ### Config & Cleanup
@@ -77,7 +77,7 @@
 | BATC-03 | Phase 3 | Pending |
 | BATC-04 | — | Dropped |
 | BATC-05 | Phase 3 | Pending |
-| BATC-06 | Phase 3, Phase 5 | Pending |
+| BATC-06 | Phase 3, Phase 5 | Complete |
 | BATC-07 | — | Dropped |
 | CONF-01 | Phase 4 | Pending |
 | CONF-02 | Phase 4 | Pending |

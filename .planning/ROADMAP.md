@@ -92,7 +92,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 05-01-PLAN.md — Fix no-match filter bug, migrate cursor toggle to api wrapper, replace catch(e: any) with catch(e: unknown) (BATC-06)
+- [x] 05-01-PLAN.md — Fix no-match filter bug, migrate cursor toggle to api wrapper, replace catch(e: any) with catch(e: unknown) (BATC-06)
 
 ## Progress
 
