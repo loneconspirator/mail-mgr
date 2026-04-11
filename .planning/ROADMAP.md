@@ -89,12 +89,15 @@ Plans:
   1. No-match group in dry-run preview renders with muted styling and "No match (stay in folder)" label, separated from match groups
   2. Cursor toggle API calls use the api wrapper object, not raw fetch()
   3. All catch blocks in app.ts use catch(e: unknown) with instanceof Error check
-**Plans**: 0 plans (pending /gsd-plan-phase 5)
+**Plans**: 1 plan
+
+Plans:
+- [ ] 05-01-PLAN.md — Fix no-match filter bug, migrate cursor toggle to api wrapper, replace catch(e: any) with catch(e: unknown) (BATC-06)
 
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 -> 2 -> 3 -> 4
+Phases execute in numeric order: 1 -> 2 -> 3 -> 4 -> 5
 Note: Phase 4 has no dependency on Phases 2-3 and could run in parallel if inserted earlier.
 
 | Phase | Plans Complete | Status | Completed |
@@ -103,4 +106,4 @@ Note: Phase 4 has no dependency on Phases 2-3 and could run in parallel if inser
 | 2. Tree Picker | 0/2 | Planning complete | - |
 | 3. Batch Filing Engine | 0/3 | Planning complete | - |
 | 4. Config & Cleanup | 0/2 | Planning complete | - |
-| 5. Frontend Polish | 0/0 | Not started | - |
+| 5. Frontend Polish | 0/1 | Planning complete | - |
