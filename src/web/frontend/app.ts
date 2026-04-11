@@ -103,7 +103,7 @@ async function renderRules() {
       toggleInput.addEventListener('change', async () => {
         try {
           await api.rules.update(rule.id, { ...rule, enabled: toggleInput.checked });
-        } catch (e: any) { toast(e.message, true); }
+        } catch (e: unknown) { const msg = e instanceof Error ? e.message : String(e); toast(msg, true); }
       });
       const slider = h('span', { className: 'slider' });
       toggleLabel.append(toggleInput, slider);
@@ -118,7 +118,7 @@ async function renderRules() {
           await api.rules.delete(rule.id);
           toast('Rule deleted');
           renderRules();
-        } catch (e: any) { toast(e.message, true); }
+        } catch (e: unknown) { const msg = e instanceof Error ? e.message : String(e); toast(msg, true); }
       });
 
       const actionsCell = h('td', {}, editBtn, document.createTextNode(' '), deleteBtn);
@@ -133,9 +133,10 @@ async function renderRules() {
 
     table.append(tbody);
     app.append(table);
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
     app.innerHTML = '';
-    app.append(h('div', { className: 'empty' }, `Failed to load rules: ${e.message}`));
+    app.append(h('div', { className: 'empty' }, `Failed to load rules: ${msg}`));
   }
 }
 
@@ -328,9 +329,10 @@ async function renderActivity() {
       if (currentPage === 'activity') renderActivity();
     }, 30000);
 
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
     app.innerHTML = '';
-    app.append(h('div', { className: 'empty' }, `Failed to load activity: ${e.message}`));
+    app.append(h('div', { className: 'empty' }, `Failed to load activity: ${msg}`));
   }
 }
 
@@ -387,7 +389,7 @@ async function renderSettings() {
         await api.config.updateImap(cfg);
         toast('Settings saved');
         renderSettings();
-      } catch (e: any) { toast(e.message, true); }
+      } catch (e: unknown) { const msg = e instanceof Error ? e.message : String(e); toast(msg, true); }
     });
 
     // K8: Review Status panel
@@ -496,9 +498,10 @@ async function renderSettings() {
       });
     }
 
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : String(e);
     app.innerHTML = '';
-    app.append(h('div', { className: 'empty' }, `Failed to load settings: ${e.message}`));
+    app.append(h('div', { className: 'empty' }, `Failed to load settings: ${msg}`));
   }
 }
 
