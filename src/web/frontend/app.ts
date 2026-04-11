@@ -1,7 +1,7 @@
 import { api } from './api.js';
 import type { Rule, ActivityEntry, ImapConfig, ReviewConfig, BatchStatusResponse, DryRunGroup } from './api.js';
 import { renderFolderPicker } from './folder-picker.js';
-import { formatRuleAction, generateBehaviorDescription } from './rule-display.js';
+import { generateBehaviorDescription } from './rule-display.js';
 
 // --- State ---
 let currentPage = 'rules';

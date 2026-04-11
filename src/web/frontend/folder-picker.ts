@@ -70,6 +70,7 @@ export async function renderFolderPicker(opts: FolderPickerOptions): Promise<voi
     if (cachedFolders && Date.now() - cachedAt < CACHE_TTL) {
       folders = cachedFolders
       recentFolders = await api.activity.recentFolders()
+      cachedRecent = recentFolders
     } else {
       const [treeRes, recent] = await Promise.all([
         api.folders.list(),
@@ -78,6 +79,7 @@ export async function renderFolderPicker(opts: FolderPickerOptions): Promise<voi
       folders = treeRes.folders
       recentFolders = recent
       cachedFolders = folders
+      cachedRecent = recent
       cachedAt = Date.now()
     }
 
