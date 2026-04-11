@@ -230,8 +230,8 @@ function openRuleModal(rule?: Rule) {
     if (name) payload.name = name;
 
     try {
-      if (isEdit) {
-        await api.rules.update(rule!.id, payload);
+      if (isEdit && rule) {
+        await api.rules.update(rule.id, payload);
         toast('Rule updated');
       } else {
         await api.rules.create(payload);
@@ -239,7 +239,10 @@ function openRuleModal(rule?: Rule) {
       }
       overlay.remove();
       renderRules();
-    } catch (e: any) { toast(e.message, true); }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast(msg, true);
+    }
   });
 }
 
