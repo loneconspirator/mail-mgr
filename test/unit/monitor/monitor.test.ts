@@ -483,4 +483,113 @@ describe('Monitor', () => {
 
     await client.disconnect();
   });
+
+  describe('cursorEnabled toggle', () => {
+    it('when cursorEnabled is false, starts with lastUid=0 even if lastUid is stored', async () => {
+      // Pre-store a lastUid and set cursorEnabled to false
+      activityLog.setState('lastUid', '500');
+      activityLog.setState('cursorEnabled', 'false');
+
+      const config = makeConfig([]);
+      const flow = makeMockFlow();
+      (flow.fetch as ReturnType<typeof vi.fn>).mockReturnValue({
+        async *[Symbol.asyncIterator]() { /* no messages */ },
+      });
+
+      const client = new ImapClient(config.imap, () => flow);
+      const monitor = new Monitor(config, { imapClient: client, activityLog, logger: silentLogger });
+
+      await client.connect();
+      await monitor.processNewMessages();
+
+      // Should fetch from UID 1 (lastUid=0 means sinceUid=0, so range '1:*')
+      expect(flow.fetch).toHaveBeenCalledWith('1:*', expect.any(Object), expect.any(Object));
+
+      await client.disconnect();
+    });
+
+    it('when cursorEnabled is false, does not persist lastUid during processNewMessages', async () => {
+      activityLog.setState('cursorEnabled', 'false');
+
+      const rule = makeRule();
+      const config = makeConfig([rule]);
+      const flow = makeMockFlow();
+
+      const fetchResult = makeFetchResult(10, 'alice@example.com', 'Hello');
+      (flow.fetch as ReturnType<typeof vi.fn>).mockReturnValue({
+        async *[Symbol.asyncIterator]() {
+          yield fetchResult;
+        },
+      });
+
+      const client = new ImapClient(config.imap, () => flow);
+      const monitor = new Monitor(config, { imapClient: client, activityLog, logger: silentLogger });
+
+      await client.connect();
+      await monitor.processNewMessages();
+
+      // lastUid should NOT have been persisted
+      expect(activityLog.getState('lastUid')).toBeUndefined();
+
+      await client.disconnect();
+    });
+
+    it('when cursorEnabled is unset (default), loads and persists lastUid normally', async () => {
+      activityLog.setState('lastUid', '100');
+      // cursorEnabled is NOT set — default behavior
+
+      const rule = makeRule();
+      const config = makeConfig([rule]);
+      const flow = makeMockFlow();
+
+      const fetchResult = makeFetchResult(101, 'alice@example.com', 'Hello');
+      (flow.fetch as ReturnType<typeof vi.fn>).mockReturnValue({
+        async *[Symbol.asyncIterator]() {
+          yield fetchResult;
+        },
+      });
+
+      const client = new ImapClient(config.imap, () => flow);
+      const monitor = new Monitor(config, { imapClient: client, activityLog, logger: silentLogger });
+
+      await client.connect();
+      await monitor.processNewMessages();
+
+      // Should have fetched from UID 101 (lastUid=100, range '101:*')
+      expect(flow.fetch).toHaveBeenCalledWith('101:*', expect.any(Object), expect.any(Object));
+      // And persisted the new lastUid
+      expect(activityLog.getState('lastUid')).toBe('101');
+
+      await client.disconnect();
+    });
+
+    it('when cursorEnabled is true, loads and persists lastUid normally', async () => {
+      activityLog.setState('lastUid', '200');
+      activityLog.setState('cursorEnabled', 'true');
+
+      const rule = makeRule();
+      const config = makeConfig([rule]);
+      const flow = makeMockFlow();
+
+      const fetchResult = makeFetchResult(201, 'alice@example.com', 'Hello');
+      (flow.fetch as ReturnType<typeof vi.fn>).mockReturnValue({
+        async *[Symbol.asyncIterator]() {
+          yield fetchResult;
+        },
+      });
+
+      const client = new ImapClient(config.imap, () => flow);
+      const monitor = new Monitor(config, { imapClient: client, activityLog, logger: silentLogger });
+
+      await client.connect();
+      await monitor.processNewMessages();
+
+      // Should have fetched from UID 201 (lastUid=200, range '201:*')
+      expect(flow.fetch).toHaveBeenCalledWith('201:*', expect.any(Object), expect.any(Object));
+      // And persisted the new lastUid
+      expect(activityLog.getState('lastUid')).toBe('201');
+
+      await client.disconnect();
+    });
+  });
 });
