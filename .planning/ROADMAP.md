@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Tree Picker** - Visual folder selector replaces text input in rule editor
 - [ ] **Phase 3: Batch Filing Engine** - Core engine for retroactive rule application with dry-run and cancellation
 - [ ] **Phase 4: Config & Cleanup** - Editable sweep settings, per-stream archive defaults, and v0.2 bug fixes
-- [ ] **Phase 5: Frontend Polish** - Fix no-match display bug, replace raw fetch with api wrapper, eliminate catch(e: any)
+- [x] **Phase 5: Frontend Polish** - Fix no-match display bug, replace raw fetch with api wrapper, eliminate catch(e: any)
 
 ## Phase Details
 
