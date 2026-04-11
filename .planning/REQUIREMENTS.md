@@ -77,7 +77,7 @@
 | BATC-03 | Phase 3 | Pending |
 | BATC-04 | — | Dropped |
 | BATC-05 | Phase 3 | Pending |
-| BATC-06 | Phase 3 | Pending |
+| BATC-06 | Phase 3, Phase 5 | Pending |
 | BATC-07 | — | Dropped |
 | CONF-01 | Phase 4 | Pending |
 | CONF-02 | Phase 4 | Pending |

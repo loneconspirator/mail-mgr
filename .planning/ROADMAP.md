@@ -16,6 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Tree Picker** - Visual folder selector replaces text input in rule editor
 - [ ] **Phase 3: Batch Filing Engine** - Core engine for retroactive rule application with dry-run and cancellation
 - [ ] **Phase 4: Config & Cleanup** - Editable sweep settings, per-stream archive defaults, and v0.2 bug fixes
+- [ ] **Phase 5: Frontend Polish** - Fix no-match display bug, replace raw fetch with api wrapper, eliminate catch(e: any)
 
 ## Phase Details
 
@@ -79,6 +80,17 @@ Plans:
 - [x] 04-01-PLAN.md — Optional rule name schema change, behavior description generator, rule table display update (CONF-05)
 - [x] 04-02-PLAN.md — Editable sweep settings card with tree pickers, stale sweeper fix, cursor toggle (CONF-01, CONF-02, CONF-03, CONF-04)
 
+### Phase 5: Frontend Polish
+**Goal**: Fix no-match group display bug in batch dry-run preview, replace raw fetch with api wrapper for cursor toggle, eliminate remaining catch(e: any) blocks
+**Depends on**: Phase 3, Phase 4
+**Requirements**: BATC-06 (integration fix)
+**Gap Closure**: Closes tech debt from v0.3 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. No-match group in dry-run preview renders with muted styling and "No match (stay in folder)" label, separated from match groups
+  2. Cursor toggle API calls use the api wrapper object, not raw fetch()
+  3. All catch blocks in app.ts use catch(e: unknown) with instanceof Error check
+**Plans**: 0 plans (pending /gsd-plan-phase 5)
+
 ## Progress
 
 **Execution Order:**
@@ -91,3 +103,4 @@ Note: Phase 4 has no dependency on Phases 2-3 and could run in parallel if inser
 | 2. Tree Picker | 0/2 | Planning complete | - |
 | 3. Batch Filing Engine | 0/3 | Planning complete | - |
 | 4. Config & Cleanup | 0/2 | Planning complete | - |
+| 5. Frontend Polish | 0/0 | Not started | - |
