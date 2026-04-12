@@ -24,6 +24,7 @@ export interface ImapFlowLike {
   mailboxCreate(path: string | string[]): Promise<unknown>;
   fetch(range: string, query: Record<string, unknown>, options?: { uid?: boolean }): AsyncIterable<unknown>;
   list(options?: Record<string, unknown>): Promise<unknown[]>;
+  status(path: string, query: Record<string, boolean>): Promise<Record<string, number>>;
   noop(): Promise<void>;
   on(event: string, listener: (...args: unknown[]) => void): this;
   removeAllListeners(event?: string): this;
