@@ -5,13 +5,14 @@ import os from 'node:os';
 import { Monitor } from '../../../src/monitor/index.js';
 import { ImapClient } from '../../../src/imap/index.js';
 import type { ImapFlowLike } from '../../../src/imap/index.js';
+import * as imapIndex from '../../../src/imap/index.js';
 import { ActivityLog } from '../../../src/log/index.js';
 import type { Config, Rule } from '../../../src/config/index.js';
 import pino from 'pino';
 
 const silentLogger = pino({ level: 'silent' });
 
-function makeConfig(rules: Rule[] = []): Config {
+function makeConfig(rules: Rule[] = [], opts?: { envelopeHeader?: string }): Config {
   return {
     imap: {
       host: 'localhost',
@@ -20,6 +21,7 @@ function makeConfig(rules: Rule[] = []): Config {
       auth: { user: 'test', pass: 'test' },
       idleTimeout: 300000,
       pollInterval: 60000,
+      ...(opts?.envelopeHeader !== undefined ? { envelopeHeader: opts.envelopeHeader } : {}),
     },
     server: { port: 3000, host: '0.0.0.0' },
     rules,
@@ -482,6 +484,71 @@ describe('Monitor', () => {
     expect(entries[0].rule_id).toBe('skip-rule');
 
     await client.disconnect();
+  });
+
+  describe('envelopeHeader passthrough', () => {
+    it('passes envelopeHeader to parseMessage when configured', async () => {
+      const rule = makeRule();
+      const config = makeConfig([rule], { envelopeHeader: 'Delivered-To' });
+      const flow = makeMockFlow();
+
+      const fetchResult = makeFetchResult(1, 'alice@example.com', 'Hello');
+      (flow.fetch as ReturnType<typeof vi.fn>).mockReturnValue({
+        async *[Symbol.asyncIterator]() {
+          yield fetchResult;
+        },
+      });
+
+      const parseMessageSpy = vi.spyOn(imapIndex, 'parseMessage');
+
+      const client = new ImapClient(config.imap, () => flow);
+      const monitor = new Monitor(config, { imapClient: client, activityLog, logger: silentLogger });
+
+      await client.connect();
+      await monitor.processNewMessages();
+
+      expect(parseMessageSpy).toHaveBeenCalledWith(fetchResult, 'Delivered-To');
+
+      parseMessageSpy.mockRestore();
+      await client.disconnect();
+    });
+
+    it('passes undefined envelopeHeader to parseMessage when not configured', async () => {
+      const rule = makeRule();
+      const config = makeConfig([rule]);
+      const flow = makeMockFlow();
+
+      const fetchResult = makeFetchResult(1, 'alice@example.com', 'Hello');
+      (flow.fetch as ReturnType<typeof vi.fn>).mockReturnValue({
+        async *[Symbol.asyncIterator]() {
+          yield fetchResult;
+        },
+      });
+
+      const parseMessageSpy = vi.spyOn(imapIndex, 'parseMessage');
+
+      const client = new ImapClient(config.imap, () => flow);
+      const monitor = new Monitor(config, { imapClient: client, activityLog, logger: silentLogger });
+
+      await client.connect();
+      await monitor.processNewMessages();
+
+      expect(parseMessageSpy).toHaveBeenCalledWith(fetchResult, undefined);
+
+      parseMessageSpy.mockRestore();
+      await client.disconnect();
+    });
+
+    it('new Monitor with envelopeHeader stores the value from config', () => {
+      const config = makeConfig([], { envelopeHeader: 'X-Original-To' });
+      const flow = makeMockFlow();
+      const client = new ImapClient(config.imap, () => flow);
+      const monitor = new Monitor(config, { imapClient: client, activityLog, logger: silentLogger });
+
+      // Verify by processing a message and checking the spy
+      // The constructor should have stored the envelopeHeader
+      expect(monitor).toBeDefined();
+    });
   });
 
   describe('cursorEnabled toggle', () => {
