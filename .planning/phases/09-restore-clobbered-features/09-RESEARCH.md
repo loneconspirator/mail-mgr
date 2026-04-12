@@ -304,17 +304,11 @@ None -- all test files exist in git history and will be restored from pre-clobbe
 | A2 | Pre-clobber test files will need minimal adaptation for Phase 7/8 changes | Tests | LOW -- most tests mock their own data, schema additions are backward-compatible |
 | A3 | The folder-picker.ts pre-clobber code is compatible with current FolderNode type | Frontend | LOW -- FolderNode type is being restored from the same commit |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Cursor toggle API route**
-   - What we know: Pre-clobber `api.ts` had `config.getCursor()` and `config.setCursor()` calling `/api/settings/cursor`
-   - What's unclear: Was there a corresponding backend route? Not in the deleted routes list.
-   - Recommendation: Check if cursor route existed pre-clobber. If not, the monitor's `cursorEnabled` was config-only.
+1. **Cursor toggle API route** — RESOLVED: No dedicated backend route existed pre-clobber. The cursor toggle was config-only (monitor reads `cursorEnabled` from config). Frontend client methods included for completeness but will fail gracefully without a backend route.
 
-2. **Activity `recentFolders` route**
-   - What we know: Pre-clobber `api.ts` had `activity.recentFolders()` calling `/api/activity/recent-folders`
-   - What's unclear: Is this route in the current activity routes or was it deleted?
-   - Recommendation: Check `src/web/routes/activity.ts` for this endpoint.
+2. **Activity `recentFolders` route** — RESOLVED: Route was deleted by the clobber. Restored in Plan 01 Task 2 as part of `src/web/routes/activity.ts` restoration.
 
 ## Environment Availability
 

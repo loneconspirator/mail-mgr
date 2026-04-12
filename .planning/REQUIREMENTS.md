@@ -70,8 +70,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MATCH-04 | Phase 7 | Pending |
 | MATCH-05 | Phase 7 | Pending |
 | MATCH-06 | Phase 6 | Pending |
-| LEARN-01 | Phase 9 | Pending |
-| LEARN-02 | Phase 9 | Pending |
+| LEARN-01 | Phase 10 | Pending |
+| LEARN-02 | Phase 10 | Pending |
 | LEARN-03 | Phase 10 | Pending |
 | LEARN-04 | Phase 10 | Pending |
 | LEARN-05 | Phase 10 | Pending |
