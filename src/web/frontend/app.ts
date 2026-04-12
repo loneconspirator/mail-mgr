@@ -92,7 +92,7 @@ async function renderRules() {
       const tr = document.createElement('tr');
       tr.dataset.id = rule.id;
 
-      const matchStr = generateBehaviorDescription(rule.match as Record<string, string>);
+      const matchStr = generateBehaviorDescription(rule.match);
       const actionStr = 'folder' in rule.action ? `${rule.action.type} → ${rule.action.folder}` : rule.action.type;
 
       const toggleLabel = document.createElement('label');

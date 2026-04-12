@@ -1,5 +1,7 @@
+import type { EmailMatch } from '../../shared/types.js';
+
 /** Generate a human-readable description of a rule's match conditions. */
-export function generateBehaviorDescription(match: Record<string, string>): string {
+export function generateBehaviorDescription(match: EmailMatch): string {
   const parts: string[] = [];
   if (match.sender) parts.push(`sender: ${match.sender}`);
   if (match.recipient) parts.push(`to: ${match.recipient}`);
