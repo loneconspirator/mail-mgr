@@ -14,6 +14,7 @@ function makeMockClient(messages: Array<{ headers?: Buffer }>): ImapClient {
     withMailboxLock: vi.fn().mockImplementation(
       async (_folder: string, fn: (flow: unknown) => Promise<unknown>) => {
         const flow = {
+          status: vi.fn().mockResolvedValue({ messages: messages.length }),
           fetch: vi.fn().mockReturnValue({
             async *[Symbol.asyncIterator]() {
               for (const msg of messages) {

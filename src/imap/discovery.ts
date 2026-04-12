@@ -21,15 +21,20 @@ const MIN_CONSENSUS = 3;
  */
 export async function probeEnvelopeHeaders(client: ImapClient): Promise<string | null> {
   const results = await client.withMailboxLock('INBOX', async (flow) => {
+    // Fetch only the last 10 messages by sequence number to avoid
+    // pulling the entire mailbox over the wire (WR-02).
+    const status = await flow.status('INBOX', { messages: true });
+    const count = status.messages ?? 0;
+    if (count === 0) return [];
+    const start = Math.max(1, count - 9);
     const msgs: Array<{ headers?: Buffer }> = [];
-    for await (const msg of flow.fetch('1:*', {
+    for await (const msg of flow.fetch(`${start}:*`, {
       uid: true,
       headers: [...CANDIDATE_HEADERS],
     }, { uid: true })) {
       msgs.push(msg as { headers?: Buffer });
     }
-    // Take last 10 by position (most recent)
-    return msgs.slice(-10);
+    return msgs;
   });
 
   if (results.length === 0) {
