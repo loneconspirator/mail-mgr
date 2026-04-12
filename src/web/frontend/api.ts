@@ -36,5 +36,7 @@ export const api = {
   config: {
     getImap: () => request<ImapConfig>('/api/config/imap'),
     updateImap: (cfg: ImapConfig) => request<ImapConfig>('/api/config/imap', { method: 'PUT', body: JSON.stringify(cfg) }),
+    getEnvelopeStatus: () => request<{ envelopeHeader: string | null }>('/api/config/envelope'),
+    triggerDiscovery: () => request<{ envelopeHeader: string | null }>('/api/config/envelope/discover', { method: 'POST' }),
   },
 };

@@ -57,6 +57,11 @@ export interface ReviewStatusResponse {
   } | null;
 }
 
+// GET /api/config/envelope response
+export interface EnvelopeStatus {
+  envelopeHeader: string | null;
+}
+
 // GET /api/status response
 export interface StatusResponse {
   connectionStatus: string;
