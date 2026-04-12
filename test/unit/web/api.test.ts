@@ -321,3 +321,36 @@ describe('PUT /api/config/imap', () => {
     expect(res.statusCode).toBe(400);
   });
 });
+
+// --- Envelope Config ---
+
+describe('GET /api/config/envelope', () => {
+  it('returns { envelopeHeader: null } when not configured', async () => {
+    const app = buildServer(makeDeps(makeConfig()));
+    const res = await app.inject({ method: 'GET', url: '/api/config/envelope' });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body).toEqual({ envelopeHeader: null });
+  });
+
+  it('returns { envelopeHeader: "Delivered-To" } when configured', async () => {
+    const config = makeConfig();
+    (config.imap as any).envelopeHeader = 'Delivered-To';
+    const app = buildServer(makeDeps(config));
+    const res = await app.inject({ method: 'GET', url: '/api/config/envelope' });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body).toEqual({ envelopeHeader: 'Delivered-To' });
+  });
+});
+
+describe('POST /api/config/envelope/discover', () => {
+  it('returns envelope status shape on error (no IMAP server)', async () => {
+    const app = buildServer(makeDeps(makeConfig()));
+    const res = await app.inject({ method: 'POST', url: '/api/config/envelope/discover' });
+    // Without a real IMAP server, this should return 500 with error
+    expect(res.statusCode).toBe(500);
+    const body = res.json();
+    expect(body.error).toBeDefined();
+  });
+});
