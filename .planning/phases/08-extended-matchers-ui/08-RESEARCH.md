@@ -292,10 +292,18 @@ app.get('/api/config/envelope', async () => {
   return { envelopeHeader: config.imap.envelopeHeader ?? null };
 });
 
-// POST /api/config/envelope/discover — triggers re-discovery, returns result
+// POST /api/config/envelope/discover — creates temporary ImapClient, probes headers, persists result
 app.post('/api/config/envelope/discover', async (request, reply) => {
-  // Trigger discovery through monitor/imap client
-  // Return updated envelope header status
+  const config = deps.configRepo.getConfig();
+  const imapConfig = config.imap;
+  const client = new ImapClient(imapConfig, (cfg) =>
+    new ImapFlow({ host: cfg.host, port: cfg.port, secure: cfg.tls, auth: cfg.auth, logger: false }) as any
+  );
+  await client.connect();
+  const header = await probeEnvelopeHeaders(client);
+  await client.disconnect();
+  await deps.configRepo.updateImapConfig({ ...imapConfig, envelopeHeader: header ?? undefined });
+  return { envelopeHeader: header };
 });
 ```
 
@@ -435,7 +443,7 @@ export function generateBehaviorDescription(match: Record<string, string>): stri
 
 | Pattern | STRIDE | Standard Mitigation |
 |---------|--------|---------------------|
-| XSS via innerHTML template interpolation | Tampering | Existing risk in codebase -- rule values with HTML chars. Follow existing pattern for consistency; note in open questions. |
+| XSS via innerHTML template interpolation | Tampering | Pre-existing risk across all modal fields. Out of scope for Phase 8 (see resolved Q3 below). Accepted in threat model T-08-03. |
 | CSRF on discovery trigger | Tampering | Low risk -- single-user app on localhost. No mitigation needed. |
 
 ## Assumptions Log
@@ -446,22 +454,16 @@ export function generateBehaviorDescription(match: Record<string, string>): stri
 | A2 | ConfigRepository will have a method to access `envelopeHeader` | Code Examples | Need to read config differently if getter doesn't exist |
 | A3 | Discovery can be triggered programmatically from a route handler | Code Examples | If discovery requires IMAP connection lifecycle management, the POST endpoint shape changes |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **How does the POST discovery endpoint actually trigger discovery?**
-   - What we know: Phase 6 D-01 says discovery triggers on IMAP config submit. The Monitor has access to ImapClient.
-   - What's unclear: Whether there's a standalone `runDiscovery()` method on ImapClient or Monitor that a route handler can call, or if it's coupled to the config-save flow.
-   - Recommendation: The route handler needs access to either `monitor.runDiscovery()` or `imapClient.discoverEnvelopeHeader()`. ServerDeps may need extending to include this capability. Plan should account for this wiring.
+1. **How does the POST discovery endpoint actually trigger discovery?** (RESOLVED)
+   - **Resolution:** The route handler creates its own temporary ImapClient directly. No ServerDeps extension needed. `src/index.ts` shows the pattern at lines 33 and 42: `new ImapClient(config.imap, createImapFlow)` where `createImapFlow` constructs an `ImapFlow` from config fields (host, port, tls, auth). The POST handler in `src/web/routes/envelope.ts` reproduces this pattern inline -- it reads imap config from `deps.configRepo.getConfig()`, creates a temporary `ImapClient` with an inline `ImapFlow` factory, calls `client.connect()`, runs `probeEnvelopeHeaders(client)`, calls `client.disconnect()`, persists the result via `deps.configRepo.updateImapConfig()`, and returns the status. The `createImapFlow` factory in `src/index.ts` is only 4 lines and trivially reproducible in the route handler. Plan 01 Task 2 action reflects this exact approach.
 
-2. **Should `generateBehaviorDescription()` replace the inline `matchStr` in the rules table?**
-   - What we know: Line 84 of app.ts builds `matchStr` inline: `Object.entries(rule.match).map(...)`. CONTEXT D-14 says to create `generateBehaviorDescription()` in rule-display.ts.
-   - What's unclear: Whether the existing inline logic should be replaced or if both coexist.
-   - Recommendation: Replace the inline logic with `generateBehaviorDescription()` for cleaner field labels (e.g., "delivered-to" instead of raw key name "deliveredTo").
+2. **Should `generateBehaviorDescription()` replace the inline `matchStr` in the rules table?** (RESOLVED)
+   - **Resolution:** Yes, replace it. Line 84 of app.ts (`Object.entries(rule.match).map(...)`) is replaced with `generateBehaviorDescription(rule.match)` imported from `rule-display.ts`. This provides human-readable labels ("delivered-to" instead of "deliveredTo", "field: direct" instead of "visibility: direct"). Plan 02 Task 1 Step 4 implements this replacement.
 
-3. **Existing XSS risk in rule modal template interpolation**
-   - What we know: All modal fields use `value="${rule?.name || ''}"` which doesn't escape HTML entities.
-   - What's unclear: Whether to fix this as part of this phase or leave it consistent.
-   - Recommendation: Out of scope for this phase (pre-existing), but worth noting. The new fields follow the same pattern.
+3. **Existing XSS risk in rule modal template interpolation** (RESOLVED)
+   - **Resolution:** Out of scope for Phase 8. This is a pre-existing risk across all modal fields (sender, subject, name all use unescaped `value="${...}"`). New fields follow the same pattern for consistency. Fixing would require refactoring the entire modal from innerHTML to the `h()` DOM factory, which is a separate concern. Noted as a known risk in the threat model (T-08-03, disposition: accept).
 
 ## Sources
 
