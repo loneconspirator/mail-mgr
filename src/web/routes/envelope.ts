@@ -37,8 +37,10 @@ export function registerEnvelopeRoutes(app: FastifyInstance, deps: ServerDeps): 
       await client.disconnect();
       await deps.configRepo.updateImapConfig({ ...imapConfig, envelopeHeader: header ?? undefined });
       return { envelopeHeader: header };
-    } catch (err: any) {
-      return reply.status(500).send({ error: `Discovery failed: ${err.message}` });
+    } catch (err: unknown) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      app.log.error({ err: error }, 'envelope discovery failed');
+      return reply.status(500).send({ error: 'Discovery failed. Check server logs for details.' });
     } finally {
       discoveryInProgress = false;
     }
