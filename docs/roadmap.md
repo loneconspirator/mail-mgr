@@ -75,7 +75,7 @@ A system that learns from user behavior and eventually proposes its own rules. E
 
 ## Tier 6: Action Folders
 
-**Manage routing from the mail client.** This tier lets the user create and remove common rules by moving messages to special folders in Mac Mail, without switching to the web UI. Action folders are shortcuts for rule management — the resulting rules are standard rules that appear in the normal rule list and the sender disposition views.
+**Manage routing from the mail client.** This tier lets the user create and remove common rules by moving messages to special folders in their mail client, without switching to the web UI. Action folders are shortcuts for rule management — the resulting rules are standard rules that appear in the normal rule list and the sender disposition views.
 
 ### Product Requirements
 
@@ -151,7 +151,7 @@ A system that learns from user behavior and eventually proposes its own rules. E
 
 - **Retroactive rule application:** When creating or editing a rule, an optional checkbox to apply it to existing messages in a specified folder. One-shot batch operation with progress reporting.
 
-- **Multi-account support:** Run one instance that monitors multiple IMAP accounts. The current architecture (one instance per account via Docker) works, but a single UI managing multiple accounts is more convenient.
+- **Multi-account support:** Run one instance that monitors multiple IMAP accounts. The current architecture (one instance per account) works, but a single UI managing multiple accounts is more convenient.
 
 - **Mobile-friendly UI:** The current SPA works fine on desktop. Make it responsive for quick checks from a phone.
 

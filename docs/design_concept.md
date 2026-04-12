@@ -79,7 +79,7 @@ These are shortcuts for rule management, not a separate data structure. The resu
 
 ## Archival Folder Structure
 
-The archival layer uses a small, intentional set of category folders for retrieval. An email can only live in one folder (a constraint of IMAP/Mac Mail), so the automation picks the most useful single category.
+The archival layer uses a small, intentional set of category folders for retrieval. An email can only live in one folder (a constraint of IMAP and folder-based mail clients), so the automation picks the most useful single category.
 
 ### Structure
 
@@ -198,9 +198,9 @@ This approach fails gracefully. A bad guess just means something lands in the wr
 
 - **Runtime:** Node.js / TypeScript
 - **Protocol:** IMAP client running in the background
-- **Primary mail server:** Fastmail (with potential Gmail instance later)
-- **User's mail client:** Mac Mail (read-only interaction; the automation system has its own management UI)
-- **Constraint:** Mac Mail does not support tags or labels, only folders and colored flags. The system is designed entirely around folders.
+- **IMAP server:** Any standard IMAP provider (tested with Fastmail)
+- **Mail client:** Any folder-based mail client (Mac Mail, Thunderbird, etc.). The automation system has its own management web UI.
+- **Constraint:** Designed for folder-based mail clients that don't support tags or labels. Organization is achieved entirely through folder placement.
 - **Message modification:** Not used. The system does not alter message headers or subject lines. Organization is achieved solely through folder placement.
 
 ---

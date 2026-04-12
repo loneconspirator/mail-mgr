@@ -5,15 +5,15 @@
 
 **Mail Manager**
 
-An automated email organization system that monitors IMAP mailboxes, routes messages using pattern-matching rules, and manages a two-stream intake model (Inbox for action items, Review for batch processing). Built for a single user with 20 years of email on Fastmail, accessed via Mac Mail. Includes a web UI for rule management, activity logging, and system status.
+An automated email organization system that monitors IMAP mailboxes, routes messages using pattern-matching rules, and manages a two-stream intake model (Inbox for action items, Review for batch processing). Designed for individual use — one instance per mailbox, any IMAP provider. Includes a web UI for rule management, activity logging, and system status.
 
 **Core Value:** Dramatically reduce inbox volume without losing visibility — messages that need attention stay in Inbox, everything else is automatically routed, reviewed in batches, and archived.
 
 ### Constraints
 
 - **IMAP-only:** No message header modification, no flags beyond standard IMAP flags. Organization is folder placement only.
-- **Mac Mail compatibility:** Must work within Mac Mail's folder-based model. No tags, labels, or virtual folders.
-- **Single user:** No auth, no multi-tenancy. One instance per mailbox.
+- **Folder-based clients:** Must work within folder-based mail clients (Mac Mail, Thunderbird, etc.). No tags, labels, or virtual folders.
+- **Single instance:** No auth, no multi-tenancy. One instance per mailbox.
 - **Batch filing scale:** Must handle applying rules to folders with thousands of messages. Needs progress reporting and the ability to cancel mid-run.
 <!-- GSD:project-end -->
 

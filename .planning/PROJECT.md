@@ -2,7 +2,7 @@
 
 ## What This Is
 
-An automated email organization system that monitors IMAP mailboxes, routes messages using pattern-matching rules, and manages a two-stream intake model (Inbox for action items, Review for batch processing). Includes retroactive batch filing to reorganize existing messages with dry-run preview. Built for a single user with 20 years of email on Fastmail, accessed via Mac Mail. Web UI provides rule management with visual folder pickers, editable sweep settings, batch filing, activity logging, and system status.
+An automated email organization system that monitors IMAP mailboxes, routes messages using pattern-matching rules, and manages a two-stream intake model (Inbox for action items, Review for batch processing). Includes retroactive batch filing to reorganize existing messages with dry-run preview. Designed for individual use — one instance per mailbox, any IMAP provider. Web UI provides rule management with visual folder pickers, editable sweep settings, batch filing, activity logging, and system status.
 
 ## Core Value
 
@@ -70,21 +70,21 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 ## Context
 
 - **Runtime:** Node.js / TypeScript, compiled with tsc
-- **IMAP server:** Fastmail (potential Gmail later)
-- **Mail client:** Mac Mail (folders only, no tags/labels)
+- **IMAP server:** Any standard IMAP provider (tested with Fastmail)
+- **Mail client:** Any folder-based mail client (Mac Mail, Thunderbird, etc.)
 - **Database:** SQLite via better-sqlite3
 - **Web UI:** Vanilla HTML/CSS/JS SPA served by Fastify
 - **Testing:** Vitest with 347 tests (unit + integration)
 - **Codebase:** ~5,500 LOC TypeScript across 44+ source files
 - **Architecture:** Monitor loop polls IMAP, evaluates rules, executes actions, logs activity. Sweep runs periodically on Review folder. BatchEngine applies rules retroactively with chunked execution. Web server exposes REST API for UI.
 - **Key insight:** Folder structure is owned by the mail client/IMAP server, not this application. The system discovers what folders exist and uses them — it does not create or manage them.
-- **User's email history:** 20 years of accumulated mail with inconsistent organization. The folder taxonomy needs to work with what exists, not impose a new structure.
+- **Design assumption:** Users may have years of accumulated mail with inconsistent organization. The folder taxonomy works with what exists, not imposing a new structure.
 
 ## Constraints
 
 - **IMAP-only:** No message header modification, no flags beyond standard IMAP flags. Organization is folder placement only.
-- **Mac Mail compatibility:** Must work within Mac Mail's folder-based model. No tags, labels, or virtual folders.
-- **Single user:** No auth, no multi-tenancy. One instance per mailbox.
+- **Folder-based clients:** Must work within folder-based mail clients (Mac Mail, Thunderbird, etc.). No tags, labels, or virtual folders.
+- **Single instance:** No auth, no multi-tenancy. One instance per mailbox.
 - **Batch filing scale:** Must handle applying rules to folders with thousands of messages. Needs progress reporting and the ability to cancel mid-run.
 
 ## Key Decisions
@@ -93,7 +93,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 |----------|-----------|---------|
 | Folder taxonomy discovered from server, not managed in app | User manages folders in Mac Mail; app should reflect reality, not duplicate management | ✓ Good |
 | Tree picker for folder selection | Current text input doesn't show available folders; visual hierarchy aids rule creation | ✓ Good |
-| Retroactive batch filing included in Tier 3 | User needs to reorganize existing mail into taxonomy — critical for 20 years of accumulated email | ✓ Good |
+| Retroactive batch filing included in Tier 3 | Users need to reorganize existing mail into taxonomy — critical for large accumulated mailboxes | ✓ Good |
 | v0.2 cleanup folded into Tier 3 | Sweep settings UI and stale sweeper ref are small fixes that belong with the next milestone | ✓ Good |
 | Apply full ruleset in batch (no per-rule selection) | Matches how Monitor works; "all rules" satisfies "one, multiple, or all" | ✓ Good |
 | Narrowed CONF-02 to single archive folder | Inbox has no archive fallback; unmatched stay in INBOX; only review needs configurable archive | ✓ Good |
