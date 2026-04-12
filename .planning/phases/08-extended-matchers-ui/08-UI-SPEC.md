@@ -34,7 +34,7 @@ Declared values (must be multiples of 4):
 | Token | Value | Usage |
 |-------|-------|-------|
 | xs | 4px (0.25rem) | Inline padding, icon margins (spinner margin-right) |
-| sm | 8px (0.5rem) | Form input padding, compact gaps (nav gap, form-actions gap) |
+| sm | 8px (0.5rem) | Form input padding, compact gaps (nav gap, form-actions gap), discovery-warning padding, discovery-heading margin-bottom |
 | md | 16px (1rem) | Default element spacing (form-group margin-bottom, header/modal padding) |
 | lg | 24px (1.5rem) | Section padding (settings-card padding, modal padding, main margin, discovery-divider margin) |
 | xl | 32px (2rem) | Header horizontal padding |
@@ -56,7 +56,7 @@ Source: Extracted from existing styles.css. All values are multiples of 4px as m
 | Small/Badge | 12.8px (0.8rem) | 600 (semibold) | 1.5 |
 
 Phase 8 additions:
-- Discovery heading (h3): 15.2px (0.95rem), weight 400, color #444 (subheading within card)
+- Discovery heading (h3): 14.4px (0.9rem), weight 400, color #444 (Body size at regular weight with muted color for visual de-emphasis as subheading within card)
 - Discovery warning text: 13.6px (0.85rem), weight 400, color #854d0e
 - Info icon (tooltip trigger): 13.6px (0.85rem), weight 400, color #666
 
@@ -167,7 +167,7 @@ Source: styles.css full palette extraction. Phase 8 additions from RESEARCH.md C
 | Delivered-To placeholder | `*@example.com` |
 | Recipient Field label | "Recipient Field" |
 | Read Status label | "Read Status" |
-| Dropdown blank option | em-dash character (U+2014: `—`) |
+| Dropdown blank option | em-dash character (U+2014: `---`) |
 | Recipient Field options | "Direct", "CC", "BCC", "List" |
 | Read Status options | "Read", "Unread" |
 | Disabled field tooltip | "Envelope header not discovered -- run discovery in IMAP settings." |
@@ -180,9 +180,9 @@ Source: styles.css full palette extraction. Phase 8 additions from RESEARCH.md C
 | Discovery success toast | "Discovered: {headerName}" |
 | Discovery failure toast | "No envelope header found" |
 | Validation error (no match fields) | "At least one match field is required" |
-| Behavior description — deliveredTo | "delivered-to: {glob}" |
-| Behavior description — visibility | "field: {value}" |
-| Behavior description — readStatus | "status: {value}" |
+| Behavior description --- deliveredTo | "delivered-to: {glob}" |
+| Behavior description --- visibility | "field: {value}" |
+| Behavior description --- readStatus | "status: {value}" |
 
 Source: CONTEXT.md decisions D-03 through D-10, RESEARCH.md code examples.
 
@@ -216,8 +216,8 @@ New rules to add to `src/web/frontend/styles.css`:
 }
 
 .discovery-heading {
-  font-size: 0.95rem;
-  margin-bottom: 0.75rem;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
   color: #444;
 }
 
@@ -225,10 +225,10 @@ New rules to add to `src/web/frontend/styles.css`:
 .discovery-warning {
   color: #854d0e;
   background: #fef9c3;
-  padding: 0.5rem 0.75rem;
+  padding: 0.5rem 0.5rem;
   border-radius: 4px;
   font-size: 0.85rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 /* Discovery button loading state (D-10) */
@@ -260,14 +260,14 @@ Source: RESEARCH.md CSS additions section.
 
 Exact field order per D-01:
 
-1. Name — `<input>` text, id `m-name`
-2. Match Sender — `<input>` text, id `m-sender`, placeholder `*@example.com`
-3. Match Subject — `<input>` text, id `m-subject`, placeholder `*newsletter*`
-4. **Delivered-To** — `<input>` text, id `m-deliveredTo`, placeholder `*@example.com` (NEW)
-5. **Recipient Field** — `<select>`, id `m-visibility` (NEW)
-6. **Read Status** — `<select>`, id `m-readStatus` (NEW)
-7. Action — `<select>`, id `m-action-type`
-8. Folder — folder picker (conditional on action type)
+1. Name --- `<input>` text, id `m-name`
+2. Match Sender --- `<input>` text, id `m-sender`, placeholder `*@example.com`
+3. Match Subject --- `<input>` text, id `m-subject`, placeholder `*newsletter*`
+4. **Delivered-To** --- `<input>` text, id `m-deliveredTo`, placeholder `*@example.com` (NEW)
+5. **Recipient Field** --- `<select>`, id `m-visibility` (NEW)
+6. **Read Status** --- `<select>`, id `m-readStatus` (NEW)
+7. Action --- `<select>`, id `m-action-type`
+8. Folder --- folder picker (conditional on action type)
 
 No grouping, no separators, no collapsible sections per D-01.
 
@@ -289,7 +289,7 @@ No grouping, no separators, no collapsible sections per D-01.
 
 | Registry | Blocks Used | Safety Gate |
 |----------|-------------|-------------|
-| not applicable | none | not applicable — no component library, no shadcn |
+| not applicable | none | not applicable --- no component library, no shadcn |
 
 ---
 
