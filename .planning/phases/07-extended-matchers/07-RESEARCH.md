@@ -345,8 +345,8 @@ Note on the refine: `readStatus: 'any'` alone is arguably not a meaningful rule 
 | MATCH-05 | readStatus any matches both | unit | `npx vitest run test/unit/rules/matcher.test.ts -x` | Needs extension |
 | MATCH-06 (D-08) | Rules with deliveredTo/visibility skipped when envelope unavailable | unit | `npx vitest run test/unit/rules/evaluator.test.ts -x` | Needs extension |
 | MATCH-06 (D-09) | readStatus NOT skipped when envelope unavailable | unit | `npx vitest run test/unit/rules/evaluator.test.ts -x` | Needs extension |
-| Schema | emailMatchSchema validates new fields | unit | `npx vitest run test/unit/rules/ -x` | May need new file |
-| Schema | emailMatchSchema refine accepts each new field alone | unit | `npx vitest run test/unit/rules/ -x` | May need new file |
+| Schema | emailMatchSchema validates new fields | unit | `npx vitest run test/unit/config/schema.test.ts -x` | Needs new file |
+| Schema | emailMatchSchema refine accepts each new field alone | unit | `npx vitest run test/unit/config/schema.test.ts -x` | Needs new file |
 | AND logic | New fields combine with existing fields in AND logic | unit | `npx vitest run test/unit/rules/matcher.test.ts -x` | Needs extension |
 
 ### Sampling Rate
@@ -357,7 +357,7 @@ Note on the refine: `readStatus: 'any'` alone is arguably not a meaningful rule 
 ### Wave 0 Gaps
 - [ ] Extend `test/unit/rules/matcher.test.ts` with describe blocks for `deliveredTo`, `visibility`, `readStatus`
 - [ ] Extend `test/unit/rules/evaluator.test.ts` with describe block for envelope-unavailable skip logic
-- [ ] Consider new `test/unit/config/schema.test.ts` for emailMatchSchema validation (or add to existing if exists)
+- [ ] Create new `test/unit/config/schema.test.ts` for emailMatchSchema validation
 
 ## Security Domain
 
@@ -385,17 +385,19 @@ Note on the refine: `readStatus: 'any'` alone is arguably not a meaningful rule 
 | A1 | picomatch is safe against ReDoS with arbitrary user input | Security Domain | LOW -- picomatch is widely used and designed for glob patterns, not arbitrary regex |
 | A2 | `readStatus: 'any'` alone should pass the refine check | Code Examples | LOW -- policy decision, easy to change either way |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Should `readStatus: 'any'` alone pass the at-least-one-field refine?**
    - What we know: `any` matches all messages regardless of read status, so a rule with only `readStatus: 'any'` is essentially a catch-all
    - What's unclear: Whether users would intentionally create such a rule
    - Recommendation: Allow it (include readStatus in refine check regardless of value). A catch-all rule has legitimate uses and the user is being explicit about intent.
+   - **RESOLVED:** Yes -- Plan 01 Task 1 includes `readStatus` in the refine predicate regardless of value (`m.readStatus !== undefined`). A rule with only `readStatus: 'any'` passes validation. Per Claude's discretion area in CONTEXT.md.
 
 2. **Should `any` be stripped on config serialization?**
    - What we know: D-06 says omitting equals `any`. CONTEXT gives Claude discretion on serialization behavior.
    - What's unclear: Whether user prefers minimal YAML or explicit intent
    - Recommendation: Preserve `any` if user explicitly set it. Don't inject it as a default. This matches the YAML config philosophy of "what you write is what you get."
+   - **RESOLVED:** No stripping -- `any` is preserved if user sets it, not injected as default. Plan 01 stores whatever the user provides; the matcher treats `readStatus: 'any'` and omission identically (both pass through). Per Claude's discretion area in CONTEXT.md.
 
 ## Sources
 
