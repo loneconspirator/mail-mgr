@@ -103,7 +103,7 @@ async function renderRules() {
       toggleInput.addEventListener('change', async () => {
         try {
           await api.rules.update(rule.id, { ...rule, enabled: toggleInput.checked });
-        } catch (e: any) { toast(e.message, true); }
+        } catch (e: unknown) { toast(e instanceof Error ? e.message : String(e), true); }
       });
       const slider = h('span', { className: 'slider' });
       toggleLabel.append(toggleInput, slider);
@@ -122,7 +122,7 @@ async function renderRules() {
           await api.rules.delete(rule.id);
           toast('Rule deleted');
           renderRules();
-        } catch (e: any) { toast(e.message, true); }
+        } catch (e: unknown) { toast(e instanceof Error ? e.message : String(e), true); }
       });
 
       const actionsCell = h('td', {}, editBtn, document.createTextNode(' '), deleteBtn);
@@ -139,9 +139,9 @@ async function renderRules() {
 
     table.append(tbody);
     app.append(table);
-  } catch (e: any) {
+  } catch (e: unknown) {
     app.innerHTML = '';
-    app.append(h('div', { className: 'empty' }, `Failed to load rules: ${e.message}`));
+    app.append(h('div', { className: 'empty' }, `Failed to load rules: ${e instanceof Error ? e.message : String(e)}`));
   }
 }
 
@@ -257,7 +257,7 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true) {
       }
       overlay.remove();
       renderRules();
-    } catch (e: any) { toast(e.message, true); }
+    } catch (e: unknown) { toast(e instanceof Error ? e.message : String(e), true); }
   });
 }
 
@@ -323,9 +323,9 @@ async function renderActivity() {
       if (currentPage === 'activity') renderActivity();
     }, 30000);
 
-  } catch (e: any) {
+  } catch (e: unknown) {
     app.innerHTML = '';
-    app.append(h('div', { className: 'empty' }, `Failed to load activity: ${e.message}`));
+    app.append(h('div', { className: 'empty' }, `Failed to load activity: ${e instanceof Error ? e.message : String(e)}`));
   }
 }
 
@@ -388,7 +388,7 @@ async function renderSettings() {
         await api.config.updateImap(cfg);
         toast('Settings saved');
         renderSettings();
-      } catch (e: any) { toast(e.message, true); }
+      } catch (e: unknown) { toast(e instanceof Error ? e.message : String(e), true); }
     });
 
     document.getElementById('s-rediscover')?.addEventListener('click', async (e) => {
@@ -414,9 +414,9 @@ async function renderSettings() {
       }
     });
 
-  } catch (e: any) {
+  } catch (e: unknown) {
     app.innerHTML = '';
-    app.append(h('div', { className: 'empty' }, `Failed to load settings: ${e.message}`));
+    app.append(h('div', { className: 'empty' }, `Failed to load settings: ${e instanceof Error ? e.message : String(e)}`));
   }
 }
 
