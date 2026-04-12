@@ -14,7 +14,8 @@ import { registerEnvelopeRoutes } from './routes/envelope.js';
 export interface ServerDeps {
   configRepo: ConfigRepository;
   activityLog: ActivityLog;
-  monitor: Monitor;
+  /** Returns the current Monitor instance (supports hot-reload of IMAP config). */
+  getMonitor: () => Monitor;
   /** Override static files root for testing (defaults to dist/public) */
   staticRoot?: string;
 }

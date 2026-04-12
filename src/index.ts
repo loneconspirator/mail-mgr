@@ -75,7 +75,7 @@ async function main(): Promise<void> {
   const app = buildServer({
     configRepo,
     activityLog,
-    monitor,
+    getMonitor: () => monitor,
   });
 
   await app.listen({ port: config.server.port, host: config.server.host });

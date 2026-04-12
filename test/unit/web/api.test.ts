@@ -56,7 +56,7 @@ function makeDeps(config: Config): ServerDeps {
   return {
     configRepo,
     activityLog,
-    monitor: {
+    getMonitor: () => ({
       getState() {
         return {
           connectionStatus: 'connected',
@@ -64,7 +64,7 @@ function makeDeps(config: Config): ServerDeps {
           messagesProcessed: 42,
         };
       },
-    } as any,
+    } as any),
   };
 }
 
