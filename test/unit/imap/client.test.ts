@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ImapClient, type ImapFlowLike, type ImapFlowFactory, type ConnectionState, type ReviewMessage } from '../../../src/imap/index.js';
 import type { ImapConfig } from '../../../src/config/index.js';
+import { imapConfigSchema } from '../../../src/config/schema.js';
 
 const TEST_CONFIG: ImapConfig = {
   host: 'imap.example.com',
@@ -834,6 +835,155 @@ describe('ImapClient', () => {
       const result = await client.listFolders();
 
       expect(result[0].disabled).toBeUndefined();
+    });
+  });
+
+  describe('imapConfigSchema envelopeHeader', () => {
+    it('accepts config without envelopeHeader (backward compatible)', () => {
+      const result = imapConfigSchema.safeParse({
+        host: 'imap.example.com',
+        auth: { user: 'test@example.com', pass: 'secret' },
+      });
+      expect(result.success).toBe(true);
+    });
+
+    it('accepts config with envelopeHeader', () => {
+      const result = imapConfigSchema.safeParse({
+        host: 'imap.example.com',
+        auth: { user: 'test@example.com', pass: 'secret' },
+        envelopeHeader: 'Delivered-To',
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.envelopeHeader).toBe('Delivered-To');
+      }
+    });
+
+    it('rejects empty string envelopeHeader', () => {
+      const result = imapConfigSchema.safeParse({
+        host: 'imap.example.com',
+        auth: { user: 'test@example.com', pass: 'secret' },
+        envelopeHeader: '',
+      });
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe('conditional header fetching', () => {
+    const CONFIG_WITH_HEADER: ImapConfig = {
+      ...TEST_CONFIG,
+      envelopeHeader: 'Delivered-To',
+    };
+
+    it('fetchNewMessages includes headers in query when envelopeHeader is configured', async () => {
+      const fetchFn = vi.fn(function* () {
+        yield { uid: 1, envelope: {}, flags: new Set() };
+      } as unknown as ImapFlowLike['fetch']);
+
+      const flow = createMockFlow({ fetch: fetchFn });
+      const f = vi.fn(() => flow);
+      const c = new ImapClient(CONFIG_WITH_HEADER, f);
+
+      await c.connect();
+      await c.fetchNewMessages(0);
+
+      expect(fetchFn).toHaveBeenCalled();
+      const query = fetchFn.mock.calls[0][1] as Record<string, unknown>;
+      expect(query.headers).toEqual(['Delivered-To', 'List-Id']);
+    });
+
+    it('fetchNewMessages does NOT include headers when envelopeHeader is undefined', async () => {
+      const fetchFn = vi.fn(function* () {
+        yield { uid: 1, envelope: {}, flags: new Set() };
+      } as unknown as ImapFlowLike['fetch']);
+
+      const flow = createMockFlow({ fetch: fetchFn });
+      const f = vi.fn(() => flow);
+      const c = new ImapClient(TEST_CONFIG, f);
+
+      await c.connect();
+      await c.fetchNewMessages(0);
+
+      expect(fetchFn).toHaveBeenCalled();
+      const query = fetchFn.mock.calls[0][1] as Record<string, unknown>;
+      expect(query.headers).toBeUndefined();
+    });
+
+    it('fetchAllMessages includes headers in query when envelopeHeader is configured', async () => {
+      const fetchFn = vi.fn(function* () {
+        yield {
+          uid: 1,
+          flags: new Set(),
+          internalDate: new Date(),
+          envelope: { from: [{ address: 'a@b.com' }], to: [], cc: [], subject: 'Test', messageId: '<1@test>' },
+        };
+      } as unknown as ImapFlowLike['fetch']);
+
+      const flow = createMockFlow({ fetch: fetchFn });
+      const f = vi.fn(() => flow);
+      const c = new ImapClient(CONFIG_WITH_HEADER, f);
+
+      await c.connect();
+      await c.fetchAllMessages('Review');
+
+      expect(fetchFn).toHaveBeenCalled();
+      const query = fetchFn.mock.calls[0][1] as Record<string, unknown>;
+      expect(query.headers).toEqual(['Delivered-To', 'List-Id']);
+    });
+
+    it('parseRawToReviewMessage extracts envelopeRecipient and visibility from headers', async () => {
+      const fetchFn = vi.fn(function* () {
+        yield {
+          uid: 10,
+          flags: new Set(['\\Seen']),
+          internalDate: new Date('2026-03-01T12:00:00Z'),
+          envelope: {
+            from: [{ name: 'Alice', address: 'alice@test.com' }],
+            to: [{ name: 'Bob', address: 'bob@test.com' }],
+            cc: [],
+            subject: 'Hello',
+            messageId: '<msg-10@test.com>',
+          },
+          headers: Buffer.from('Delivered-To: bob@test.com\r\n'),
+        };
+      } as unknown as ImapFlowLike['fetch']);
+
+      const flow = createMockFlow({ fetch: fetchFn });
+      const f = vi.fn(() => flow);
+      const c = new ImapClient(CONFIG_WITH_HEADER, f);
+
+      await c.connect();
+      const results = await c.fetchAllMessages('Review');
+
+      expect(results[0].envelopeRecipient).toBe('bob@test.com');
+      expect(results[0].visibility).toBe('direct');
+    });
+
+    it('parseRawToReviewMessage leaves fields undefined when no headers Buffer', async () => {
+      const fetchFn = vi.fn(function* () {
+        yield {
+          uid: 10,
+          flags: new Set(['\\Seen']),
+          internalDate: new Date('2026-03-01T12:00:00Z'),
+          envelope: {
+            from: [{ name: 'Alice', address: 'alice@test.com' }],
+            to: [{ name: 'Bob', address: 'bob@test.com' }],
+            cc: [],
+            subject: 'Hello',
+            messageId: '<msg-10@test.com>',
+          },
+        };
+      } as unknown as ImapFlowLike['fetch']);
+
+      const flow = createMockFlow({ fetch: fetchFn });
+      const f = vi.fn(() => flow);
+      const c = new ImapClient(CONFIG_WITH_HEADER, f);
+
+      await c.connect();
+      const results = await c.fetchAllMessages('Review');
+
+      expect(results[0].envelopeRecipient).toBeUndefined();
+      expect(results[0].visibility).toBeUndefined();
     });
   });
 });
