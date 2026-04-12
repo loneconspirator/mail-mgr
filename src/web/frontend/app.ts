@@ -1,5 +1,6 @@
 import { api } from './api.js';
 import type { Rule, ActivityEntry, ImapConfig } from './api.js';
+import type { Action } from '../../shared/types.js';
 import { generateBehaviorDescription } from './rule-display.js';
 
 // --- State ---
@@ -222,13 +223,15 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true) {
       return;
     }
 
-    let action: Record<string, string>;
+    let action: Action;
     if (actionType === 'move') {
       action = { type: 'move', folder };
     } else if (actionType === 'review') {
       action = folder ? { type: 'review', folder } : { type: 'review' };
+    } else if (actionType === 'skip') {
+      action = { type: 'skip' };
     } else {
-      action = { type: actionType };
+      action = { type: 'delete' };
     }
 
     const payload = {
