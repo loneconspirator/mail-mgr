@@ -77,6 +77,7 @@ export const imapConfigSchema = z.object({
   auth: imapAuthSchema,
   idleTimeout: z.number().int().positive().default(300_000),
   pollInterval: z.number().int().positive().default(60_000),
+  envelopeHeader: z.string().optional(),
 });
 
 // --- Server config schema ---

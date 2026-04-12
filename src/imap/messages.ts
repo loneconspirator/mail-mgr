@@ -76,6 +76,34 @@ export function reviewMessageToEmailMessage(rm: ReviewMessage): EmailMessage {
   };
 }
 
+export function parseHeaderLines(buf: Buffer | undefined): Map<string, string> {
+  const headers = new Map<string, string>();
+  if (!buf || buf.length === 0) return headers;
+  const text = buf.toString('utf-8');
+  const lines = text.split(/\r?\n/);
+  let currentKey = '';
+  let currentValue = '';
+  for (const line of lines) {
+    if (line === '') continue;
+    if (/^\s/.test(line)) {
+      currentValue += ' ' + line.trim();
+    } else {
+      if (currentKey) {
+        headers.set(currentKey.toLowerCase(), currentValue.trim());
+      }
+      const colonIdx = line.indexOf(':');
+      if (colonIdx > 0) {
+        currentKey = line.substring(0, colonIdx);
+        currentValue = line.substring(colonIdx + 1);
+      }
+    }
+  }
+  if (currentKey) {
+    headers.set(currentKey.toLowerCase(), currentValue.trim());
+  }
+  return headers;
+}
+
 export function parseMessage(fetched: ImapFetchResult): EmailMessage {
   const envelope = fetched.envelope;
 
