@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import type { Rule, ActivityEntry, ImapConfig } from './api.js';
+import type { Rule, ActivityEntry, ImapConfigResponse } from './api.js';
 import type { Action } from '../../shared/types.js';
 import { generateBehaviorDescription } from './rule-display.js';
 
@@ -372,7 +372,7 @@ async function renderSettings() {
     app.append(card);
 
     document.getElementById('s-save')!.addEventListener('click', async () => {
-      const cfg: ImapConfig = {
+      const cfg: ImapConfigResponse = {
         host: (document.getElementById('s-host') as HTMLInputElement).value,
         port: parseInt((document.getElementById('s-port') as HTMLInputElement).value),
         tls: (document.getElementById('s-tls') as HTMLInputElement).checked,
