@@ -31,7 +31,7 @@ export async function probeEnvelopeHeaders(client: ImapClient): Promise<string |
     for await (const msg of flow.fetch(`${start}:*`, {
       uid: true,
       headers: [...CANDIDATE_HEADERS],
-    }, { uid: true })) {
+    })) {
       msgs.push(msg as { headers?: Buffer });
     }
     return msgs;
