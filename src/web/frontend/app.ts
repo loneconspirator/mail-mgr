@@ -302,7 +302,11 @@ async function renderSettings() {
   app.innerHTML = '<p>Loading...</p>';
 
   try {
-    const [imapCfg, status] = await Promise.all([api.config.getImap(), api.status.get()]);
+    const [imapCfg, status, envelopeStatus] = await Promise.all([
+      api.config.getImap(),
+      api.status.get(),
+      api.config.getEnvelopeStatus(),
+    ]);
     app.innerHTML = '';
 
     const card = h('div', { className: 'settings-card' });
@@ -323,6 +327,13 @@ async function renderSettings() {
       <div class="form-actions">
         <button class="btn btn-primary" id="s-save">Save Settings</button>
       </div>
+      <hr class="discovery-divider" />
+      <h3 class="discovery-heading">Envelope Discovery</h3>
+      ${envelopeStatus.envelopeHeader
+        ? `<p><span class="status-badge connected">${envelopeStatus.envelopeHeader}</span> detected</p>
+           <button class="btn" id="s-rediscover">Re-run Discovery</button>`
+        : `<p class="discovery-warning">&#9888; No envelope header detected. Rules using Delivered-To and Recipient Field will be skipped.</p>
+           <button class="btn btn-primary" id="s-rediscover">Run Discovery</button>`}
     `;
 
     app.append(card);
@@ -345,6 +356,29 @@ async function renderSettings() {
         toast('Settings saved');
         renderSettings();
       } catch (e: any) { toast(e.message, true); }
+    });
+
+    document.getElementById('s-rediscover')?.addEventListener('click', async (e) => {
+      const btn = e.target as HTMLButtonElement;
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.classList.add('discovering');
+      btn.innerHTML = '<span class="spinner"></span> Discovering...';
+      try {
+        const result = await api.config.triggerDiscovery();
+        if (result.envelopeHeader) {
+          toast(`Discovered: ${result.envelopeHeader}`);
+        } else {
+          toast('No envelope header found', true);
+        }
+        renderSettings();
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        toast(message, true);
+        btn.disabled = false;
+        btn.classList.remove('discovering');
+        btn.innerHTML = originalText || 'Run Discovery';
+      }
     });
 
   } catch (e: any) {

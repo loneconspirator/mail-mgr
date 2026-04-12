@@ -236,3 +236,65 @@ tr:last-child td { border-bottom: none; }
 .toast.error { background: #dc2626; }
 
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* --- Phase 8: Extended Matchers UI --- */
+
+/* Disabled form fields (D-11) */
+.form-group input:disabled,
+.form-group select:disabled {
+  background: #f0f0f0;
+  color: #999;
+  cursor: not-allowed;
+}
+
+/* Info icon tooltip for disabled field labels (D-11) */
+.info-icon {
+  cursor: help;
+  color: #666;
+  font-size: 0.85rem;
+}
+
+/* Discovery section divider (D-07) */
+.discovery-divider {
+  margin: 1.5rem 0;
+  border: none;
+  border-top: 1px solid #eee;
+}
+
+.discovery-heading {
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  color: #444;
+}
+
+/* Discovery warning (D-09) */
+.discovery-warning {
+  color: #854d0e;
+  background: #fef9c3;
+  padding: 0.5rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+/* Discovery button loading state (D-10) */
+.btn.discovering {
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #ccc;
+  border-top-color: #333;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  vertical-align: middle;
+  margin-right: 0.25rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
