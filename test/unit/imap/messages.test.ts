@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseMessage, reviewMessageToEmailMessage, type ImapFetchResult, type ReviewMessage } from '../../../src/imap/index.js';
+import { parseMessage, reviewMessageToEmailMessage, parseHeaderLines, classifyVisibility, type ImapFetchResult, type ReviewMessage, type Visibility } from '../../../src/imap/index.js';
 
 function makeFetchResult(overrides: Partial<ImapFetchResult> = {}): ImapFetchResult {
   return {
@@ -247,5 +247,159 @@ describe('reviewMessageToEmailMessage', () => {
     const em = reviewMessageToEmailMessage(rm);
 
     expect(em.date).toEqual(d);
+  });
+
+  it('passes through envelopeRecipient and visibility fields', () => {
+    const rm = makeReviewMessage({
+      envelopeRecipient: 'user@example.com',
+      visibility: 'direct' as Visibility,
+    });
+    const em = reviewMessageToEmailMessage(rm);
+
+    expect(em.envelopeRecipient).toBe('user@example.com');
+    expect(em.visibility).toBe('direct');
+  });
+
+  it('leaves envelopeRecipient and visibility undefined when not set', () => {
+    const rm = makeReviewMessage();
+    const em = reviewMessageToEmailMessage(rm);
+
+    expect(em.envelopeRecipient).toBeUndefined();
+    expect(em.visibility).toBeUndefined();
+  });
+});
+
+describe('parseHeaderLines', () => {
+  it('returns empty Map for undefined input', () => {
+    const result = parseHeaderLines(undefined);
+    expect(result.size).toBe(0);
+  });
+
+  it('returns empty Map for empty Buffer', () => {
+    const result = parseHeaderLines(Buffer.from(''));
+    expect(result.size).toBe(0);
+  });
+
+  it('parses single header line', () => {
+    const buf = Buffer.from('Delivered-To: user@example.com\r\n');
+    const result = parseHeaderLines(buf);
+
+    expect(result.get('delivered-to')).toBe('user@example.com');
+  });
+
+  it('handles folded headers (continuation lines)', () => {
+    const buf = Buffer.from('List-Id: <very-long-list-name\r\n .example.com>\r\n');
+    const result = parseHeaderLines(buf);
+
+    expect(result.get('list-id')).toBe('<very-long-list-name .example.com>');
+  });
+
+  it('parses multiple headers from one Buffer', () => {
+    const buf = Buffer.from('Delivered-To: user@example.com\r\nList-Id: <list.example.com>\r\n');
+    const result = parseHeaderLines(buf);
+
+    expect(result.get('delivered-to')).toBe('user@example.com');
+    expect(result.get('list-id')).toBe('<list.example.com>');
+  });
+});
+
+describe('classifyVisibility', () => {
+  const toAddrs = [{ name: 'Bob', address: 'bob@example.com' }];
+  const ccAddrs = [{ name: 'Charlie', address: 'charlie@example.com' }];
+
+  it('returns undefined when envelopeRecipient is undefined', () => {
+    expect(classifyVisibility(undefined, toAddrs, ccAddrs, undefined)).toBeUndefined();
+  });
+
+  it('returns list when listId is present', () => {
+    expect(classifyVisibility('bob@example.com', toAddrs, ccAddrs, '<list.example.com>')).toBe('list');
+  });
+
+  it('returns direct when envelopeRecipient matches To address (case-insensitive)', () => {
+    expect(classifyVisibility('BOB@EXAMPLE.COM', toAddrs, ccAddrs, undefined)).toBe('direct');
+  });
+
+  it('returns cc when envelopeRecipient matches CC address but not To', () => {
+    expect(classifyVisibility('charlie@example.com', toAddrs, ccAddrs, undefined)).toBe('cc');
+  });
+
+  it('returns bcc when envelopeRecipient not in To or CC and no listId', () => {
+    expect(classifyVisibility('secret@example.com', toAddrs, ccAddrs, undefined)).toBe('bcc');
+  });
+});
+
+describe('parseMessage with headers', () => {
+  it('populates envelopeRecipient and visibility when headers Buffer present', () => {
+    const fetched: ImapFetchResult = {
+      uid: 42,
+      flags: new Set(['\\Seen']),
+      envelope: {
+        subject: 'Test',
+        messageId: '<abc@example.com>',
+        from: [{ name: 'Alice', address: 'alice@example.com' }],
+        to: [{ name: 'Bob', address: 'bob@example.com' }],
+        cc: [],
+      },
+      headers: Buffer.from('Delivered-To: bob@example.com\r\n'),
+    };
+
+    const result = parseMessage(fetched, 'Delivered-To');
+
+    expect(result.envelopeRecipient).toBe('bob@example.com');
+    expect(result.visibility).toBe('direct');
+  });
+
+  it('sets visibility to list when List-Id header is present', () => {
+    const fetched: ImapFetchResult = {
+      uid: 43,
+      flags: new Set(),
+      envelope: {
+        subject: 'List post',
+        messageId: '<list@example.com>',
+        from: [{ address: 'sender@example.com' }],
+        to: [{ address: 'list@example.com' }],
+      },
+      headers: Buffer.from('Delivered-To: me@example.com\r\nList-Id: <mylist.example.com>\r\n'),
+    };
+
+    const result = parseMessage(fetched, 'Delivered-To');
+
+    expect(result.envelopeRecipient).toBe('me@example.com');
+    expect(result.visibility).toBe('list');
+  });
+
+  it('leaves envelopeRecipient and visibility undefined without headers Buffer', () => {
+    const fetched: ImapFetchResult = {
+      uid: 44,
+      flags: new Set(),
+      envelope: {
+        subject: 'No headers',
+        from: [{ address: 'a@b.com' }],
+        to: [{ address: 'c@d.com' }],
+      },
+    };
+
+    const result = parseMessage(fetched);
+
+    expect(result.envelopeRecipient).toBeUndefined();
+    expect(result.visibility).toBeUndefined();
+  });
+
+  it('leaves envelopeRecipient undefined when header value lacks @', () => {
+    const fetched: ImapFetchResult = {
+      uid: 45,
+      flags: new Set(),
+      envelope: {
+        subject: 'Bad header',
+        from: [{ address: 'a@b.com' }],
+        to: [{ address: 'c@d.com' }],
+      },
+      headers: Buffer.from('Delivered-To: not-an-email\r\n'),
+    };
+
+    const result = parseMessage(fetched, 'Delivered-To');
+
+    expect(result.envelopeRecipient).toBeUndefined();
+    expect(result.visibility).toBeUndefined();
   });
 });
