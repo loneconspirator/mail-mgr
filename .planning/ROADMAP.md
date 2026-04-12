@@ -77,7 +77,7 @@ Plans:
 - [x] 08-01-PLAN.md — Restore discovery backend, add envelopeHeader to config schema, create envelope API endpoints
 - [x] 08-02-PLAN.md — Rule editor new match fields, generateBehaviorDescription, rule list update
 - [x] 08-03-PLAN.md — Settings discovery section, Phase 8 CSS styles, visual verification
-- [ ] 08-04-PLAN.md — Gap closure: fix rule editor regressions and discovery POST error
+- [x] 08-04-PLAN.md — Gap closure: fix rule editor regressions and discovery POST error
 **UI hint**: yes
 
 ### Phase 9: Move Tracking

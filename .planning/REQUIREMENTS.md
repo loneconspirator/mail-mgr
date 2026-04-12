@@ -26,9 +26,9 @@ Requirements for milestone v0.4: Extended Matchers and Behavioral Learning.
 
 ### UI Updates
 
-- [ ] **UI-01**: Rule editor surfaces envelope recipient glob input, header visibility multi-select (direct/cc/bcc/list), and read status toggle for new match fields
+- [x] **UI-01**: Rule editor surfaces envelope recipient glob input, header visibility multi-select (direct/cc/bcc/list), and read status toggle for new match fields
 - [ ] **UI-02**: Proposed rules view displays detected patterns with signal count, confidence, example messages, and approve/modify/dismiss controls
-- [ ] **UI-03**: IMAP settings page shows discovered envelope recipient header and provides a button to re-run auto-discovery
+- [x] **UI-03**: IMAP settings page shows discovered envelope recipient header and provides a button to re-run auto-discovery
 
 ## Future Requirements
 
@@ -75,9 +75,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LEARN-03 | Phase 10 | Pending |
 | LEARN-04 | Phase 10 | Pending |
 | LEARN-05 | Phase 10 | Pending |
-| UI-01 | Phase 8 | Pending |
+| UI-01 | Phase 8 | Complete |
 | UI-02 | Phase 10 | Pending |
-| UI-03 | Phase 8 | Pending |
+| UI-03 | Phase 8 | Complete |
 
 **Coverage:**
 - v0.4 requirements: 14 total
