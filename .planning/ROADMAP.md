@@ -47,7 +47,7 @@ Plans:
 - [x] 06-01-PLAN.md — Versioned migration system replacing try/catch ALTER TABLE
 - [x] 06-02-PLAN.md — Extended message types, header parsing, visibility classification, conditional fetch
 - [x] 06-03-PLAN.md — Auto-discovery module and lifecycle integration
-- [ ] 06-04-PLAN.md — Gap closure: wire envelopeHeader into Monitor parseMessage call
+- [x] 06-04-PLAN.md — Gap closure: wire envelopeHeader into Monitor parseMessage call
 
 ### Phase 7: Extended Matchers
 **Goal**: Users can write rules that match on envelope recipient, header visibility, and read status, with all three fields integrated into the existing first-match-wins evaluation pipeline
