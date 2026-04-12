@@ -74,7 +74,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - **Mail client:** Any folder-based mail client (Mac Mail, Thunderbird, etc.)
 - **Database:** SQLite via better-sqlite3
 - **Web UI:** Vanilla HTML/CSS/JS SPA served by Fastify
-- **Testing:** Vitest with 347 tests (unit + integration)
+- **Testing:** Vitest with 388 tests (unit + integration)
 - **Codebase:** ~5,500 LOC TypeScript across 44+ source files
 - **Architecture:** Monitor loop polls IMAP, evaluates rules, executes actions, logs activity. Sweep runs periodically on Review folder. BatchEngine applies rules retroactively with chunked execution. Web server exposes REST API for UI.
 - **Key insight:** Folder structure is owned by the mail client/IMAP server, not this application. The system discovers what folders exist and uses them — it does not create or manage them.
@@ -120,4 +120,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-11 after v0.4 milestone started — Extended Matchers and Behavioral Learning*
+*Last updated: 2026-04-12 after Phase 6 (Extended Message Data) complete — envelope recipient extraction, header visibility classification, auto-discovery, versioned migrations*
