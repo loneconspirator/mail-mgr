@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 import type { ActionResult } from '../actions/index.js';
 import type { EmailMessage } from '../imap/index.js';
 import type { Rule } from '../config/index.js';
+import { runMigrations } from './migrations.js';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS activity (
@@ -52,28 +53,7 @@ export class ActivityLog {
     this.db = new Database(dbPath);
     this.db.pragma('journal_mode = WAL');
     this.db.exec(SCHEMA);
-    this.migrate();
-  }
-
-  /**
-   * Run idempotent migrations for schema changes added after initial release.
-   */
-  private migrate(): void {
-    try {
-      this.db.exec(`ALTER TABLE activity ADD COLUMN source TEXT NOT NULL DEFAULT 'arrival'`);
-    } catch {
-      // Column already exists — nothing to do.
-    }
-    try {
-      this.db.exec(`CREATE INDEX IF NOT EXISTS idx_activity_source ON activity(source)`);
-    } catch {
-      // Index already exists
-    }
-    try {
-      this.db.exec(`CREATE INDEX IF NOT EXISTS idx_activity_folder_success ON activity(folder, success)`);
-    } catch {
-      // Index already exists
-    }
+    runMigrations(this.db);
   }
 
   /**
