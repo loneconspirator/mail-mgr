@@ -64,26 +64,26 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MATCH-01 | — | Pending |
-| MATCH-02 | — | Pending |
-| MATCH-03 | — | Pending |
-| MATCH-04 | — | Pending |
-| MATCH-05 | — | Pending |
-| MATCH-06 | — | Pending |
-| LEARN-01 | — | Pending |
-| LEARN-02 | — | Pending |
-| LEARN-03 | — | Pending |
-| LEARN-04 | — | Pending |
-| LEARN-05 | — | Pending |
-| UI-01 | — | Pending |
-| UI-02 | — | Pending |
-| UI-03 | — | Pending |
+| MATCH-01 | Phase 6 | Pending |
+| MATCH-02 | Phase 6 | Pending |
+| MATCH-03 | Phase 7 | Pending |
+| MATCH-04 | Phase 7 | Pending |
+| MATCH-05 | Phase 7 | Pending |
+| MATCH-06 | Phase 6 | Pending |
+| LEARN-01 | Phase 9 | Pending |
+| LEARN-02 | Phase 9 | Pending |
+| LEARN-03 | Phase 10 | Pending |
+| LEARN-04 | Phase 10 | Pending |
+| LEARN-05 | Phase 10 | Pending |
+| UI-01 | Phase 8 | Pending |
+| UI-02 | Phase 10 | Pending |
+| UI-03 | Phase 8 | Pending |
 
 **Coverage:**
 - v0.4 requirements: 14 total
-- Mapped to phases: 0
-- Unmapped: 14
+- Mapped to phases: 14
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-11*
-*Last updated: 2026-04-11 after initial definition*
+*Last updated: 2026-04-11 after roadmap creation*

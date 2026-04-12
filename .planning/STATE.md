@@ -5,9 +5,9 @@ milestone_name: "Extended Matchers and Behavioral Learning"
 status: active
 stopped_at: null
 last_updated: "2026-04-11T00:00:00.000Z"
-last_activity: 2026-04-11 -- Milestone v0.4 started
+last_activity: 2026-04-11 -- Roadmap created for v0.4
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,31 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-11)
 
 **Core value:** Dramatically reduce inbox volume without losing visibility
-**Current focus:** Defining requirements for v0.4
+**Current focus:** Phase 6 - Extended Message Data
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 6 of 10 (Extended Message Data)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-11 — Milestone v0.4 started
+Status: Ready to plan
+Last activity: 2026-04-11 — Roadmap created for v0.4
+
+Progress: [░░░░░░░░░░] 0%
+
+## Performance Metrics
+
+**Velocity:**
+- Total plans completed: 0 (v0.4)
+- Average duration: —
+- Total execution time: —
+
+**By Phase:**
+
+| Phase | Plans | Total | Avg/Plan |
+|-------|-------|-------|----------|
+| - | - | - | - |
+
+*Updated after each plan completion*
 
 ## Accumulated Context
 
@@ -51,10 +68,10 @@ None.
 
 ### Blockers/Concerns
 
-None active. Previous research gaps (Fastmail connection limits, activity log indexing) carried forward to next milestone planning.
+None active.
 
 ## Session Continuity
 
-Last session: 2026-04-11T18:30:00Z
-Stopped at: Milestone v0.3 archived and tagged
+Last session: 2026-04-11
+Stopped at: Roadmap created for v0.4
 Resume file: None
