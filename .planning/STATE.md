@@ -63,6 +63,7 @@ Full v0.3 decision history archived in milestones/v0.3-ROADMAP.md.
 ### Pending Todos
 
 1. **Restore batch UI wiped by Phase 7 clobber** (ui) — Batch page, nav button, poll timer, activity badges all removed by f453be7
+2. **Restore folder picker, review status, and sweep settings** (ui) — folder-picker.ts deleted, review/sweep settings cards removed, API methods stripped by f453be7
 
 ### Quick Tasks Completed
 
