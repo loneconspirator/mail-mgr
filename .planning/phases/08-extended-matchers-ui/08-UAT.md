@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 08-extended-matchers-ui
 source: [08-01-SUMMARY.md, 08-02-SUMMARY.md, 08-03-SUMMARY.md]
 started: 2026-04-12T18:00:00Z
@@ -63,9 +63,17 @@ blocked: 1
   reason: "User reported: Name is required, the only Action option is Move, and Folder is not a picker but a plain text input (rejected when submitted)"
   severity: major
   test: 2
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "Pre-existing gaps in rule editor (not phase 08 regressions). Line 196 validates !name making Name required. Line 174 hard-codes only Move option. Line 175 uses text input instead of select for folder. Line 210 hard-codes action type as move."
+  artifacts:
+    - path: "src/web/frontend/app.ts"
+      issue: "Line 196: validation treats Name as required; Line 174: Action dropdown only has Move option; Line 175: Folder is text input not select; Line 210: action payload hard-coded to move"
+    - path: "src/config/schema.ts"
+      issue: "Lines 5-27: defines move, review, skip, delete but frontend only exposes move"
+  missing:
+    - "Remove !name from validation guard at line 196"
+    - "Add review, skip, delete options to Action dropdown at line 174"
+    - "Replace Folder text input with select populated from IMAP folder list"
+    - "Update save handler at line 210 to construct correct action shape based on selected type"
   debug_session: ""
 
 - truth: "Discovery re-run button triggers probe and updates UI with result"
@@ -73,7 +81,12 @@ blocked: 1
   reason: "User reported: Clicking re-run detection simply shows Bad Request error"
   severity: major
   test: 7
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "Content-Type/empty body mismatch. request() helper at api.ts:10-11 unconditionally sets Content-Type: application/json. triggerDiscovery() at api.ts:40 sends POST with no body. Fastify JSON parser rejects the empty body as invalid JSON, returning 400 before the handler runs."
+  artifacts:
+    - path: "src/web/frontend/api.ts"
+      issue: "Line 10-11: Content-Type application/json set unconditionally; Line 40: triggerDiscovery sends POST with no body"
+    - path: "src/web/routes/envelope.ts"
+      issue: "Line 17: handler never reached — Fastify rejects at framework layer"
+  missing:
+    - "Only set Content-Type: application/json in request() when body is present, OR send body: JSON.stringify({}) in triggerDiscovery()"
   debug_session: ""
