@@ -7,9 +7,13 @@ import type { ActivityEntry, StatusResponse } from '../../shared/types.js';
 export type { Rule, ImapConfig, ActivityEntry, StatusResponse };
 
 async function request<T>(url: string, opts?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (opts?.body) {
+    headers['Content-Type'] = 'application/json';
+  }
   const res = await fetch(url, {
-    headers: { 'Content-Type': 'application/json' },
     ...opts,
+    headers: { ...headers, ...opts?.headers as Record<string, string> },
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));

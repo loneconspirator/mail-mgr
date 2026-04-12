@@ -171,8 +171,13 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true) {
         <option value="unread" ${rule?.match?.readStatus === 'unread' ? 'selected' : ''}>Unread</option>
       </select>
     </div>
-    <div class="form-group"><label>Action</label><select id="m-action-type"><option value="move">Move</option></select></div>
-    <div class="form-group"><label>Folder</label><input id="m-folder" value="${rule?.action && 'folder' in rule.action ? rule.action.folder || '' : ''}" placeholder="Archive" /></div>
+    <div class="form-group"><label>Action</label><select id="m-action-type">
+      <option value="move" ${rule?.action?.type === 'move' ? 'selected' : ''}>Move</option>
+      <option value="review" ${rule?.action?.type === 'review' ? 'selected' : ''}>Review</option>
+      <option value="skip" ${rule?.action?.type === 'skip' ? 'selected' : ''}>Skip</option>
+      <option value="delete" ${rule?.action?.type === 'delete' ? 'selected' : ''}>Delete</option>
+    </select></div>
+    <div class="form-group" id="m-folder-group"><label>Folder</label><input id="m-folder" value="${rule?.action && 'folder' in rule.action ? rule.action.folder || '' : ''}" placeholder="Archive" /></div>
     <div class="form-actions">
       <button class="btn" id="m-cancel">Cancel</button>
       <button class="btn btn-primary" id="m-save">${isEdit ? 'Save' : 'Create'}</button>
@@ -181,6 +186,16 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true) {
 
   overlay.append(modal);
   document.body.append(overlay);
+
+  // Show/hide folder field based on action type
+  const actionSelect = document.getElementById('m-action-type') as HTMLSelectElement;
+  const folderGroup = document.getElementById('m-folder-group') as HTMLElement;
+  const updateFolderVisibility = () => {
+    const actionType = actionSelect.value;
+    folderGroup.style.display = (actionType === 'move' || actionType === 'review') ? '' : 'none';
+  };
+  actionSelect.addEventListener('change', updateFolderVisibility);
+  updateFolderVisibility();
 
   overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
   document.getElementById('m-cancel')!.addEventListener('click', () => overlay.remove());
@@ -193,7 +208,8 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true) {
     const readStatus = (document.getElementById('m-readStatus') as HTMLSelectElement).value;
     const folder = (document.getElementById('m-folder') as HTMLInputElement).value.trim();
 
-    if (!name || !folder) { toast('Name and folder are required', true); return; }
+    const actionType = (document.getElementById('m-action-type') as HTMLSelectElement).value;
+    if (actionType === 'move' && !folder) { toast('Folder is required for Move action', true); return; }
 
     const match: Record<string, string> = {};
     if (sender) match.sender = sender;
@@ -206,10 +222,19 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true) {
       return;
     }
 
+    let action: Record<string, string>;
+    if (actionType === 'move') {
+      action = { type: 'move', folder };
+    } else if (actionType === 'review') {
+      action = folder ? { type: 'review', folder } : { type: 'review' };
+    } else {
+      action = { type: actionType };
+    }
+
     const payload = {
       name,
       match,
-      action: { type: 'move' as const, folder },
+      action,
       enabled: rule?.enabled ?? true,
       order: rule?.order ?? 0,
     };
