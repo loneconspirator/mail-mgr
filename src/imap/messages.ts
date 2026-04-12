@@ -36,6 +36,7 @@ export interface ImapFetchResult {
   uid: number;
   flags?: Set<string>;
   envelope?: ImapEnvelopeObject;
+  headers?: Buffer;
 }
 
 function parseAddress(raw: ImapAddressObject | undefined): EmailAddress {
@@ -61,6 +62,8 @@ export interface ReviewMessage {
     subject: string;
     messageId: string;
   };
+  envelopeRecipient?: string;
+  visibility?: Visibility;
 }
 
 export function reviewMessageToEmailMessage(rm: ReviewMessage): EmailMessage {
@@ -73,6 +76,8 @@ export function reviewMessageToEmailMessage(rm: ReviewMessage): EmailMessage {
     subject: rm.envelope.subject,
     date: rm.internalDate,
     flags: rm.flags,
+    envelopeRecipient: rm.envelopeRecipient,
+    visibility: rm.visibility,
   };
 }
 
@@ -104,22 +109,50 @@ export function parseHeaderLines(buf: Buffer | undefined): Map<string, string> {
   return headers;
 }
 
-export function parseMessage(fetched: ImapFetchResult): EmailMessage {
-  const envelope = fetched.envelope;
+/** Classify how a message reached the recipient based on envelope and header data. */
+export function classifyVisibility(
+  envelopeRecipient: string | undefined,
+  toAddresses: EmailAddress[],
+  ccAddresses: EmailAddress[],
+  listId: string | undefined,
+): Visibility | undefined {
+  if (!envelopeRecipient) return undefined;
+  if (listId) return 'list';
+  const envLower = envelopeRecipient.toLowerCase();
+  if (toAddresses.some(a => a.address.toLowerCase() === envLower)) return 'direct';
+  if (ccAddresses.some(a => a.address.toLowerCase() === envLower)) return 'cc';
+  return 'bcc';
+}
 
+export function parseMessage(fetched: ImapFetchResult, envelopeHeader?: string): EmailMessage {
+  const envelope = fetched.envelope;
   const fromList = envelope?.from;
   const from = fromList && fromList.length > 0
     ? parseAddress(fromList[0])
     : { name: '', address: '' };
-
+  const to = parseAddressList(envelope?.to);
+  const cc = parseAddressList(envelope?.cc);
+  let envelopeRecipient: string | undefined;
+  let visibility: Visibility | undefined;
+  if (envelopeHeader && fetched.headers) {
+    const hdrs = parseHeaderLines(fetched.headers);
+    const recipientVal = hdrs.get(envelopeHeader.toLowerCase());
+    if (recipientVal && recipientVal.includes('@')) {
+      envelopeRecipient = recipientVal;
+    }
+    const listId = hdrs.get('list-id');
+    visibility = classifyVisibility(envelopeRecipient, to, cc, listId);
+  }
   return {
     uid: fetched.uid,
     messageId: envelope?.messageId ?? '',
     from,
-    to: parseAddressList(envelope?.to),
-    cc: parseAddressList(envelope?.cc),
+    to,
+    cc,
     subject: envelope?.subject ?? '',
     date: envelope?.date ?? new Date(0),
     flags: fetched.flags ?? new Set(),
+    envelopeRecipient,
+    visibility,
   };
 }
