@@ -75,8 +75,8 @@ Plans:
 **Plans:** 3 plans
 Plans:
 - [x] 08-01-PLAN.md — Restore discovery backend, add envelopeHeader to config schema, create envelope API endpoints
-- [ ] 08-02-PLAN.md — Rule editor new match fields, generateBehaviorDescription, rule list update
-- [ ] 08-03-PLAN.md — Settings discovery section, Phase 8 CSS styles, visual verification
+- [x] 08-02-PLAN.md — Rule editor new match fields, generateBehaviorDescription, rule list update
+- [x] 08-03-PLAN.md — Settings discovery section, Phase 8 CSS styles, visual verification
 **UI hint**: yes
 
 ### Phase 9: Move Tracking
