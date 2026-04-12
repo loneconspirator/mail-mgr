@@ -1,10 +1,13 @@
-import { ensureConfig, getConfigPath, ConfigRepository } from './config/index.js';
+import { ensureConfig, getConfigPath, saveConfig, ConfigRepository } from './config/index.js';
 import type { ImapConfig } from './config/index.js';
 import { buildServer } from './web/index.js';
 import { ActivityLog } from './log/index.js';
 import { Monitor } from './monitor/index.js';
+import { ReviewSweeper } from './sweep/index.js';
 import { ImapClient, probeEnvelopeHeaders } from './imap/index.js';
 import type { ImapFlowLike } from './imap/index.js';
+import { FolderCache } from './folders/index.js';
+import { BatchEngine } from './batch/index.js';
 import { ImapFlow } from 'imapflow';
 import pino from 'pino';
 
@@ -25,63 +28,162 @@ async function main(): Promise<void> {
   ensureConfig(configPath);
 
   const configRepo = new ConfigRepository(configPath);
-  let config = configRepo.getConfig();
+  const config = configRepo.getConfig();
 
   const activityLog = ActivityLog.fromDataPath();
   activityLog.startAutoPrune();
 
-  const imapClient = new ImapClient(config.imap, createImapFlow);
-  await imapClient.connect();
-
-  // Run envelope header discovery on startup
-  try {
-    const discoveredHeader = await probeEnvelopeHeaders(imapClient);
-    if (discoveredHeader !== (config.imap.envelopeHeader ?? null)) {
-      await configRepo.updateImapConfig({ ...config.imap, envelopeHeader: discoveredHeader ?? undefined });
-      // Reload config after update
-      const updatedConfig = configRepo.getConfig();
-      config = updatedConfig;
-    }
-  } catch (err) {
-    logger.error(err, 'envelope header discovery failed on startup, continuing without');
-  }
-
+  let imapClient = new ImapClient(config.imap, createImapFlow);
+  let folderCache = new FolderCache({ imapClient, ttlMs: 300_000 });
   let monitor = new Monitor(config, { imapClient, activityLog, logger });
+
+  // H1: Create ReviewSweeper (trash folder resolved after IMAP connect)
+  let sweeper: ReviewSweeper | undefined = new ReviewSweeper({
+    client: imapClient,
+    activityLog,
+    rules: config.rules,
+    reviewConfig: config.review,
+    trashFolder: config.review.trashFolder,
+    logger,
+  });
+
+  // H1b: Create BatchEngine for retroactive rule application
+  let batchEngine = new BatchEngine({
+    client: imapClient,
+    activityLog,
+    rules: config.rules,
+    trashFolder: config.review.trashFolder,
+    reviewFolder: config.review.folder,
+    reviewConfig: config.review,
+    logger,
+  });
 
   configRepo.onRulesChange((rules) => {
     monitor.updateRules(rules);
+    if (sweeper) sweeper.updateRules(rules);
+    batchEngine.updateRules(rules);
   });
 
+  // H2: Restart sweeper when review config changes
+  configRepo.onReviewConfigChange(async () => {
+    const updatedConfig = configRepo.getConfig();
+    if (sweeper) sweeper.stop();
+    sweeper = undefined;  // Signal "rebuilding" to getSweeper() callers
+    const reviewTrash = await imapClient.getSpecialUseFolder('\\Trash')
+      ?? updatedConfig.review.trashFolder;
+    sweeper = new ReviewSweeper({
+      client: imapClient,
+      activityLog,
+      rules: updatedConfig.rules,
+      reviewConfig: updatedConfig.review,
+      trashFolder: reviewTrash,
+      logger,
+    });
+    sweeper.start();
+    batchEngine = new BatchEngine({
+      client: imapClient,
+      activityLog,
+      rules: updatedConfig.rules,
+      trashFolder: reviewTrash,
+      reviewFolder: updatedConfig.review.folder,
+      reviewConfig: updatedConfig.review,
+      logger,
+    });
+  });
+
+  // H3: Stop/rebuild sweeper alongside monitor on IMAP config change
   configRepo.onImapConfigChange(async (newConfig) => {
+    if (sweeper) sweeper.stop();
+    sweeper = undefined;
     await monitor.stop();
     const newClient = new ImapClient(newConfig.imap, createImapFlow);
-    await newClient.connect();
+    imapClient = newClient;
+    folderCache = new FolderCache({ imapClient: newClient, ttlMs: 300_000 });
 
-    // Run envelope header discovery on config change
+    // H3a: Run envelope header discovery before Monitor starts (D-01, D-03)
+    await newClient.connect();
+    let discoveredHeader: string | null = null;
     try {
-      const discoveredHeader = await probeEnvelopeHeaders(newClient);
-      if (discoveredHeader !== (newConfig.imap.envelopeHeader ?? null)) {
-        await configRepo.updateImapConfig({ ...newConfig.imap, envelopeHeader: discoveredHeader ?? undefined });
-      }
+      discoveredHeader = await probeEnvelopeHeaders(newClient);
     } catch (err) {
-      logger.error(err, 'envelope header discovery failed on config change, continuing without');
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error({ error }, 'envelope header discovery failed, continuing without');
     }
 
-    const latestConfig = configRepo.getConfig();
-    monitor = new Monitor(latestConfig, { imapClient: newClient, activityLog, logger });
+    // H3b: Persist discovered header (or clear it) in config (D-04)
+    const cfg = configRepo.getConfig();
+    cfg.imap.envelopeHeader = discoveredHeader ?? undefined;
+    saveConfig(configPath, cfg);
+
+    // H3c: Rebuild monitor with updated config that includes envelopeHeader
+    const updatedConfig = configRepo.getConfig();
+    monitor = new Monitor(updatedConfig, { imapClient: newClient, activityLog, logger });
     await monitor.start();
+    const newTrash = await newClient.getSpecialUseFolder('\\Trash')
+      ?? updatedConfig.review.trashFolder;
+    sweeper = new ReviewSweeper({
+      client: newClient,
+      activityLog,
+      rules: updatedConfig.rules,
+      reviewConfig: updatedConfig.review,
+      trashFolder: newTrash,
+      logger,
+    });
+    batchEngine = new BatchEngine({
+      client: newClient,
+      activityLog,
+      rules: updatedConfig.rules,
+      trashFolder: newTrash,
+      reviewFolder: updatedConfig.review.folder,
+      reviewConfig: updatedConfig.review,
+      logger,
+    });
+    sweeper.start();
   });
 
+  // H5: Pass getter functions so routes always read the current instance
   const app = buildServer({
     configRepo,
     activityLog,
     getMonitor: () => monitor,
+    getSweeper: () => sweeper,
+    getFolderCache: () => folderCache,
+    getBatchEngine: () => batchEngine,
   });
 
   await app.listen({ port: config.server.port, host: config.server.host });
   logger.info('mail-mgr listening on %s:%d', config.server.host, config.server.port);
 
+  // H4a: Run initial envelope header discovery before Monitor starts (D-01, D-03)
+  await imapClient.connect();
+  let initialHeader: string | null = null;
+  try {
+    initialHeader = await probeEnvelopeHeaders(imapClient);
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    logger.error({ error }, 'initial envelope header discovery failed');
+  }
+
+  if (initialHeader !== config.imap.envelopeHeader) {
+    config.imap.envelopeHeader = initialHeader ?? undefined;
+    saveConfig(configPath, config);
+    // Rebuild monitor with updated config that includes envelopeHeader
+    monitor = new Monitor(config, { imapClient, activityLog, logger });
+  }
+
+  // H4b: Start sweeper after monitor (resolve trash folder now that IMAP is connected)
   await monitor.start();
+  const resolvedTrash = await imapClient.getSpecialUseFolder('\\Trash')
+    ?? config.review.trashFolder;
+  sweeper = new ReviewSweeper({
+    client: imapClient,
+    activityLog,
+    rules: config.rules,
+    reviewConfig: config.review,
+    trashFolder: resolvedTrash,
+    logger,
+  });
+  sweeper.start();
 }
 
 main().catch((err) => {

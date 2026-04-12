@@ -65,6 +65,15 @@ function makeDeps(config: Config): ServerDeps {
         };
       },
     } as any),
+    getSweeper: () => undefined,
+    getFolderCache: () => ({
+      hasFolder: () => true,
+      getTree: async () => [],
+      getResponse: () => ({ folders: [], cachedAt: new Date().toISOString(), stale: false }),
+    } as any),
+    getBatchEngine: () => ({
+      getState: () => ({ status: 'idle' }),
+    } as any),
   };
 }
 
