@@ -223,7 +223,7 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true) {
     if (deliveredTo) match.deliveredTo = deliveredTo;
     if (visibility) match.visibility = visibility;
     if (readStatus) match.readStatus = readStatus;
-    if (!sender && !subject && !deliveredTo && !visibility && !readStatus) {
+    if (Object.keys(match).length === 0) {
       toast('At least one match field is required', true);
       return;
     }
