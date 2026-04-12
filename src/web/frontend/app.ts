@@ -1,5 +1,6 @@
 import { api } from './api.js';
 import type { Rule, ActivityEntry, ImapConfig } from './api.js';
+import { generateBehaviorDescription } from './rule-display.js';
 
 // --- State ---
 let currentPage = 'rules';
@@ -64,7 +65,11 @@ async function renderRules() {
     );
     app.append(toolbar);
 
-    document.getElementById('add-rule-btn')!.addEventListener('click', () => openRuleModal());
+    document.getElementById('add-rule-btn')!.addEventListener('click', () => {
+      api.config.getEnvelopeStatus().then(status => {
+        openRuleModal(undefined, status.envelopeHeader !== null);
+      }).catch(() => openRuleModal(undefined, false));
+    });
 
     if (rules.length === 0) {
       app.append(h('div', { className: 'empty' }, 'No rules yet. Create one to get started.'));
@@ -81,7 +86,7 @@ async function renderRules() {
       const tr = document.createElement('tr');
       tr.dataset.id = rule.id;
 
-      const matchStr = Object.entries(rule.match).map(([k, v]) => `${k}: ${v}`).join(', ');
+      const matchStr = generateBehaviorDescription(rule.match as Record<string, string>);
       const actionStr = 'folder' in rule.action ? `${rule.action.type} → ${rule.action.folder}` : rule.action.type;
 
       const toggleLabel = document.createElement('label');
@@ -98,7 +103,11 @@ async function renderRules() {
       toggleLabel.append(toggleInput, slider);
 
       const editBtn = h('button', { className: 'btn btn-sm' }, 'Edit');
-      editBtn.addEventListener('click', () => openRuleModal(rule));
+      editBtn.addEventListener('click', () => {
+        api.config.getEnvelopeStatus().then(status => {
+          openRuleModal(rule, status.envelopeHeader !== null);
+        }).catch(() => openRuleModal(rule, false));
+      });
 
       const deleteBtn = h('button', { className: 'btn btn-sm btn-danger' }, 'Del');
       deleteBtn.addEventListener('click', async () => {
@@ -130,7 +139,7 @@ async function renderRules() {
   }
 }
 
-function openRuleModal(rule?: Rule) {
+function openRuleModal(rule?: Rule, envelopeAvailable = true) {
   const isEdit = !!rule;
   const overlay = h('div', { className: 'modal-overlay' });
   const modal = h('div', { className: 'modal' });
@@ -140,6 +149,28 @@ function openRuleModal(rule?: Rule) {
     <div class="form-group"><label>Name</label><input id="m-name" value="${rule?.name || ''}" /></div>
     <div class="form-group"><label>Match Sender</label><input id="m-sender" value="${rule?.match?.sender || ''}" placeholder="*@example.com" /></div>
     <div class="form-group"><label>Match Subject</label><input id="m-subject" value="${rule?.match?.subject || ''}" placeholder="*newsletter*" /></div>
+    <div class="form-group">
+      <label>Delivered-To${!envelopeAvailable ? ' <span class="info-icon" title="Envelope header not discovered &#8212; run discovery in IMAP settings.">&#9432;</span>' : ''}</label>
+      <input id="m-deliveredTo" value="${rule?.match?.deliveredTo || ''}" placeholder="*@example.com" ${!envelopeAvailable ? 'disabled' : ''} />
+    </div>
+    <div class="form-group">
+      <label>Recipient Field${!envelopeAvailable ? ' <span class="info-icon" title="Envelope header not discovered &#8212; run discovery in IMAP settings.">&#9432;</span>' : ''}</label>
+      <select id="m-visibility" ${!envelopeAvailable ? 'disabled' : ''}>
+        <option value="">&mdash;</option>
+        <option value="direct" ${rule?.match?.visibility === 'direct' ? 'selected' : ''}>Direct</option>
+        <option value="cc" ${rule?.match?.visibility === 'cc' ? 'selected' : ''}>CC</option>
+        <option value="bcc" ${rule?.match?.visibility === 'bcc' ? 'selected' : ''}>BCC</option>
+        <option value="list" ${rule?.match?.visibility === 'list' ? 'selected' : ''}>List</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Read Status</label>
+      <select id="m-readStatus">
+        <option value="">&mdash;</option>
+        <option value="read" ${rule?.match?.readStatus === 'read' ? 'selected' : ''}>Read</option>
+        <option value="unread" ${rule?.match?.readStatus === 'unread' ? 'selected' : ''}>Unread</option>
+      </select>
+    </div>
     <div class="form-group"><label>Action</label><select id="m-action-type"><option value="move">Move</option></select></div>
     <div class="form-group"><label>Folder</label><input id="m-folder" value="${rule?.action && 'folder' in rule.action ? rule.action.folder || '' : ''}" placeholder="Archive" /></div>
     <div class="form-actions">
@@ -157,6 +188,9 @@ function openRuleModal(rule?: Rule) {
     const name = (document.getElementById('m-name') as HTMLInputElement).value.trim();
     const sender = (document.getElementById('m-sender') as HTMLInputElement).value.trim();
     const subject = (document.getElementById('m-subject') as HTMLInputElement).value.trim();
+    const deliveredTo = (document.getElementById('m-deliveredTo') as HTMLInputElement).value.trim();
+    const visibility = (document.getElementById('m-visibility') as HTMLSelectElement).value;
+    const readStatus = (document.getElementById('m-readStatus') as HTMLSelectElement).value;
     const folder = (document.getElementById('m-folder') as HTMLInputElement).value.trim();
 
     if (!name || !folder) { toast('Name and folder are required', true); return; }
@@ -164,7 +198,13 @@ function openRuleModal(rule?: Rule) {
     const match: Record<string, string> = {};
     if (sender) match.sender = sender;
     if (subject) match.subject = subject;
-    if (!sender && !subject) { toast('At least one match field is required', true); return; }
+    if (deliveredTo) match.deliveredTo = deliveredTo;
+    if (visibility) match.visibility = visibility;
+    if (readStatus) match.readStatus = readStatus;
+    if (!sender && !subject && !deliveredTo && !visibility && !readStatus) {
+      toast('At least one match field is required', true);
+      return;
+    }
 
     const payload = {
       name,
