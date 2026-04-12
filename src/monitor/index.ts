@@ -28,6 +28,7 @@ export class Monitor {
   private readonly reviewFolder: string;
   private readonly trashFolder: string;
   private rules: Rule[];
+  private envelopeHeader: string | undefined;
   private lastUid: number;
   private cursorEnabled: boolean;
   private processing: boolean = false;
@@ -41,6 +42,7 @@ export class Monitor {
     this.reviewFolder = config.review.folder;
     this.trashFolder = config.review.trashFolder;
     this.rules = config.rules;
+    this.envelopeHeader = config.imap.envelopeHeader;
     const cursorEnabled = this.activityLog.getState('cursorEnabled');
     this.cursorEnabled = cursorEnabled !== 'false';  // default: enabled
     if (this.cursorEnabled) {
@@ -109,7 +111,7 @@ export class Monitor {
       const fetched = await this.client.fetchNewMessages(this.lastUid);
 
       for (const raw of fetched) {
-        const message = parseMessage(raw as ImapFetchResult);
+        const message = parseMessage(raw as ImapFetchResult, this.envelopeHeader);
         try {
           await this.processMessage(message);
           if (message.uid > this.lastUid) {
