@@ -93,11 +93,11 @@ Plans:
 **Reference**: `.planning/todos/pending/2026-04-12-restore-all-features-wiped-by-phase-7-clobber.md` — contains file-by-file inventory with line counts and missing features
 **Plans:** 5 plans
 Plans:
-- [ ] 09-01-PLAN.md — Foundation types, IMAP message/client restoration, config review methods, migrations, folder cache
-- [ ] 09-02-PLAN.md — ReviewSweeper and BatchEngine modules with tests
-- [ ] 09-03-PLAN.md — Backend wiring: route handlers, server deps, monitor envelope, main entry lifecycle
-- [ ] 09-04-PLAN.md — Frontend restoration: API client, folder picker, app.ts merge, styles, HTML
-- [ ] 09-05-PLAN.md — Final integration verification and visual UI checkpoint
+- [x] 09-01-PLAN.md — Foundation types, IMAP message/client restoration, config review methods, migrations, folder cache
+- [x] 09-02-PLAN.md — ReviewSweeper and BatchEngine modules with tests
+- [x] 09-03-PLAN.md — Backend wiring: route handlers, server deps, monitor envelope, main entry lifecycle
+- [x] 09-04-PLAN.md — Frontend restoration: API client, folder picker, app.ts merge, styles, HTML
+- [x] 09-05-PLAN.md — Final integration verification and visual UI checkpoint
 
 ### Phase 10: Move Tracking
 **Goal**: System detects when the user manually moves messages out of Inbox or Review and logs structured signal data for pattern analysis
