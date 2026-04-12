@@ -33,10 +33,13 @@ export function registerEnvelopeRoutes(app: FastifyInstance, deps: ServerDeps): 
         }) as unknown as ImapFlowLike
       );
       await client.connect();
-      const header = await probeEnvelopeHeaders(client);
-      await client.disconnect();
-      await deps.configRepo.updateImapConfig({ ...imapConfig, envelopeHeader: header ?? undefined });
-      return { envelopeHeader: header };
+      try {
+        const header = await probeEnvelopeHeaders(client);
+        await deps.configRepo.updateImapConfig({ ...imapConfig, envelopeHeader: header ?? undefined });
+        return { envelopeHeader: header };
+      } finally {
+        await client.disconnect().catch(() => {});  // best-effort cleanup
+      }
     } catch (err: unknown) {
       const error = err instanceof Error ? err : new Error(String(err));
       app.log.error({ err: error }, 'envelope discovery failed');
