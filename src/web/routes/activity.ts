@@ -27,11 +27,4 @@ export function registerActivityRoutes(app: FastifyInstance, deps: ServerDeps): 
       error: r.error,
     }));
   });
-
-  // GET /api/activity/recent-folders — distinct folder destinations, most recent first
-  app.get<{ Querystring: { limit?: string } }>('/api/activity/recent-folders', async (request) => {
-    const query = request.query as { limit?: string };
-    const limit = Math.min(Math.max(parseInt(query.limit || '5', 10) || 5, 1), 20);
-    return deps.activityLog.getRecentFolders(limit);
-  });
 }

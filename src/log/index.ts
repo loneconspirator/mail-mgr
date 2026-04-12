@@ -3,7 +3,6 @@ import Database from 'better-sqlite3';
 import type { ActionResult } from '../actions/index.js';
 import type { EmailMessage } from '../imap/index.js';
 import type { Rule } from '../config/index.js';
-import { runMigrations } from './migrations.js';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS activity (
@@ -53,7 +52,18 @@ export class ActivityLog {
     this.db = new Database(dbPath);
     this.db.pragma('journal_mode = WAL');
     this.db.exec(SCHEMA);
-    runMigrations(this.db);
+    this.migrate();
+  }
+
+  /**
+   * Run idempotent migrations for schema changes added after initial release.
+   */
+  private migrate(): void {
+    try {
+      this.db.exec(`ALTER TABLE activity ADD COLUMN source TEXT NOT NULL DEFAULT 'arrival'`);
+    } catch {
+      // Column already exists — nothing to do.
+    }
   }
 
   /**
@@ -67,7 +77,7 @@ export class ActivityLog {
   /**
    * Log an action result with message and rule context.
    */
-  logActivity(result: ActionResult, message: EmailMessage, rule: Rule | null, source: 'arrival' | 'sweep' | 'batch' = 'arrival'): void {
+  logActivity(result: ActionResult, message: EmailMessage, rule: Rule | null, source: 'arrival' | 'sweep' = 'arrival'): void {
     const stmt = this.db.prepare(`
       INSERT INTO activity (
         timestamp, message_uid, message_id, message_from, message_to,
@@ -119,20 +129,6 @@ export class ActivityLog {
       'SELECT * FROM activity ORDER BY id DESC LIMIT ? OFFSET ?',
     );
     return stmt.all(limit, offset) as ActivityEntry[];
-  }
-
-  /**
-   * Return distinct folder paths from recent successful actions, ordered by most recently used.
-   */
-  getRecentFolders(limit: number = 5): string[] {
-    const rows = this.db.prepare(
-      `SELECT folder FROM activity
-       WHERE folder IS NOT NULL AND folder != '' AND success = 1
-       GROUP BY folder
-       ORDER BY MAX(id) DESC
-       LIMIT ?`
-    ).all(limit) as Array<{ folder: string }>;
-    return rows.map(r => r.folder);
   }
 
   /**

@@ -240,91 +240,6 @@ describe('ActivityLog', () => {
     });
   });
 
-  describe('getRecentFolders', () => {
-    it('returns empty array when no activity exists', () => {
-      expect(log.getRecentFolders()).toEqual([]);
-    });
-
-    it('returns distinct folder paths from successful moves ordered by most recent', () => {
-      // Log activities to different folders at different times
-      log.logActivity(
-        makeResult({ messageUid: 1, folder: 'Archive', timestamp: new Date('2026-01-01T01:00:00Z') }),
-        makeMessage({ uid: 1 }),
-        makeRule(),
-      );
-      log.logActivity(
-        makeResult({ messageUid: 2, folder: 'Lists', timestamp: new Date('2026-01-01T02:00:00Z') }),
-        makeMessage({ uid: 2 }),
-        makeRule(),
-      );
-      log.logActivity(
-        makeResult({ messageUid: 3, folder: 'Archive', timestamp: new Date('2026-01-01T03:00:00Z') }),
-        makeMessage({ uid: 3 }),
-        makeRule(),
-      );
-
-      const folders = log.getRecentFolders();
-      // Archive was used most recently (id=3), then Lists (id=2)
-      expect(folders).toEqual(['Archive', 'Lists']);
-    });
-
-    it('excludes rows where success = 0', () => {
-      log.logActivity(
-        makeResult({ messageUid: 1, folder: 'Archive', success: false }),
-        makeMessage({ uid: 1 }),
-        makeRule(),
-      );
-      log.logActivity(
-        makeResult({ messageUid: 2, folder: 'Lists', success: true }),
-        makeMessage({ uid: 2 }),
-        makeRule(),
-      );
-
-      const folders = log.getRecentFolders();
-      expect(folders).toEqual(['Lists']);
-    });
-
-    it('excludes rows where folder is null or empty', () => {
-      // Skip action has no folder
-      log.logActivity(
-        makeResult({ messageUid: 1, action: 'skip', folder: undefined }),
-        makeMessage({ uid: 1 }),
-        makeRule(),
-      );
-      log.logActivity(
-        makeResult({ messageUid: 2, folder: 'Archive' }),
-        makeMessage({ uid: 2 }),
-        makeRule(),
-      );
-
-      const folders = log.getRecentFolders();
-      expect(folders).toEqual(['Archive']);
-    });
-
-    it('respects limit parameter', () => {
-      log.logActivity(makeResult({ messageUid: 1, folder: 'A' }), makeMessage({ uid: 1 }), makeRule());
-      log.logActivity(makeResult({ messageUid: 2, folder: 'B' }), makeMessage({ uid: 2 }), makeRule());
-      log.logActivity(makeResult({ messageUid: 3, folder: 'C' }), makeMessage({ uid: 3 }), makeRule());
-
-      const folders = log.getRecentFolders(2);
-      expect(folders).toHaveLength(2);
-      expect(folders).toEqual(['C', 'B']);
-    });
-
-    it('deduplicates folders using GROUP BY', () => {
-      for (let i = 1; i <= 5; i++) {
-        log.logActivity(
-          makeResult({ messageUid: i, folder: 'Archive' }),
-          makeMessage({ uid: i }),
-          makeRule(),
-        );
-      }
-
-      const folders = log.getRecentFolders();
-      expect(folders).toEqual(['Archive']);
-    });
-  });
-
   describe('logActivity with sweep source and null rule', () => {
     it('logs with sweep source', () => {
       log.logActivity(makeResult(), makeMessage(), makeRule(), 'sweep');
@@ -344,45 +259,6 @@ describe('ActivityLog', () => {
       log.logActivity(makeResult(), makeMessage(), makeRule());
       const entries = log.getRecentActivity();
       expect(entries[0].source).toBe('arrival');
-    });
-  });
-
-  describe('batch source', () => {
-    it('logs with batch source and inserts correctly', () => {
-      log.logActivity(makeResult(), makeMessage(), makeRule(), 'batch');
-      const entries = log.getRecentActivity();
-      expect(entries).toHaveLength(1);
-      expect(entries[0].source).toBe('batch');
-    });
-
-    it('getRecentActivity returns batch entries with correct source field', () => {
-      log.logActivity(makeResult({ messageUid: 1 }), makeMessage({ uid: 1 }), makeRule(), 'arrival');
-      log.logActivity(makeResult({ messageUid: 2 }), makeMessage({ uid: 2 }), makeRule(), 'batch');
-      log.logActivity(makeResult({ messageUid: 3 }), makeMessage({ uid: 3 }), makeRule(), 'sweep');
-
-      const entries = log.getRecentActivity();
-      expect(entries).toHaveLength(3);
-      expect(entries[0].source).toBe('sweep');
-      expect(entries[1].source).toBe('batch');
-      expect(entries[2].source).toBe('arrival');
-    });
-  });
-
-  describe('database indexes', () => {
-    it('creates idx_activity_source index after migration', () => {
-      const db = (log as any).db;
-      const indexes = db.prepare(
-        "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='activity' AND name='idx_activity_source'"
-      ).all();
-      expect(indexes).toHaveLength(1);
-    });
-
-    it('creates idx_activity_folder_success index after migration', () => {
-      const db = (log as any).db;
-      const indexes = db.prepare(
-        "SELECT name FROM sqlite_master WHERE type='index' AND tbl_name='activity' AND name='idx_activity_folder_success'"
-      ).all();
-      expect(indexes).toHaveLength(1);
     });
   });
 });

@@ -6,12 +6,13 @@ import { loadConfig, saveConfig, ensureConfig, substituteEnvVars } from '../../.
 import {
   configSchema,
   actionSchema,
-  ruleSchema,
   reviewActionSchema,
   skipActionSchema,
   deleteActionSchema,
   sweepConfigSchema,
   reviewConfigSchema,
+  emailMatchSchema,
+  ruleSchema,
 } from '../../../src/config/index.js';
 
 const FIXTURES_DIR = path.join(os.tmpdir(), `mail-mgr-test-${process.pid}`);
@@ -413,6 +414,92 @@ describe('reviewConfigSchema', () => {
   });
 });
 
+describe('emailMatchSchema extended fields', () => {
+  it('accepts deliveredTo as sole field', () => {
+    const result = emailMatchSchema.safeParse({ deliveredTo: '*@example.com' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts visibility direct as sole field', () => {
+    const result = emailMatchSchema.safeParse({ visibility: 'direct' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts visibility cc as sole field', () => {
+    const result = emailMatchSchema.safeParse({ visibility: 'cc' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts visibility bcc as sole field', () => {
+    const result = emailMatchSchema.safeParse({ visibility: 'bcc' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts visibility list as sole field', () => {
+    const result = emailMatchSchema.safeParse({ visibility: 'list' });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects invalid visibility value', () => {
+    const result = emailMatchSchema.safeParse({ visibility: 'invalid' });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts readStatus read as sole field', () => {
+    const result = emailMatchSchema.safeParse({ readStatus: 'read' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts readStatus unread as sole field', () => {
+    const result = emailMatchSchema.safeParse({ readStatus: 'unread' });
+    expect(result.success).toBe(true);
+  });
+
+  it('accepts readStatus any as sole field', () => {
+    const result = emailMatchSchema.safeParse({ readStatus: 'any' });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects invalid readStatus value', () => {
+    const result = emailMatchSchema.safeParse({ readStatus: 'bogus' });
+    expect(result.success).toBe(false);
+  });
+
+  it('accepts all six fields combined', () => {
+    const result = emailMatchSchema.safeParse({
+      sender: '*@github.com',
+      recipient: 'mike@example.com',
+      subject: '*PR*',
+      deliveredTo: '*@example.com',
+      visibility: 'direct',
+      readStatus: 'read',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rejects empty object (at-least-one-field enforced)', () => {
+    const result = emailMatchSchema.safeParse({});
+    expect(result.success).toBe(false);
+  });
+
+  it('round-trips rule with new match fields through ruleSchema', () => {
+    const result = ruleSchema.safeParse({
+      id: 'test-ext',
+      name: 'Extended Rule',
+      match: { deliveredTo: '*@lists.example.com', visibility: 'list', readStatus: 'unread' },
+      action: { type: 'move', folder: 'Lists' },
+      enabled: true,
+      order: 5,
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.match.deliveredTo).toBe('*@lists.example.com');
+      expect(result.data.match.visibility).toBe('list');
+      expect(result.data.match.readStatus).toBe('unread');
+    }
+  });
+});
+
 describe('configSchema with review section', () => {
   const minimalConfig = {
     imap: { host: 'imap.test.com', auth: { user: 'u', pass: 'p' } },
@@ -447,85 +534,5 @@ describe('configSchema with review section', () => {
       ],
     });
     expect(result.success).toBe(true);
-  });
-});
-
-describe('ruleSchema optional name', () => {
-  const baseRule = {
-    id: 'test-1',
-    match: { sender: '*@github.com' },
-    action: { type: 'move' as const, folder: 'GH' },
-    order: 0,
-  };
-
-  it('accepts a rule with name omitted', () => {
-    const result = ruleSchema.safeParse(baseRule);
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.name).toBeUndefined();
-    }
-  });
-
-  it('accepts a rule with name present', () => {
-    const result = ruleSchema.safeParse({ ...baseRule, name: 'Test Rule' });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.name).toBe('Test Rule');
-    }
-  });
-
-  it('rejects a rule with no match fields', () => {
-    const result = ruleSchema.safeParse({ ...baseRule, match: {} });
-    expect(result.success).toBe(false);
-  });
-});
-
-import { generateBehaviorDescription } from '../../../src/web/frontend/rule-display.js';
-import type { Rule } from '../../../src/config/schema.js';
-
-describe('generateBehaviorDescription', () => {
-  it('includes only populated match fields', () => {
-    const rule = {
-      id: 'r1', match: { sender: '*@github.com' },
-      action: { type: 'move' as const, folder: 'Notifications' },
-      enabled: true, order: 0,
-    } as Rule;
-    expect(generateBehaviorDescription(rule)).toBe('sender:*@github.com \u2192 Notifications');
-  });
-
-  it('includes sender and subject when both populated', () => {
-    const rule = {
-      id: 'r2', match: { sender: '*@github.com', subject: '*PR*' },
-      action: { type: 'move' as const, folder: 'Notifications' },
-      enabled: true, order: 0,
-    } as Rule;
-    expect(generateBehaviorDescription(rule)).toBe('sender:*@github.com, subject:*PR* \u2192 Notifications');
-  });
-
-  it('returns only action when no match fields populated', () => {
-    const rule = {
-      id: 'r3', match: {},
-      action: { type: 'review' as const },
-      enabled: true, order: 0,
-    } as Rule;
-    expect(generateBehaviorDescription(rule)).toBe('\u2192 Review');
-  });
-
-  it('includes all three match fields when populated', () => {
-    const rule = {
-      id: 'r4', match: { sender: 'a@b.com', recipient: 'c@d.com', subject: '*test*' },
-      action: { type: 'move' as const, folder: 'Archive' },
-      enabled: true, order: 0,
-    } as Rule;
-    expect(generateBehaviorDescription(rule)).toBe('sender:a@b.com, recipient:c@d.com, subject:*test* \u2192 Archive');
-  });
-
-  it('handles delete action', () => {
-    const rule = {
-      id: 'r5', match: { sender: '*@example.com' },
-      action: { type: 'delete' as const },
-      enabled: true, order: 0,
-    } as Rule;
-    expect(generateBehaviorDescription(rule)).toBe('sender:*@example.com \u2715 Delete');
   });
 });

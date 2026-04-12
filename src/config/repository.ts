@@ -1,14 +1,13 @@
 import crypto from 'node:crypto';
 import { loadConfig, saveConfig } from './loader.js';
-import { ruleSchema, imapConfigSchema, reviewConfigSchema } from './schema.js';
-import type { Config, Rule, ImapConfig, ReviewConfig } from './schema.js';
+import { ruleSchema, imapConfigSchema } from './schema.js';
+import type { Config, Rule, ImapConfig } from './schema.js';
 
 export class ConfigRepository {
   private config: Config;
   private readonly configPath: string;
   private rulesListeners: Array<(rules: Rule[]) => void> = [];
   private imapListeners: Array<(config: Config) => Promise<void>> = [];
-  private reviewListeners: Array<(config: ReviewConfig) => Promise<void>> = [];
 
   constructor(configPath: string) {
     this.configPath = configPath;
@@ -95,29 +94,6 @@ export class ConfigRepository {
       await fn(this.config);
     }
     return result.data;
-  }
-
-  getReviewConfig(): ReviewConfig {
-    return this.config.review;
-  }
-
-  async updateReviewConfig(input: Partial<ReviewConfig>): Promise<ReviewConfig> {
-    const merged = { ...this.config.review, ...input };
-    const result = reviewConfigSchema.safeParse(merged);
-    if (!result.success) {
-      const issues = result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
-      throw new Error(`Validation failed: ${issues.join(', ')}`);
-    }
-    this.config.review = result.data;
-    this.persist();
-    for (const fn of this.reviewListeners) {
-      await fn(result.data);
-    }
-    return result.data;
-  }
-
-  onReviewConfigChange(fn: (config: ReviewConfig) => Promise<void>): void {
-    this.reviewListeners.push(fn);
   }
 
   private notifyRulesChange(): void {
