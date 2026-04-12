@@ -74,7 +74,7 @@ Plans:
   4. IMAP settings page displays the discovered envelope recipient header name and provides a button to re-run auto-discovery
 **Plans:** 2 plans
 Plans:
-- [ ] 08-01-PLAN.md — Restore discovery backend, add envelopeHeader to config schema, create envelope API endpoints
+- [x] 08-01-PLAN.md — Restore discovery backend, add envelopeHeader to config schema, create envelope API endpoints
 - [ ] 08-02-PLAN.md — Rule editor new match fields, behavior descriptions, settings discovery section
 **UI hint**: yes
 

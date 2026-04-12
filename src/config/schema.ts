@@ -56,7 +56,7 @@ export const emailMatchSchema = z
 
 export const ruleSchema = z.object({
   id: z.string().min(1),
-  name: z.string().min(1),
+  name: z.string().optional(),
   match: emailMatchSchema,
   action: actionSchema,
   enabled: z.boolean().default(true),

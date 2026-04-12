@@ -113,7 +113,7 @@ async function renderRules() {
       const actionsCell = h('td', {}, editBtn, document.createTextNode(' '), deleteBtn);
 
       tr.append(
-        h('td', {}, rule.name),
+        h('td', {}, rule.name ?? ''),
         h('td', {}, matchStr),
         h('td', {}, actionStr),
         h('td', {}, toggleLabel),
