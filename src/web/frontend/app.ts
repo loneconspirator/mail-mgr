@@ -155,6 +155,7 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true) {
     <div class="form-group"><label>Name</label><input id="m-name" value="${esc(rule?.name || '')}" /></div>
     <div class="form-group"><label>Match Sender</label><input id="m-sender" value="${esc(rule?.match?.sender || '')}" placeholder="*@example.com" /></div>
     <div class="form-group"><label>Match Subject</label><input id="m-subject" value="${esc(rule?.match?.subject || '')}" placeholder="*newsletter*" /></div>
+    <div class="form-group"><label>Match Recipient</label><input id="m-recipient" value="${esc(rule?.match?.recipient || '')}" placeholder="*@example.com" /></div>
     <div class="form-group">
       <label>Delivered-To${!envelopeAvailable ? ' <span class="info-icon" title="Envelope header not discovered &#8212; run discovery in IMAP settings.">&#9432;</span>' : ''}</label>
       <input id="m-deliveredTo" value="${esc(rule?.match?.deliveredTo || '')}" placeholder="*@example.com" ${!envelopeAvailable ? 'disabled' : ''} />
@@ -209,6 +210,7 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true) {
     const name = (document.getElementById('m-name') as HTMLInputElement).value.trim();
     const sender = (document.getElementById('m-sender') as HTMLInputElement).value.trim();
     const subject = (document.getElementById('m-subject') as HTMLInputElement).value.trim();
+    const recipient = (document.getElementById('m-recipient') as HTMLInputElement).value.trim();
     const deliveredTo = (document.getElementById('m-deliveredTo') as HTMLInputElement).value.trim();
     const visibility = (document.getElementById('m-visibility') as HTMLSelectElement).value;
     const readStatus = (document.getElementById('m-readStatus') as HTMLSelectElement).value;
@@ -220,6 +222,7 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true) {
     const match: Record<string, string> = {};
     if (sender) match.sender = sender;
     if (subject) match.subject = subject;
+    if (recipient) match.recipient = recipient;
     if (deliveredTo) match.deliveredTo = deliveredTo;
     if (visibility) match.visibility = visibility;
     if (readStatus) match.readStatus = readStatus;
