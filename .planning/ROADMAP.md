@@ -58,7 +58,10 @@ Plans:
   2. User can create a rule that matches on header visibility (direct, cc, bcc, list) as a multi-select condition
   3. User can create a rule that matches on read/unread status at evaluation time
   4. Rules using new match fields work identically in Monitor (live), Sweep (review), and Batch (retroactive) contexts
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 07-01-PLAN.md — Schema + matcher extension: deliveredTo, visibility, readStatus fields
+- [ ] 07-02-PLAN.md — Evaluator skip logic for envelope-unavailable rules
 
 ### Phase 8: Extended Matchers UI
 **Goal**: Rule editor exposes the new match fields with appropriate controls and the IMAP settings page shows auto-discovery status
@@ -110,7 +113,7 @@ Note: Phases 7-8 (matchers track) and Phase 9 (learning track) are independent a
 | 4. Config & Cleanup | v0.3 | 2/2 | Complete | 2026-04-10 |
 | 5. Frontend Polish | v0.3 | 1/1 | Complete | 2026-04-11 |
 | 6. Extended Message Data | v0.4 | 3/4 | Gap closure | - |
-| 7. Extended Matchers | v0.4 | 0/? | Not started | - |
+| 7. Extended Matchers | v0.4 | 0/2 | Planned | - |
 | 8. Extended Matchers UI | v0.4 | 0/? | Not started | - |
 | 9. Move Tracking | v0.4 | 0/? | Not started | - |
 | 10. Pattern Detection & Proposed Rules | v0.4 | 0/? | Not started | - |
