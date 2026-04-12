@@ -21,6 +21,11 @@ function h(tag: string, attrs: Record<string, string> = {}, ...children: (string
   return el;
 }
 
+/** Escape HTML special characters to prevent XSS in innerHTML templates. */
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 function toast(msg: string, isError = false) {
   const el = h('div', { className: `toast${isError ? ' error' : ''}` }, msg);
   document.body.append(el);
@@ -147,12 +152,12 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true) {
 
   modal.innerHTML = `
     <h2>${isEdit ? 'Edit Rule' : 'New Rule'}</h2>
-    <div class="form-group"><label>Name</label><input id="m-name" value="${rule?.name || ''}" /></div>
-    <div class="form-group"><label>Match Sender</label><input id="m-sender" value="${rule?.match?.sender || ''}" placeholder="*@example.com" /></div>
-    <div class="form-group"><label>Match Subject</label><input id="m-subject" value="${rule?.match?.subject || ''}" placeholder="*newsletter*" /></div>
+    <div class="form-group"><label>Name</label><input id="m-name" value="${esc(rule?.name || '')}" /></div>
+    <div class="form-group"><label>Match Sender</label><input id="m-sender" value="${esc(rule?.match?.sender || '')}" placeholder="*@example.com" /></div>
+    <div class="form-group"><label>Match Subject</label><input id="m-subject" value="${esc(rule?.match?.subject || '')}" placeholder="*newsletter*" /></div>
     <div class="form-group">
       <label>Delivered-To${!envelopeAvailable ? ' <span class="info-icon" title="Envelope header not discovered &#8212; run discovery in IMAP settings.">&#9432;</span>' : ''}</label>
-      <input id="m-deliveredTo" value="${rule?.match?.deliveredTo || ''}" placeholder="*@example.com" ${!envelopeAvailable ? 'disabled' : ''} />
+      <input id="m-deliveredTo" value="${esc(rule?.match?.deliveredTo || '')}" placeholder="*@example.com" ${!envelopeAvailable ? 'disabled' : ''} />
     </div>
     <div class="form-group">
       <label>Recipient Field${!envelopeAvailable ? ' <span class="info-icon" title="Envelope header not discovered &#8212; run discovery in IMAP settings.">&#9432;</span>' : ''}</label>
@@ -178,7 +183,7 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true) {
       <option value="skip" ${rule?.action?.type === 'skip' ? 'selected' : ''}>Skip</option>
       <option value="delete" ${rule?.action?.type === 'delete' ? 'selected' : ''}>Delete</option>
     </select></div>
-    <div class="form-group" id="m-folder-group"><label>Folder</label><input id="m-folder" value="${rule?.action && 'folder' in rule.action ? rule.action.folder || '' : ''}" placeholder="Archive" /></div>
+    <div class="form-group" id="m-folder-group"><label>Folder</label><input id="m-folder" value="${esc(rule?.action && 'folder' in rule.action ? rule.action.folder || '' : '')}" placeholder="Archive" /></div>
     <div class="form-actions">
       <button class="btn" id="m-cancel">Cancel</button>
       <button class="btn btn-primary" id="m-save">${isEdit ? 'Save' : 'Create'}</button>
@@ -345,13 +350,13 @@ async function renderSettings() {
       <h2>IMAP Connection</h2>
       <p style="margin-bottom:1rem">Status: <span class="status-badge ${statusClass}">${status.connectionStatus}</span>
         &mdash; ${status.messagesProcessed} messages processed</p>
-      <div class="form-group"><label>Host</label><input id="s-host" value="${imapCfg.host}" /></div>
-      <div class="form-group"><label>Port</label><input id="s-port" type="number" value="${imapCfg.port}" /></div>
+      <div class="form-group"><label>Host</label><input id="s-host" value="${esc(imapCfg.host)}" /></div>
+      <div class="form-group"><label>Port</label><input id="s-port" type="number" value="${esc(String(imapCfg.port))}" /></div>
       <div class="form-group">
         <label><input id="s-tls" type="checkbox" ${imapCfg.tls ? 'checked' : ''} /> Use TLS</label>
       </div>
-      <div class="form-group"><label>Username</label><input id="s-user" value="${imapCfg.auth.user}" /></div>
-      <div class="form-group"><label>Password</label><input id="s-pass" type="password" value="${imapCfg.auth.pass}" /></div>
+      <div class="form-group"><label>Username</label><input id="s-user" value="${esc(imapCfg.auth.user)}" /></div>
+      <div class="form-group"><label>Password</label><input id="s-pass" type="password" value="${esc(imapCfg.auth.pass)}" /></div>
       <div class="form-actions">
         <button class="btn btn-primary" id="s-save">Save Settings</button>
       </div>
