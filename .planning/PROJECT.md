@@ -39,7 +39,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - [ ] Envelope recipient matching (Delivered-To/X-Original-To extraction, glob syntax, +tag support)
 - [ ] Header visibility matching (direct/cc/bcc/list classification from To/CC/List-Id headers)
 - [ ] Read status matching (read/unread at evaluation time)
-- [ ] UI updates for new match fields (envelope recipient glob, header visibility multi-select, read status toggle)
+- ✓ UI updates for new match fields (envelope recipient glob, header visibility multi-select, read status toggle) — v0.4
 - [ ] Move tracking on Inbox + Review (periodic folder scan, signal logging to SQLite)
 - [ ] Pattern detection (statistical analysis on logged moves, threshold-based candidate identification)
 - [ ] Proposed rules (UI for approving, modifying, or dismissing learned patterns)
@@ -120,4 +120,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-12 after Phase 6 (Extended Message Data) complete — envelope recipient extraction, header visibility classification, auto-discovery, versioned migrations*
+*Last updated: 2026-04-12 after Phase 8 (Extended Matchers UI) complete — rule editor new match fields, settings discovery section, behavior descriptions*
