@@ -37,8 +37,6 @@ A system that learns from user behavior and eventually proposes its own rules. E
 
 - **Proposed rules:** The system surfaces detected patterns as rule proposals in the UI: "You've moved 8 emails from `noreply@rei.com` to Review — want me to do this automatically?" The user can approve (becomes a real rule), modify (adjust the pattern or destination), or dismiss. When the user repeatedly moves a sender's messages back from Review to Inbox, the system proposes an inbox-pinning rule for that sender.
 
-- **Rule effectiveness dashboard:** Which rules fire most often? Which rules has the user overridden by manually moving messages elsewhere? Are there messages sitting in Inbox that match a Review-stream profile?
-
 ### Technical Guardrails
 
 - Envelope recipient extraction must handle multiple header formats: `Delivered-To`, `X-Original-To`, and parsing `Received` headers as a fallback. Not all mail servers include the same headers. The system should try each source in order and use the first match.
@@ -156,6 +154,8 @@ A system that learns from user behavior and eventually proposes its own rules. E
 - **Multi-account support:** Run one instance that monitors multiple IMAP accounts. The current architecture (one instance per account via Docker) works, but a single UI managing multiple accounts is more convenient.
 
 - **Mobile-friendly UI:** The current SPA works fine on desktop. Make it responsive for quick checks from a phone.
+
+- **Rule effectiveness dashboard:** Which rules fire most often? Which rules has the user overridden by manually moving messages elsewhere? Are there messages sitting in Inbox that match a Review-stream profile? Depends on move tracking data from Tier 4.
 
 ---
 
