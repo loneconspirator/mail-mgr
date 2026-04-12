@@ -1,17 +1,17 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.3
-milestone_name: "Folder Taxonomy & Batch Filing"
-status: complete
-stopped_at: "Milestone v0.3 archived and tagged"
-last_updated: "2026-04-11T18:30:00.000Z"
-last_activity: 2026-04-11 -- v0.3 milestone complete
+milestone: v0.4
+milestone_name: "Extended Matchers and Behavioral Learning"
+status: active
+stopped_at: null
+last_updated: "2026-04-11T00:00:00.000Z"
+last_activity: 2026-04-11 -- Milestone v0.4 started
 progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 10
-  completed_plans: 10
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,16 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-11)
 
 **Core value:** Dramatically reduce inbox volume without losing visibility
-**Current focus:** Planning next milestone
+**Current focus:** Defining requirements for v0.4
 
 ## Current Position
 
-Phase: All v0.3 phases complete
-Plan: All plans complete
-Status: Milestone v0.3 shipped
-Last activity: 2026-04-11 -- v0.3 archived and tagged
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-11 — Milestone v0.4 started
 
 ## Accumulated Context
 

@@ -36,7 +36,26 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 
 ### Active
 
-(None yet — define with `/gsd-new-milestone`)
+- [ ] Envelope recipient matching (Delivered-To/X-Original-To extraction, glob syntax, +tag support)
+- [ ] Header visibility matching (direct/cc/bcc/list classification from To/CC/List-Id headers)
+- [ ] Read status matching (read/unread at evaluation time)
+- [ ] UI updates for new match fields (envelope recipient glob, header visibility multi-select, read status toggle)
+- [ ] Move tracking on Inbox + Review (periodic folder scan, signal logging to SQLite)
+- [ ] Pattern detection (statistical analysis on logged moves, threshold-based candidate identification)
+- [ ] Proposed rules (UI for approving, modifying, or dismissing learned patterns)
+
+## Current Milestone: v0.4 Extended Matchers and Behavioral Learning
+
+**Goal:** Expand the deterministic rule engine with new match fields (envelope recipient, header visibility, read status), then add behavioral learning that tracks user-initiated moves and proposes rules based on statistical patterns.
+
+**Target features:**
+- Envelope recipient matching (Delivered-To/X-Original-To extraction, glob syntax, +tag support)
+- Header visibility matching (direct/cc/bcc/list classification from To/CC/List-Id headers)
+- Read status matching (read/unread at evaluation time)
+- UI updates for new match fields (envelope recipient glob, header visibility multi-select, read status toggle)
+- Move tracking on Inbox + Review (periodic folder scan, signal logging)
+- Pattern detection (statistical analysis on logged moves, threshold-based candidate rules)
+- Proposed rules (UI for approving/modifying/dismissing learned patterns)
 
 ### Out of Scope
 
@@ -101,4 +120,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-11 after v0.3 milestone — Folder Taxonomy & Batch Filing shipped*
+*Last updated: 2026-04-11 after v0.4 milestone started — Extended Matchers and Behavioral Learning*
