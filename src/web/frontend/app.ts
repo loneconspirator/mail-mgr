@@ -319,6 +319,7 @@ async function renderActivity() {
     }
 
     // Auto-refresh every 30s
+    if (activityTimer) { clearInterval(activityTimer); activityTimer = null; }
     activityTimer = setInterval(() => {
       if (currentPage === 'activity') renderActivity();
     }, 30000);
