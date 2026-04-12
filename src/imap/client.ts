@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events';
 import type { ImapConfig } from '../config/index.js';
-import type { ReviewMessage, EmailAddress } from './messages.js';
+import type { ReviewMessage, EmailAddress, Visibility } from './messages.js';
+import { parseHeaderLines, classifyVisibility } from './messages.js';
 import type { FolderNode } from '../shared/types.js';
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'error';
@@ -188,6 +189,12 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     return results;
   }
 
+  /** Return the header field names to fetch, or undefined if not configured. */
+  private getHeaderFields(): string[] | undefined {
+    if (!this.config.envelopeHeader) return undefined;
+    return [this.config.envelopeHeader, 'List-Id'];
+  }
+
   /**
    * Fetch envelopes for messages newer than the given UID.
    * Returns raw fetch results for parsing with parseMessage().
@@ -195,8 +202,13 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   async fetchNewMessages(sinceUid: number): Promise<unknown[]> {
     return this.withMailboxLock('INBOX', async (flow) => {
       const range = sinceUid > 0 ? `${sinceUid + 1}:*` : '1:*';
+      const query: Record<string, unknown> = { uid: true, envelope: true, flags: true };
+      const headerFields = this.getHeaderFields();
+      if (headerFields) {
+        query.headers = headerFields;
+      }
       const results: unknown[] = [];
-      for await (const msg of flow.fetch(range, { uid: true, envelope: true, flags: true }, { uid: true })) {
+      for await (const msg of flow.fetch(range, query, { uid: true })) {
         const m = msg as { uid?: number };
         if (m.uid !== undefined && m.uid > sinceUid) {
           results.push(msg);
@@ -208,12 +220,17 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
 
   async fetchAllMessages(folder: string): Promise<ReviewMessage[]> {
     return this.withMailboxLock(folder, async () => {
-      const raw = await this.fetchMessagesRaw('1:*', {
+      const query: Record<string, unknown> = {
         uid: true,
         flags: true,
         internalDate: true,
         envelope: true,
-      });
+      };
+      const headerFields = this.getHeaderFields();
+      if (headerFields) {
+        query.headers = headerFields;
+      }
+      const raw = await this.fetchMessagesRaw('1:*', query);
       return raw.map((r) => this.parseRawToReviewMessage(r));
     });
   }
@@ -223,6 +240,7 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
       uid: number;
       flags?: Set<string>;
       internalDate?: Date;
+      headers?: Buffer;
       envelope?: {
         from?: Array<{ name?: string; address?: string }>;
         to?: Array<{ name?: string; address?: string }>;
@@ -242,6 +260,21 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
 
     const fromList = msg.envelope?.from;
     const from = fromList && fromList.length > 0 ? parseAddr(fromList[0]) : { name: '', address: '' };
+    const to = parseAddrList(msg.envelope?.to);
+    const cc = parseAddrList(msg.envelope?.cc);
+
+    let envelopeRecipient: string | undefined;
+    let visibility: Visibility | undefined;
+
+    if (this.config.envelopeHeader && msg.headers) {
+      const hdrs = parseHeaderLines(msg.headers);
+      const recipientVal = hdrs.get(this.config.envelopeHeader.toLowerCase());
+      if (recipientVal && recipientVal.includes('@')) {
+        envelopeRecipient = recipientVal;
+      }
+      const listId = hdrs.get('list-id');
+      visibility = classifyVisibility(envelopeRecipient, to, cc, listId);
+    }
 
     return {
       uid: msg.uid,
@@ -249,11 +282,13 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
       internalDate: msg.internalDate ?? new Date(0),
       envelope: {
         from,
-        to: parseAddrList(msg.envelope?.to),
-        cc: parseAddrList(msg.envelope?.cc),
+        to,
+        cc,
         subject: msg.envelope?.subject ?? '',
         messageId: msg.envelope?.messageId ?? '',
       },
+      envelopeRecipient,
+      visibility,
     };
   }
 
