@@ -5,7 +5,7 @@
 - ✅ **v0.1 MVP** — IMAP monitoring, pattern-matching rules, move actions, web UI
 - ✅ **v0.2 Review System** — Review folder, sweep lifecycle, multi-folder monitoring
 - ✅ **v0.3 Folder Taxonomy & Batch Filing** — Phases 1-5 (shipped 2026-04-11)
-- 🚧 **v0.4 Extended Matchers & Behavioral Learning** — Phases 6-10 (in progress)
+- 🚧 **v0.4 Extended Matchers & Behavioral Learning** — Phases 6-11 (in progress)
 
 ## Phases
 
@@ -27,8 +27,9 @@ Full details: [milestones/v0.3-ROADMAP.md](milestones/v0.3-ROADMAP.md)
 - [ ] **Phase 6: Extended Message Data** - Foundation: envelope recipient extraction, header visibility classification, auto-discovery, versioned migrations
 - [ ] **Phase 7: Extended Matchers** - Wire envelope recipient, header visibility, and read status into matchRule() and config schema
 - [ ] **Phase 8: Extended Matchers UI** - Rule editor updates for new match fields and IMAP settings auto-discovery controls
-- [ ] **Phase 9: Move Tracking** - UID snapshot diffing to detect user-initiated moves and log signals to SQLite
-- [ ] **Phase 10: Pattern Detection & Proposed Rules** - Statistical analysis on move signals, proposed rules API and UI, approve/modify/dismiss workflow
+- [ ] **Phase 9: Restore Clobbered Features** - Recover sweep, batch, folders, review config, and UI features destroyed by Phase 7 commit f453be7
+- [ ] **Phase 10: Move Tracking** - UID snapshot diffing to detect user-initiated moves and log signals to SQLite
+- [ ] **Phase 11: Pattern Detection & Proposed Rules** - Statistical analysis on move signals, proposed rules API and UI, approve/modify/dismiss workflow
 
 ## Phase Details
 
@@ -80,7 +81,25 @@ Plans:
 - [x] 08-04-PLAN.md — Gap closure: fix rule editor regressions and discovery POST error
 **UI hint**: yes
 
-### Phase 9: Move Tracking
+### Phase 9: Restore Clobbered Features
+**Goal**: Recover all v0.3 features destroyed by commit f453be7 (Phase 07-01) — which did wholesale file replacement instead of surgical edits — and reconcile the restored code with Phase 8's additions (deliveredTo, visibility, readStatus matchers; envelope discovery; extended action types)
+**Depends on**: Phase 8
+**Success Criteria** (what must be TRUE):
+  1. All 10 deleted source modules are restored and functional: ReviewSweeper, BatchEngine, FolderCache, folder barrel, DB migrations, folder-picker component, and 4 web route handlers (batch, folders, review-config, review)
+  2. All 11 degraded source files have their stripped content restored: main entry wiring, IMAP header fetching, shared types, config repository review methods, frontend API/app/styles, server route registration, rules folder warnings, monitor envelope usage, and index.html nav
+  3. All 8 deleted test files are restored and passing: sweep integration, batch engine, folder cache, DB migrations, sweep unit, batch routes, folder picker, folder routes
+  4. Restored code is adapted for Phase 8 additions — extended match fields, action union types, and discovery endpoints coexist with restored sweep/batch/folder features
+  5. Full build succeeds (`npm run build`) and full test suite passes (`npm test`)
+**Reference**: `.planning/todos/pending/2026-04-12-restore-all-features-wiped-by-phase-7-clobber.md` — contains file-by-file inventory with line counts and missing features
+**Plans:** 5 plans
+Plans:
+- [ ] 09-01-PLAN.md — Foundation types, IMAP message/client restoration, config review methods, migrations, folder cache
+- [ ] 09-02-PLAN.md — ReviewSweeper and BatchEngine modules with tests
+- [ ] 09-03-PLAN.md — Backend wiring: route handlers, server deps, monitor envelope, main entry lifecycle
+- [ ] 09-04-PLAN.md — Frontend restoration: API client, folder picker, app.ts merge, styles, HTML
+- [ ] 09-05-PLAN.md — Final integration verification and visual UI checkpoint
+
+### Phase 10: Move Tracking
 **Goal**: System detects when the user manually moves messages out of Inbox or Review and logs structured signal data for pattern analysis
 **Depends on**: Phase 6
 **Requirements**: LEARN-01, LEARN-02
@@ -91,9 +110,9 @@ Plans:
   4. Move tracking runs continuously alongside Monitor without interfering with message processing
 **Plans**: TBD
 
-### Phase 10: Pattern Detection & Proposed Rules
+### Phase 11: Pattern Detection & Proposed Rules
 **Goal**: System analyzes accumulated move signals, identifies repeating patterns, and surfaces them as proposed rules that the user can approve, modify, or dismiss
-**Depends on**: Phase 9
+**Depends on**: Phase 10
 **Requirements**: LEARN-03, LEARN-04, LEARN-05, UI-02
 **Success Criteria** (what must be TRUE):
   1. System identifies repeating move patterns (same sender/domain to same destination) from move signals using configurable thresholds (minimum count, time span, burst suppression)
@@ -107,8 +126,8 @@ Plans:
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10
-Note: Phases 7-8 (matchers track) and Phase 9 (learning track) are independent after Phase 6. Execution is serial but either track could go first.
+Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
+Note: Phase 9 (clobber restoration) must run before Move Tracking since it restores sweep/batch infrastructure that Phase 10 needs.
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -120,5 +139,6 @@ Note: Phases 7-8 (matchers track) and Phase 9 (learning track) are independent a
 | 6. Extended Message Data | v0.4 | 3/4 | Gap closure | - |
 | 7. Extended Matchers | v0.4 | 2/2 | Complete | - |
 | 8. Extended Matchers UI | v0.4 | 3/4 | Gap closure | - |
-| 9. Move Tracking | v0.4 | 0/? | Not started | - |
-| 10. Pattern Detection & Proposed Rules | v0.4 | 0/? | Not started | - |
+| 9. Restore Clobbered Features | v0.4 | 0/5 | Planned | - |
+| 10. Move Tracking | v0.4 | 0/? | Not started | - |
+| 11. Pattern Detection & Proposed Rules | v0.4 | 0/? | Not started | - |
