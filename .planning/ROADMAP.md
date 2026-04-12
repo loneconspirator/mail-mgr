@@ -72,10 +72,11 @@ Plans:
   2. Rule editor shows a header visibility multi-select with options for direct, cc, bcc, and list
   3. Rule editor shows a read status toggle for matching read or unread messages
   4. IMAP settings page displays the discovered envelope recipient header name and provides a button to re-run auto-discovery
-**Plans:** 2 plans
+**Plans:** 3 plans
 Plans:
 - [x] 08-01-PLAN.md — Restore discovery backend, add envelopeHeader to config schema, create envelope API endpoints
-- [ ] 08-02-PLAN.md — Rule editor new match fields, behavior descriptions, settings discovery section
+- [ ] 08-02-PLAN.md — Rule editor new match fields, generateBehaviorDescription, rule list update
+- [ ] 08-03-PLAN.md — Settings discovery section, Phase 8 CSS styles, visual verification
 **UI hint**: yes
 
 ### Phase 9: Move Tracking
@@ -117,6 +118,6 @@ Note: Phases 7-8 (matchers track) and Phase 9 (learning track) are independent a
 | 5. Frontend Polish | v0.3 | 1/1 | Complete | 2026-04-11 |
 | 6. Extended Message Data | v0.4 | 3/4 | Gap closure | - |
 | 7. Extended Matchers | v0.4 | 2/2 | Complete | - |
-| 8. Extended Matchers UI | v0.4 | 0/2 | Planned | - |
+| 8. Extended Matchers UI | v0.4 | 1/3 | In progress | - |
 | 9. Move Tracking | v0.4 | 0/? | Not started | - |
 | 10. Pattern Detection & Proposed Rules | v0.4 | 0/? | Not started | - |
