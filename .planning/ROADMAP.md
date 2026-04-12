@@ -42,11 +42,12 @@ Full details: [milestones/v0.3-ROADMAP.md](milestones/v0.3-ROADMAP.md)
   3. Auto-discovery re-runs automatically when IMAP server details change and can be triggered manually
   4. EmailMessage instances populated by Monitor, Sweep, and Batch consumers include envelope recipient and visibility fields derived from fetched headers
   5. Database schema changes use versioned transactional migrations instead of try/catch ALTER TABLE
-**Plans:** 3 plans
+**Plans:** 4 plans
 Plans:
-- [ ] 06-01-PLAN.md — Versioned migration system replacing try/catch ALTER TABLE
-- [ ] 06-02-PLAN.md — Extended message types, header parsing, visibility classification, conditional fetch
-- [ ] 06-03-PLAN.md — Auto-discovery module and lifecycle integration
+- [x] 06-01-PLAN.md — Versioned migration system replacing try/catch ALTER TABLE
+- [x] 06-02-PLAN.md — Extended message types, header parsing, visibility classification, conditional fetch
+- [x] 06-03-PLAN.md — Auto-discovery module and lifecycle integration
+- [ ] 06-04-PLAN.md — Gap closure: wire envelopeHeader into Monitor parseMessage call
 
 ### Phase 7: Extended Matchers
 **Goal**: Users can write rules that match on envelope recipient, header visibility, and read status, with all three fields integrated into the existing first-match-wins evaluation pipeline
@@ -108,7 +109,7 @@ Note: Phases 7-8 (matchers track) and Phase 9 (learning track) are independent a
 | 3. Batch Filing Engine | v0.3 | 3/3 | Complete | 2026-04-08 |
 | 4. Config & Cleanup | v0.3 | 2/2 | Complete | 2026-04-10 |
 | 5. Frontend Polish | v0.3 | 1/1 | Complete | 2026-04-11 |
-| 6. Extended Message Data | v0.4 | 0/3 | Planning complete | - |
+| 6. Extended Message Data | v0.4 | 3/4 | Gap closure | - |
 | 7. Extended Matchers | v0.4 | 0/? | Not started | - |
 | 8. Extended Matchers UI | v0.4 | 0/? | Not started | - |
 | 9. Move Tracking | v0.4 | 0/? | Not started | - |
