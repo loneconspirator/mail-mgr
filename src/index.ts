@@ -1,10 +1,10 @@
-import { ensureConfig, getConfigPath, ConfigRepository } from './config/index.js';
+import { ensureConfig, getConfigPath, saveConfig, ConfigRepository } from './config/index.js';
 import type { ImapConfig } from './config/index.js';
 import { buildServer } from './web/index.js';
 import { ActivityLog } from './log/index.js';
 import { Monitor } from './monitor/index.js';
 import { ReviewSweeper } from './sweep/index.js';
-import { ImapClient } from './imap/index.js';
+import { ImapClient, probeEnvelopeHeaders } from './imap/index.js';
 import type { ImapFlowLike } from './imap/index.js';
 import { FolderCache } from './folders/index.js';
 import { BatchEngine } from './batch/index.js';
@@ -99,25 +99,43 @@ async function main(): Promise<void> {
     const newClient = new ImapClient(newConfig.imap, createImapFlow);
     imapClient = newClient;
     folderCache = new FolderCache({ imapClient: newClient, ttlMs: 300_000 });
-    monitor = new Monitor(newConfig, { imapClient: newClient, activityLog, logger });
+
+    // H3a: Run envelope header discovery before Monitor starts (D-01, D-03)
+    await newClient.connect();
+    let discoveredHeader: string | null = null;
+    try {
+      discoveredHeader = await probeEnvelopeHeaders(newClient);
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      logger.error({ error }, 'envelope header discovery failed, continuing without');
+    }
+
+    // H3b: Persist discovered header (or clear it) in config (D-04)
+    const cfg = configRepo.getConfig();
+    cfg.imap.envelopeHeader = discoveredHeader ?? undefined;
+    saveConfig(configPath, cfg);
+
+    // H3c: Rebuild monitor with updated config that includes envelopeHeader
+    const updatedConfig = configRepo.getConfig();
+    monitor = new Monitor(updatedConfig, { imapClient: newClient, activityLog, logger });
     await monitor.start();
     const newTrash = await newClient.getSpecialUseFolder('\\Trash')
-      ?? newConfig.review.trashFolder;
+      ?? updatedConfig.review.trashFolder;
     sweeper = new ReviewSweeper({
       client: newClient,
       activityLog,
-      rules: newConfig.rules,
-      reviewConfig: newConfig.review,
+      rules: updatedConfig.rules,
+      reviewConfig: updatedConfig.review,
       trashFolder: newTrash,
       logger,
     });
     batchEngine = new BatchEngine({
       client: newClient,
       activityLog,
-      rules: newConfig.rules,
+      rules: updatedConfig.rules,
       trashFolder: newTrash,
-      reviewFolder: newConfig.review.folder,
-      reviewConfig: newConfig.review,
+      reviewFolder: updatedConfig.review.folder,
+      reviewConfig: updatedConfig.review,
       logger,
     });
     sweeper.start();
@@ -136,7 +154,24 @@ async function main(): Promise<void> {
   await app.listen({ port: config.server.port, host: config.server.host });
   logger.info('mail-mgr listening on %s:%d', config.server.host, config.server.port);
 
-  // H4: Start sweeper after monitor (resolve trash folder now that IMAP is connected)
+  // H4a: Run initial envelope header discovery before Monitor starts (D-01, D-03)
+  await imapClient.connect();
+  let initialHeader: string | null = null;
+  try {
+    initialHeader = await probeEnvelopeHeaders(imapClient);
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    logger.error({ error }, 'initial envelope header discovery failed');
+  }
+
+  if (initialHeader !== config.imap.envelopeHeader) {
+    config.imap.envelopeHeader = initialHeader ?? undefined;
+    saveConfig(configPath, config);
+    // Rebuild monitor with updated config that includes envelopeHeader
+    monitor = new Monitor(config, { imapClient, activityLog, logger });
+  }
+
+  // H4b: Start sweeper after monitor (resolve trash folder now that IMAP is connected)
   await monitor.start();
   const resolvedTrash = await imapClient.getSpecialUseFolder('\\Trash')
     ?? config.review.trashFolder;
