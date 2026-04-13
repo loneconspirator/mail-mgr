@@ -28,7 +28,7 @@ Full details: [milestones/v0.3-ROADMAP.md](milestones/v0.3-ROADMAP.md)
 - [ ] **Phase 7: Extended Matchers** - Wire envelope recipient, header visibility, and read status into matchRule() and config schema
 - [ ] **Phase 8: Extended Matchers UI** - Rule editor updates for new match fields and IMAP settings auto-discovery controls
 - [ ] **Phase 9: Restore Clobbered Features** - Recover sweep, batch, folders, review config, and UI features destroyed by Phase 7 commit f453be7
-- [ ] **Phase 10: Move Tracking** - UID snapshot diffing to detect user-initiated moves and log signals to SQLite
+- [x] **Phase 10: Move Tracking** - UID snapshot diffing to detect user-initiated moves and log signals to SQLite (completed 2026-04-13)
 - [ ] **Phase 11: Pattern Detection & Proposed Rules** - Statistical analysis on move signals, proposed rules API and UI, approve/modify/dismiss workflow
 
 ## Phase Details
@@ -57,7 +57,7 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can create a rule with an envelope recipient glob pattern (including +tag variants) and it matches messages delivered to that address
   2. User can create a rule that matches on header visibility (direct, cc, bcc, list) as a multi-select condition
-  3. User can create a rule that matches on read/unread status at evaluation time
+  3. User can create a rule that matches on read status (read/unread) at evaluation time
   4. Rules using new match fields work identically in Monitor (live), Sweep (review), and Batch (retroactive) contexts
 **Plans:** 2 plans
 Plans:
@@ -108,11 +108,12 @@ Plans:
   2. Detected moves are cross-referenced against the activity log by Message-ID to exclude system-initiated moves (Monitor, Sweep, Batch)
   3. For each confirmed user move, sender, envelope recipient, list headers, subject, read status, visibility, source folder, and destination folder are logged to the move_signals table
   4. Move tracking runs continuously alongside Monitor without interfering with message processing
-**Plans:** 3 plans
+**Plans:** 4 plans
 Plans:
-- [ ] 10-01-PLAN.md — Database migration, SignalStore, config schema extension
-- [ ] 10-02-PLAN.md — MoveTracker class and DestinationResolver with UID snapshot diffing
-- [ ] 10-03-PLAN.md — Application wiring: main entry, ServerDeps, config listeners
+- [x] 10-01-PLAN.md — Database migration, SignalStore, config schema extension
+- [x] 10-02-PLAN.md — MoveTracker class and DestinationResolver with UID snapshot diffing
+- [x] 10-03-PLAN.md — Application wiring: main entry, ServerDeps, config listeners
+- [ ] 10-04-PLAN.md — Gap closure: wire runMigrations into ActivityLog, fix deep-scan signal drop, connection leak
 
 ### Phase 11: Pattern Detection & Proposed Rules
 **Goal**: System analyzes accumulated move signals, identifies repeating patterns, and surfaces them as proposed rules that the user can approve, modify, or dismiss
@@ -144,5 +145,5 @@ Note: Phase 9 (clobber restoration) must run before Move Tracking since it resto
 | 7. Extended Matchers | v0.4 | 2/2 | Complete | - |
 | 8. Extended Matchers UI | v0.4 | 3/4 | Gap closure | - |
 | 9. Restore Clobbered Features | v0.4 | 0/5 | Planned | - |
-| 10. Move Tracking | v0.4 | 0/3 | Planned | - |
+| 10. Move Tracking | v0.4 | 3/4 | Gap closure | - |
 | 11. Pattern Detection & Proposed Rules | v0.4 | 0/? | Not started | - |
