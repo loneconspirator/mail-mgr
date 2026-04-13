@@ -50,8 +50,9 @@ export class ProposalStore {
         // Increment count for this destination
         destCounts[destination] = (destCounts[destination] ?? 0) + 1;
 
-        // Determine dominant destination (highest count)
-        let dominantDest = destination;
+        // Determine dominant destination (highest count).
+        // Seed with incumbent to preserve it on ties (avoid non-deterministic flipping).
+        let dominantDest = existing.destination_folder as string;
         let maxCount = 0;
         for (const [dest, count] of Object.entries(destCounts)) {
           if (count > maxCount) {
