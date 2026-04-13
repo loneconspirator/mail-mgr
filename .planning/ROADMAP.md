@@ -125,9 +125,9 @@ Plans:
   3. User can approve a proposed rule (creating a real rule in the active ruleset), modify it before approving, or dismiss it
   4. Dismissed patterns are suppressed from future proposals
   5. Approved rules integrate with existing config hot-reload so they take effect immediately
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 Plans:
-- [ ] 11-01-PLAN.md — Database migration, ProposalStore, PatternDetector, MoveTracker hook
+- [x] 11-01-PLAN.md — Database migration, ProposalStore, PatternDetector, MoveTracker hook
 - [ ] 11-02-PLAN.md — API routes, ServerDeps extension, main.ts lifecycle wiring
 - [ ] 11-03-PLAN.md — Frontend: Proposed nav tab, proposal cards, approve/modify/dismiss UI
 **UI hint**: yes
@@ -150,4 +150,4 @@ Note: Phase 9 (clobber restoration) must run before Move Tracking since it resto
 | 8. Extended Matchers UI | v0.4 | 3/4 | Gap closure | - |
 | 9. Restore Clobbered Features | v0.4 | 0/5 | Planned | - |
 | 10. Move Tracking | v0.4 | 4/4 | Complete    | 2026-04-13 |
-| 11. Pattern Detection & Proposed Rules | v0.4 | 0/3 | Planned | - |
+| 11. Pattern Detection & Proposed Rules | v0.4 | 1/3 | In Progress|  |
