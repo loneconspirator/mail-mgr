@@ -2,6 +2,7 @@ import type { ImapClient, ImapFlowLike } from '../imap/index.js';
 import type { ActivityLog } from '../log/index.js';
 import type { SignalStore, MoveSignalInput } from './signals.js';
 import type { DestinationResolver } from './destinations.js';
+import type { PatternDetector } from './detector.js';
 import type pino from 'pino';
 
 export interface MoveTrackerDeps {
@@ -14,6 +15,7 @@ export interface MoveTrackerDeps {
   scanIntervalMs: number;
   enabled: boolean;
   logger?: pino.Logger;
+  patternDetector?: PatternDetector;
 }
 
 export interface MoveTrackerState {
@@ -284,6 +286,14 @@ export class MoveTracker {
     this.deps.signalStore.logSignal(input);
     this.signalsLoggedCount++;
     this.deps.logger?.info({ from: sourceFolder, to: destinationFolder, subject: msg.subject }, 'Move signal logged');
+
+    // Trigger real-time pattern detection (D-15)
+    if (this.deps.patternDetector) {
+      const signal = this.deps.signalStore.getSignalByMessageId(input.messageId);
+      if (signal) {
+        this.deps.patternDetector.processSignal(signal);
+      }
+    }
   }
 
   /** Fetch all messages in a folder with their envelope data. */
