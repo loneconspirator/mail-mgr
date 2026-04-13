@@ -40,7 +40,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - [ ] Header visibility matching (direct/cc/bcc/list classification from To/CC/List-Id headers)
 - [ ] Read status matching (read/unread at evaluation time)
 - ✓ UI updates for new match fields (envelope recipient glob, header visibility multi-select, read status toggle) — v0.4
-- [ ] Move tracking on Inbox + Review (periodic folder scan, signal logging to SQLite)
+- ✓ Move tracking on Inbox + Review (periodic folder scan, signal logging to SQLite) — v0.4
 - [ ] Pattern detection (statistical analysis on logged moves, threshold-based candidate identification)
 - [ ] Proposed rules (UI for approving, modifying, or dismissing learned patterns)
 
@@ -120,4 +120,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-12 after Phase 8 (Extended Matchers UI) complete — rule editor new match fields, settings discovery section, behavior descriptions*
+*Last updated: 2026-04-13 after Phase 10 (Move Tracking) complete — UID snapshot diffing, signal logging, two-scan confirmation, destination resolution, runtime wiring*
