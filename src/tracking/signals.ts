@@ -63,6 +63,16 @@ export class SignalStore {
   }
 
   /**
+   * Find a signal by its row id. Returns null if not found.
+   */
+  getSignalById(id: number): MoveSignal | null {
+    const row = this.db.prepare(
+      'SELECT * FROM move_signals WHERE id = ?',
+    ).get(id) as Record<string, unknown> | undefined;
+    return row ? rowToSignal(row) : null;
+  }
+
+  /**
    * Find a signal by message_id. Returns null if not found.
    */
   getSignalByMessageId(messageId: string): MoveSignal | null {

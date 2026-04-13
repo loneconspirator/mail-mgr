@@ -283,13 +283,13 @@ export class MoveTracker {
       destinationFolder,
     };
 
-    this.deps.signalStore.logSignal(input);
+    const insertedId = this.deps.signalStore.logSignal(input);
     this.signalsLoggedCount++;
     this.deps.logger?.info({ from: sourceFolder, to: destinationFolder, subject: msg.subject }, 'Move signal logged');
 
     // Trigger real-time pattern detection (D-15)
     if (this.deps.patternDetector) {
-      const signal = this.deps.signalStore.getSignalByMessageId(input.messageId);
+      const signal = this.deps.signalStore.getSignalById(insertedId);
       if (signal) {
         this.deps.patternDetector.processSignal(signal);
       }
