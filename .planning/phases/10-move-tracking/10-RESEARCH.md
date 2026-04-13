@@ -378,22 +378,25 @@ moveTracker.start()
 | A5 | Two-scan confirmation (detect in scan N, confirm in scan N+1) eliminates Monitor/Tracker race conditions | Pitfall 2 | Could still have edge cases; may need more sophisticated coordination |
 | A6 | JSON serialization of thousands of TrackedMessage objects in the state table is performant enough at 30-second intervals | Pitfall 5 | May need to move to a dedicated SQLite table for snapshots instead of state key-value |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **ImapFlow SEARCH capability**
    - What we know: ImapFlow has `fetch()` for iterating messages. It may also have `search()` for server-side filtering.
    - What's unclear: Whether ImapFlow exposes IMAP SEARCH HEADER command for Message-ID lookup without fetching all envelopes.
    - Recommendation: Check ImapFlow API during implementation. If SEARCH is available, use it for destination detection (much faster than envelope iteration). If not, the envelope scan approach works for the small fast-pass candidate list.
+   - RESOLVED: Plan 02 DestinationResolver uses envelope iteration as the default approach with a comment to check for `flow.search()` at implementation time. The fast-pass candidate list is small enough (10-15 folders) that envelope scanning is acceptable. If search is available, executor will use it as an optimization. No blocker.
 
 2. **UIDVALIDITY access in ImapFlow**
    - What we know: IMAP protocol provides UIDVALIDITY on mailbox SELECT/EXAMINE.
    - What's unclear: How ImapFlow exposes UIDVALIDITY after `getMailboxLock()` or `mailboxOpen()`.
    - Recommendation: Check ImapFlow's mailbox metadata after lock acquisition. The value is almost certainly available on the mailbox info object.
+   - RESOLVED: Plan 02 MoveTracker accesses UIDVALIDITY via `flow.mailbox?.uidValidity` after lock acquisition. If the property path differs, executor will inspect the ImapFlow mailbox info object at implementation time. The value is standard IMAP metadata and will be available. No blocker.
 
 3. **Snapshot data volume**
    - What we know: Each TrackedMessage is ~200-500 bytes. 5,000 messages = ~1-2.5 MB JSON per snapshot per folder.
    - What's unclear: Whether writing 2-5 MB to the state table every 30 seconds causes measurable SQLite performance impact.
    - Recommendation: Start with state table approach (simplest). If profiling shows issues, migrate to a dedicated `tracking_snapshots` table with one row per message instead of one JSON blob.
+   - RESOLVED: Plan 02 uses the state table approach (ActivityLog.getState/setState) as the initial implementation per Claude's Discretion. SQLite with WAL mode handles multi-KB TEXT values well. If performance issues arise post-deployment, migration to a dedicated table is a future optimization. No blocker.
 
 ## Validation Architecture
 
