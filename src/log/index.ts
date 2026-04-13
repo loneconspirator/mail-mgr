@@ -77,7 +77,7 @@ export class ActivityLog {
   /**
    * Log an action result with message and rule context.
    */
-  logActivity(result: ActionResult, message: EmailMessage, rule: Rule | null, source: 'arrival' | 'sweep' | 'batch' = 'arrival'): void {
+  logActivity(result: ActionResult, message: EmailMessage, rule: Rule | null, source: 'arrival' | 'sweep' = 'arrival'): void {
     const stmt = this.db.prepare(`
       INSERT INTO activity (
         timestamp, message_uid, message_id, message_from, message_to,
@@ -140,20 +140,6 @@ export class ActivityLog {
     );
     const result = stmt.run(`-${days} days`);
     return result.changes;
-  }
-
-  /**
-   * Return recently-used folder destinations, most recent first.
-   */
-  getRecentFolders(limit: number = 5): string[] {
-    const rows = this.db.prepare(
-      `SELECT folder FROM activity
-       WHERE folder IS NOT NULL AND folder != '' AND success = 1
-       GROUP BY folder
-       ORDER BY MAX(id) DESC
-       LIMIT ?`
-    ).all(limit) as Array<{ folder: string }>;
-    return rows.map(r => r.folder);
   }
 
   /**

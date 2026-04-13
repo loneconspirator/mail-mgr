@@ -5,7 +5,6 @@ export interface ActionContext {
   client: ImapClient;
   reviewFolder: string;
   trashFolder: string;
-  sourceFolder?: string;
 }
 
 export interface ActionResult {
@@ -39,15 +38,15 @@ export async function executeAction(
 
   switch (action.type) {
     case 'move':
-      return executeMove(ctx.client, message, action.folder, base, ctx.sourceFolder);
+      return executeMove(ctx.client, message, action.folder, base);
     case 'review': {
       const folder = action.folder ?? ctx.reviewFolder;
-      return executeMove(ctx.client, message, folder, base, ctx.sourceFolder).then((r) => ({ ...r, action: 'review' }));
+      return executeMove(ctx.client, message, folder, base).then((r) => ({ ...r, action: 'review' }));
     }
     case 'skip':
       return { ...base, success: true, action: 'skip' };
     case 'delete':
-      return executeMove(ctx.client, message, ctx.trashFolder, base, ctx.sourceFolder).then((r) => ({ ...r, action: 'delete' }));
+      return executeMove(ctx.client, message, ctx.trashFolder, base).then((r) => ({ ...r, action: 'delete' }));
     default:
       return { ...base, success: false, action: 'unknown', error: `Unknown action type` };
   }
@@ -58,16 +57,15 @@ async function executeMove(
   message: EmailMessage,
   folder: string,
   base: Omit<ActionResult, 'success' | 'action' | 'folder' | 'error'>,
-  sourceFolder?: string,
 ): Promise<ActionResult> {
   try {
-    await client.moveMessage(message.uid, folder, sourceFolder);
+    await client.moveMessage(message.uid, folder);
     return { ...base, success: true, action: 'move', folder };
   } catch (firstErr) {
     // If move failed, try creating the folder and retry once
     try {
       await client.createMailbox(folder);
-      await client.moveMessage(message.uid, folder, sourceFolder);
+      await client.moveMessage(message.uid, folder);
       return { ...base, success: true, action: 'move', folder };
     } catch (retryErr) {
       const error = retryErr instanceof Error ? retryErr.message : String(retryErr);

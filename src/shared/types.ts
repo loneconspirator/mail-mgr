@@ -57,67 +57,9 @@ export interface ReviewStatusResponse {
   } | null;
 }
 
-// GET /api/config/envelope response
-export interface EnvelopeStatus {
-  envelopeHeader: string | null;
-}
-
 // GET /api/status response
 export interface StatusResponse {
   connectionStatus: string;
   lastProcessedAt: string | null;
   messagesProcessed: number;
-}
-
-// IMAP folder hierarchy node (converted from imapflow ListTreeResponse)
-export interface FolderNode {
-  path: string;
-  name: string;
-  delimiter: string;
-  flags: string[];
-  specialUse?: string;
-  disabled?: boolean;
-  children: FolderNode[];
-}
-
-// GET /api/folders response
-export interface FolderTreeResponse {
-  folders: FolderNode[];
-  cachedAt: string;
-  stale: boolean;
-}
-
-// Batch filing types
-export interface DryRunMessage {
-  uid: number;
-  from: string;
-  subject: string;
-  date: string;
-  ruleName: string;
-}
-
-export interface DryRunGroup {
-  destination: string;
-  action: string;
-  count: number;
-  messages: DryRunMessage[];
-}
-
-export type BatchStatus = 'idle' | 'dry-running' | 'previewing' | 'executing' | 'completed' | 'cancelled' | 'error';
-
-export interface BatchStatusResponse {
-  status: BatchStatus;
-  sourceFolder: string | null;
-  totalMessages: number;
-  processed: number;
-  moved: number;
-  skipped: number;
-  errors: number;
-  cancelled: boolean;
-  dryRunResults: DryRunGroup[] | null;
-  completedAt: string | null;
-}
-
-export interface DryRunResponse {
-  results: DryRunGroup[];
 }

@@ -29,34 +29,22 @@ export const actionSchema = z.discriminatedUnion('type', [
 
 // --- Email match schema (at least one field required) ---
 
-export const visibilityMatchEnum = z.enum(['direct', 'cc', 'bcc', 'list']);
-export const readStatusMatchEnum = z.enum(['read', 'unread', 'any']);
-
 export const emailMatchSchema = z
   .object({
     sender: z.string().optional(),
     recipient: z.string().optional(),
     subject: z.string().optional(),
-    deliveredTo: z.string().optional(),
-    visibility: visibilityMatchEnum.optional(),
-    readStatus: readStatusMatchEnum.optional(),
   })
   .refine(
-    (m) =>
-      m.sender !== undefined ||
-      m.recipient !== undefined ||
-      m.subject !== undefined ||
-      m.deliveredTo !== undefined ||
-      m.visibility !== undefined ||
-      m.readStatus !== undefined,
-    { message: 'At least one match field is required' },
+    (m) => m.sender !== undefined || m.recipient !== undefined || m.subject !== undefined,
+    { message: 'At least one match field (sender, recipient, or subject) is required' },
   );
 
 // --- Rule schema ---
 
 export const ruleSchema = z.object({
   id: z.string().min(1),
-  name: z.string().optional(),
+  name: z.string().min(1),
   match: emailMatchSchema,
   action: actionSchema,
   enabled: z.boolean().default(true),
@@ -77,7 +65,6 @@ export const imapConfigSchema = z.object({
   auth: imapAuthSchema,
   idleTimeout: z.number().int().positive().default(300_000),
   pollInterval: z.number().int().positive().default(60_000),
-  envelopeHeader: z.string().optional(),
 });
 
 // --- Server config schema ---
@@ -137,5 +124,3 @@ export type ImapAuth = z.infer<typeof imapAuthSchema>;
 export type ImapConfig = z.infer<typeof imapConfigSchema>;
 export type ServerConfig = z.infer<typeof serverConfigSchema>;
 export type Config = z.infer<typeof configSchema>;
-export type VisibilityMatch = z.infer<typeof visibilityMatchEnum>;
-export type ReadStatusMatch = z.infer<typeof readStatusMatchEnum>;

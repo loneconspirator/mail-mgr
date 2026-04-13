@@ -11,8 +11,6 @@ import {
   deleteActionSchema,
   sweepConfigSchema,
   reviewConfigSchema,
-  emailMatchSchema,
-  ruleSchema,
 } from '../../../src/config/index.js';
 
 const FIXTURES_DIR = path.join(os.tmpdir(), `mail-mgr-test-${process.pid}`);
@@ -411,92 +409,6 @@ describe('reviewConfigSchema', () => {
   it('rejects empty folder string', () => {
     const result = reviewConfigSchema.safeParse({ folder: '' });
     expect(result.success).toBe(false);
-  });
-});
-
-describe('emailMatchSchema extended fields', () => {
-  it('accepts deliveredTo as sole field', () => {
-    const result = emailMatchSchema.safeParse({ deliveredTo: '*@example.com' });
-    expect(result.success).toBe(true);
-  });
-
-  it('accepts visibility direct as sole field', () => {
-    const result = emailMatchSchema.safeParse({ visibility: 'direct' });
-    expect(result.success).toBe(true);
-  });
-
-  it('accepts visibility cc as sole field', () => {
-    const result = emailMatchSchema.safeParse({ visibility: 'cc' });
-    expect(result.success).toBe(true);
-  });
-
-  it('accepts visibility bcc as sole field', () => {
-    const result = emailMatchSchema.safeParse({ visibility: 'bcc' });
-    expect(result.success).toBe(true);
-  });
-
-  it('accepts visibility list as sole field', () => {
-    const result = emailMatchSchema.safeParse({ visibility: 'list' });
-    expect(result.success).toBe(true);
-  });
-
-  it('rejects invalid visibility value', () => {
-    const result = emailMatchSchema.safeParse({ visibility: 'invalid' });
-    expect(result.success).toBe(false);
-  });
-
-  it('accepts readStatus read as sole field', () => {
-    const result = emailMatchSchema.safeParse({ readStatus: 'read' });
-    expect(result.success).toBe(true);
-  });
-
-  it('accepts readStatus unread as sole field', () => {
-    const result = emailMatchSchema.safeParse({ readStatus: 'unread' });
-    expect(result.success).toBe(true);
-  });
-
-  it('accepts readStatus any as sole field', () => {
-    const result = emailMatchSchema.safeParse({ readStatus: 'any' });
-    expect(result.success).toBe(true);
-  });
-
-  it('rejects invalid readStatus value', () => {
-    const result = emailMatchSchema.safeParse({ readStatus: 'bogus' });
-    expect(result.success).toBe(false);
-  });
-
-  it('accepts all six fields combined', () => {
-    const result = emailMatchSchema.safeParse({
-      sender: '*@github.com',
-      recipient: 'mike@example.com',
-      subject: '*PR*',
-      deliveredTo: '*@example.com',
-      visibility: 'direct',
-      readStatus: 'read',
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it('rejects empty object (at-least-one-field enforced)', () => {
-    const result = emailMatchSchema.safeParse({});
-    expect(result.success).toBe(false);
-  });
-
-  it('round-trips rule with new match fields through ruleSchema', () => {
-    const result = ruleSchema.safeParse({
-      id: 'test-ext',
-      name: 'Extended Rule',
-      match: { deliveredTo: '*@lists.example.com', visibility: 'list', readStatus: 'unread' },
-      action: { type: 'move', folder: 'Lists' },
-      enabled: true,
-      order: 5,
-    });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.match.deliveredTo).toBe('*@lists.example.com');
-      expect(result.data.match.visibility).toBe('list');
-      expect(result.data.match.readStatus).toBe('unread');
-    }
   });
 });
 
