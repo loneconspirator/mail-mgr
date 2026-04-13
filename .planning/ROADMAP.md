@@ -150,4 +150,4 @@ Note: Phase 9 (clobber restoration) must run before Move Tracking since it resto
 | 8. Extended Matchers UI | v0.4 | 3/4 | Gap closure | - |
 | 9. Restore Clobbered Features | v0.4 | 0/5 | Planned | - |
 | 10. Move Tracking | v0.4 | 4/4 | Complete    | 2026-04-13 |
-| 11. Pattern Detection & Proposed Rules | v0.4 | 3/3 | Complete   | 2026-04-13 |
+| 11. Pattern Detection & Proposed Rules | v0.4 | 3/3 | Complete    | 2026-04-13 |
