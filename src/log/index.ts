@@ -74,6 +74,11 @@ export class ActivityLog {
     return new ActivityLog(path.join(base, 'db.sqlite3'));
   }
 
+  /** Expose database instance for shared-db consumers (e.g., SignalStore). */
+  getDb(): Database.Database {
+    return this.db;
+  }
+
   /**
    * Log an action result with message and rule context.
    */

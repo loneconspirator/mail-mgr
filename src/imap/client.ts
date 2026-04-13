@@ -157,6 +157,19 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     });
   }
 
+  /** List all mailboxes with path and flags. */
+  async listMailboxes(): Promise<Array<{ path: string; flags: string[] }>> {
+    if (!this.flow) throw new Error('Not connected');
+    const mailboxes = await this.flow.list();
+    return mailboxes.map((mb) => {
+      const box = mb as { path?: string; flags?: Set<string> | string[] };
+      return {
+        path: box.path ?? '',
+        flags: box.flags instanceof Set ? [...box.flags] : Array.isArray(box.flags) ? box.flags : [],
+      };
+    });
+  }
+
   async getSpecialUseFolder(use: string): Promise<string | null> {
     if (this.specialUseCache.has(use)) {
       return this.specialUseCache.get(use)!;
