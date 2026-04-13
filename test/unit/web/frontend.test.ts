@@ -10,6 +10,7 @@ import type { Config } from '../../../src/config/index.js';
 import { ConfigRepository } from '../../../src/config/repository.js';
 import { ActivityLog } from '../../../src/log/index.js';
 import { ProposalStore } from '../../../src/tracking/proposals.js';
+import { runMigrations } from '../../../src/log/migrations.js';
 
 // --- Helpers ---
 
@@ -35,6 +36,8 @@ let activityLog: ActivityLog;
 function makeDeps(config: Config): ServerDeps {
   fs.writeFileSync(configPath, stringifyYaml(config), 'utf-8');
   const configRepo = new ConfigRepository(configPath);
+  const proposalDb = new Database(':memory:');
+  runMigrations(proposalDb);
   return {
     configRepo,
     activityLog,
@@ -48,6 +51,11 @@ function makeDeps(config: Config): ServerDeps {
         };
       },
     } as any),
+    getSweeper: () => undefined,
+    getFolderCache: () => { throw new Error('not wired in frontend tests'); },
+    getBatchEngine: () => { throw new Error('not wired in frontend tests'); },
+    getMoveTracker: () => undefined,
+    getProposalStore: () => new ProposalStore(proposalDb),
   };
 }
 
