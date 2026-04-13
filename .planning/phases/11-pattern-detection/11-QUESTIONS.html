@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 11: Pattern Detection & Proposed Rules — Discussion Questions</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #1a1a2e; line-height: 1.5; padding: 1rem; }
+  .container { max-width: 1200px; margin: 0 auto; }
+  h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+  .subtitle { color: #64748b; font-size: 0.9rem; margin-bottom: 1rem; }
+
+  /* Stats bar */
+  .stats-bar { background: #fff; border-radius: 8px; padding: 1rem 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
+  .stat { font-size: 0.95rem; }
+  .stat strong { font-size: 1.25rem; }
+  .progress-wrap { flex: 1; min-width: 200px; }
+  .progress-bar { height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #22c55e; border-radius: 4px; transition: width 0.3s; }
+
+  /* Save button */
+  .save-row { display: flex; justify-content: flex-end; margin-bottom: 1rem; gap: 0.5rem; }
+  .btn { padding: 0.5rem 1.25rem; border: none; border-radius: 6px; font-size: 0.9rem; cursor: pointer; font-weight: 500; }
+  .btn-primary { background: #2563eb; color: #fff; }
+  .btn-primary:hover { background: #1d4ed8; }
+  .btn-secondary { background: #e2e8f0; color: #334155; }
+  .btn-secondary:hover { background: #cbd5e1; }
+
+  /* Section */
+  .section { margin-bottom: 1.5rem; }
+  .section-header { background: #fff; padding: 0.75rem 1rem; border-radius: 8px 8px 0 0; border-bottom: 1px solid #e2e8f0; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+  .section-header:hover { background: #f8fafc; }
+  .section-title { font-weight: 600; font-size: 1rem; }
+  .section-count { font-size: 0.85rem; color: #64748b; }
+  .section-arrow { transition: transform 0.2s; font-size: 0.8rem; color: #94a3b8; }
+  .section-arrow.collapsed { transform: rotate(-90deg); }
+  .section-body { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1rem; padding: 1rem; background: #fafafa; border-radius: 0 0 8px 8px; }
+  .section-body.hidden { display: none; }
+
+  /* Question card */
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 1rem; transition: border-color 0.2s, background-color 0.2s; }
+  .card.answered { border: 2px solid #22c55e; background: #f0fdf4; }
+  .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .badge { background: #e2e8f0; color: #475569; font-size: 0.75rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 4px; }
+  .card.answered .badge { background: #bbf7d0; color: #166534; }
+  .card-title { font-weight: 600; font-size: 0.9rem; }
+  .card-context { font-size: 0.8rem; color: #64748b; font-style: italic; margin-bottom: 0.75rem; line-height: 1.4; }
+
+  /* Options */
+  .option { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; padding: 0.4rem; border-radius: 4px; cursor: pointer; }
+  .option:hover { background: #f8fafc; }
+  .option input[type="radio"] { margin-top: 0.2rem; flex-shrink: 0; accent-color: #2563eb; }
+  .option-content { flex: 1; }
+  .option-label { font-weight: 500; font-size: 0.85rem; }
+  .option-desc { font-size: 0.8rem; color: #64748b; }
+
+  /* Chat more textarea */
+  .chat-more { width: 100%; margin-top: 0.5rem; padding: 0.5rem; border: 1px solid #e2e8f0; border-radius: 4px; font-family: inherit; font-size: 0.8rem; resize: vertical; min-height: 48px; transition: border-color 0.2s; }
+  .chat-more:focus { outline: none; border-color: #2563eb; }
+  .chat-more.has-content { border: 2px solid #f97316; }
+
+  /* Instructions */
+  .instructions { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 1rem; margin-top: 1.5rem; font-size: 0.85rem; line-height: 1.6; }
+  .instructions code { background: #fef3c7; padding: 0.1rem 0.3rem; border-radius: 3px; font-size: 0.8rem; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>Phase 11: Pattern Detection & Proposed Rules</h1>
+  <p class="subtitle">Discussion Questions — answer at your own pace, then save</p>
+
+  <div class="stats-bar">
+    <div class="stat"><strong id="stat-total">18</strong> total</div>
+    <div class="stat"><strong id="stat-answered">0</strong> answered</div>
+    <div class="stat"><strong id="stat-remaining">18</strong> remaining</div>
+    <div class="progress-wrap">
+      <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width: 0%"></div></div>
+    </div>
+  </div>
+
+  <div class="save-row">
+    <button class="btn btn-secondary" onclick="resetAll()">Reset All</button>
+    <button class="btn btn-primary" onclick="saveAnswers()">Save Answers</button>
+  </div>
+
+  <div id="sections"></div>
+
+  <div class="save-row" style="margin-top:1rem;">
+    <button class="btn btn-primary" onclick="saveAnswers()">Save Answers</button>
+  </div>
+
+  <div class="instructions">
+    After answering, click <strong>"Save Answers"</strong> — this will download the updated JSON file.<br>
+    Replace the original file at:<br>
+    <code>.planning/phases/11-pattern-detection/11-QUESTIONS.json</code><br><br>
+    Then return to Claude and say <code>"refresh"</code> to process your answers, or <code>"finalize"</code> to generate CONTEXT.md.
+  </div>
+</div>
+
+<script>
+const DATA = {"phase":"11-pattern-detection","generated_at":"2026-04-13T02:30:00.000Z","stats":{"total":18,"answered":0,"chat_more":0,"remaining":18},"sections":[{"id":"pattern-algorithm","title":"Pattern Detection Algorithm","questions":[{"id":"Q-01","title":"Primary grouping dimension for patterns","context":"move_signals has sender, envelope_recipient, list_id, subject, visibility, destination_folder. Need to decide what constitutes a 'pattern'. Sender\u2192destination is the most common, but domain-level grouping catches more.","options":[{"id":"a","label":"Sender email \u2192 destination folder","description":"Exact sender match. High precision \u2014 'newsletter@foo.com always goes to Newsletters'. Misses patterns across senders from same domain."},{"id":"b","label":"Sender domain \u2192 destination folder","description":"Domain-level grouping. Catches 'all mail from acme.com goes to Work'. Less precise \u2014 may merge different senders from same domain."},{"id":"c","label":"Both levels with domain as fallback","description":"Try sender-level first. If a domain has multiple senders all going to the same place, surface a domain-level pattern instead. More complex but most useful."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-02","title":"Minimum signal count threshold","context":"LEARN-03 says 'configurable thresholds (minimum count, time span, burst suppression)'. Need a sensible default for how many moves before a pattern is proposed.","options":[{"id":"a","label":"3 moves minimum","description":"Aggressive \u2014 surfaces patterns early. Risk of false positives from small sample. Good for users who want quick suggestions."},{"id":"b","label":"5 moves minimum","description":"Balanced \u2014 enough signal to be meaningful. Most patterns from regular senders (newsletters, notifications) will hit this within a week or two."},{"id":"c","label":"10 moves minimum","description":"Conservative \u2014 high confidence but slow to suggest. May frustrate users who want the system to learn faster."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-03","title":"Time span for pattern analysis","context":"Signals are retained 90 days (D-08 from Phase 10). Question is how far back the pattern detector should look by default when scanning for patterns.","options":[{"id":"a","label":"30 days (rolling month)","description":"Recent behavior only. Avoids stale patterns from months ago. Won't catch infrequent-but-consistent senders."},{"id":"b","label":"All available signals (up to 90 days)","description":"Maximum data. Catches monthly newsletters and infrequent senders. May surface patterns from behavior you've since changed."},{"id":"c","label":"Configurable, default 30 days","description":"User can tune the lookback window. Default to recent, expand if they want broader detection."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-04","title":"Burst suppression strategy","context":"LEARN-03 mentions 'burst suppression'. If someone bulk-files 20 messages from one sender in one sitting, that's one decision not 20 independent signals. Need to decide how to handle this.","options":[{"id":"a","label":"Deduplicate same sender\u2192dest within 1 hour window","description":"Signals from same sender to same destination within 1 hour count as 1 event. Simple and effective for batch filing sessions."},{"id":"b","label":"Deduplicate same sender\u2192dest within same calendar day","description":"Coarser dedup. Even if you file morning and evening, it's one event. More conservative counting."},{"id":"c","label":"No burst suppression \u2014 every signal counts","description":"Raw counts. 20 filed messages = count of 20. Patterns surface faster but may be triggered by one-time bulk cleanup."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-05","title":"When does pattern detection run","context":"Pattern detection is a read-only analysis query on move_signals. Could run on-demand, periodically, or on every new signal. Cost is a few SQL GROUP BY queries.","options":[{"id":"a","label":"On-demand only (user clicks 'Detect Patterns')","description":"No background processing. User controls when detection runs. Simplest implementation. Stale until manually refreshed."},{"id":"b","label":"Periodic background (e.g., every 4 hours or daily)","description":"Runs automatically, fresh proposals without user action. Interval is configurable. Small overhead from periodic SQL queries."},{"id":"c","label":"Triggered when visiting the proposals page","description":"Lazy evaluation \u2014 only analyze when the user is looking. Fresh results every visit. No background cost."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"}]},{"id":"proposed-rule-storage","title":"Proposed Rules Data Model","questions":[{"id":"Q-06","title":"Where to store proposed rules","context":"Current rules live in YAML config. Proposed rules need persistence across restarts but are not active rules. Options: SQLite table (like move_signals), YAML section, or separate file.","options":[{"id":"a","label":"SQLite table (proposed_rules)","description":"New migration adds proposed_rules table. Natural fit \u2014 analysis is already SQL-based, results stay in DB. ConfigRepository stays focused on active rules."},{"id":"b","label":"Separate section in YAML config","description":"Keeps everything in one config file. But proposals are transient candidates, not user-authored config. Mixes concerns."},{"id":"c","label":"Separate JSON file","description":"Clean separation from both DB and config. Easy to inspect. But yet another persistence format to manage."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-07","title":"Proposed rule lifecycle states","context":"A proposed rule starts as 'pending' when detected. User can approve (\u2192 real rule), modify then approve, or dismiss. Need to decide if dismissed means gone forever or just hidden.","options":[{"id":"a","label":"pending \u2192 approved | dismissed (dismissed = permanent)","description":"Dismissed patterns never resurface. Clean and decisive. User must be sure before dismissing."},{"id":"b","label":"pending \u2192 approved | dismissed | snoozed","description":"Snoozed patterns resurface after a configurable period (e.g., 30 days). Dismissed is permanent. Gives user a 'not now' option."},{"id":"c","label":"pending \u2192 approved | dismissed (dismissed can be undone)","description":"Dismissed patterns are hidden but can be viewed and restored from a 'dismissed' tab. Less permanent, more forgiving."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-08","title":"Dismissed pattern suppression key","context":"LEARN-04 says 'dismissed patterns are suppressed from future proposals'. Need to define what uniquely identifies a pattern for suppression \u2014 same sender to same folder? Same sender to any folder?","options":[{"id":"a","label":"sender + destination folder pair","description":"Dismissing 'newsletter@foo.com \u2192 Newsletters' won't suppress 'newsletter@foo.com \u2192 Archive' if that pattern emerges later. Precise."},{"id":"b","label":"sender only (regardless of destination)","description":"Dismissing any pattern from newsletter@foo.com suppresses all future proposals for that sender. Broader \u2014 'I don't want rules for this sender'."},{"id":"c","label":"Let user choose per dismissal","description":"When dismissing, user picks 'dismiss this specific route' or 'dismiss all patterns for this sender'. Most flexible, more UI complexity."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"}]},{"id":"approval-workflow","title":"Approve / Modify / Dismiss Workflow","questions":[{"id":"Q-09","title":"What happens when user approves a proposed rule","context":"Approval creates a real rule in ConfigRepository. Need to decide where in the rule order it goes and what match fields it gets. Existing rules use first-match-wins ordering.","options":[{"id":"a","label":"Append to end of rule list (lowest priority)","description":"Safe default \u2014 existing rules take precedence. New rule only catches messages not matched by anything else. User can reorder later."},{"id":"b","label":"Insert before catch-all / review rules","description":"If there's a catch-all (e.g., * \u2192 Review), insert before it. More useful immediately but requires detecting catch-all rules."},{"id":"c","label":"Let user choose position during approval","description":"Show the rule list and let user pick where to insert. Most control but adds friction to the approval flow."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-10","title":"Modify before approve \u2014 how much editing","context":"LEARN-04 says users can 'modify' a proposed rule before approving. This could be lightweight (tweak the glob) or full (open the rule editor pre-filled).","options":[{"id":"a","label":"Inline editing on the proposal card","description":"Edit sender glob and destination folder directly on the proposal. Quick and contextual but limited \u2014 can't add subject match or change action type."},{"id":"b","label":"Open rule editor modal pre-filled with proposal values","description":"Full rule editor with all fields pre-populated from the proposal. User has complete control. Reuses existing modal code."},{"id":"c","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-11","title":"Confirmation before approval takes effect","context":"REQUIREMENTS.md says 'system must never change routing without explicit user confirmation'. Approval is explicit, but should there be an extra confirmation step?","options":[{"id":"a","label":"Single click approve \u2014 no extra confirmation","description":"The approve button IS the confirmation. Fast and decisive. Consistent with how rule creation works today (no confirmation dialog)."},{"id":"b","label":"Approve shows the generated rule for review, then 'Confirm'","description":"Two-step: see what will be created, then confirm. Safer but adds friction. Good for users unfamiliar with rule syntax."},{"id":"c","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"}]},{"id":"proposals-ui","title":"Proposals UI Design","questions":[{"id":"Q-12","title":"Where do proposed rules appear in the UI","context":"Current nav has: Rules, Activity, Settings. Proposed rules need a home. Could be a new page, a section on the Rules page, or a notification badge.","options":[{"id":"a","label":"New 'Proposals' page in the nav","description":"Dedicated page with its own nav button. Clean separation from active rules. Badge on nav button when there are pending proposals."},{"id":"b","label":"Section above the rules table on the Rules page","description":"Proposals shown at the top of the Rules page \u2014 a 'Suggested Rules' banner/section. Keeps everything rule-related on one page."},{"id":"c","label":"Notification banner + dedicated page","description":"A banner on the Rules page says '3 new rule suggestions' with a link to the full Proposals page. Best of both \u2014 awareness + dedicated space."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-13","title":"Proposal card information density","context":"UI-02 requires: 'signal count, confidence description, example messages, and approve/modify/dismiss controls'. Question is how much detail to show per proposal.","options":[{"id":"a","label":"Compact card \u2014 pattern + count + actions","description":"E.g., 'newsletter@acme.com \u2192 Newsletters (12 moves)' with approve/dismiss buttons. Clean, scannable. Examples on click/expand."},{"id":"b","label":"Expanded card \u2014 pattern + count + confidence + 3 example subjects","description":"Shows more context upfront: signal count, 'Strong pattern' badge, recent subject lines. User can decide without expanding."},{"id":"c","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-14","title":"Confidence display \u2014 how to communicate strength","context":"UI-02 says 'plain-language confidence description'. System doesn't have a machine learning model \u2014 confidence is based on signal count and consistency. Need to decide how to present this.","options":[{"id":"a","label":"Signal count only \u2014 '12 moves'","description":"Just the raw number. Let the user interpret whether 12 is enough. Honest and simple. No false precision."},{"id":"b","label":"Tiered labels \u2014 'Weak / Moderate / Strong'","description":"Based on count thresholds (e.g., 3-5 = Weak, 6-10 = Moderate, 11+ = Strong). Easy to scan but slightly arbitrary thresholds."},{"id":"c","label":"Count + consistency \u2014 '12 moves, 100% to same folder'","description":"Show count plus what percentage of moves from that sender went to that specific folder. E.g., '8/10 moves \u2192 Archive' signals mixed behavior."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-15","title":"Empty state when no patterns detected","context":"When the system is new or the user hasn't moved many messages manually, there will be no proposals. Need a helpful empty state.","options":[{"id":"a","label":"Simple message \u2014 'No patterns detected yet'","description":"Brief explanation that the system needs more move data. Mention the minimum threshold. No action needed from user."},{"id":"b","label":"Informational \u2014 explain how it works + signal count","description":"Brief explanation of the learning system, how many signals have been collected so far, and when proposals might appear. More educational."},{"id":"c","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"}]},{"id":"conflict-handling","title":"Conflict & Edge Case Handling","questions":[{"id":"Q-16","title":"Pattern that overlaps an existing rule","context":"If a user already has a rule 'sender:*@acme.com \u2192 Work', and the system detects a pattern 'billing@acme.com \u2192 Work' from move signals \u2014 should it propose a redundant rule?","options":[{"id":"a","label":"Suppress proposals that match existing rules","description":"Before proposing, check if an existing rule already handles this sender\u2192destination. Skip if covered. Avoids redundancy."},{"id":"b","label":"Show but mark as 'already covered'","description":"Still show the pattern but note that an existing rule already handles it. User sees the system is working. Can dismiss easily."},{"id":"c","label":"Propose regardless \u2014 user decides","description":"Don't analyze existing rules. Just surface all patterns above threshold. More duplicates but simpler implementation."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-17","title":"Contradictory patterns (same sender, different destinations)","context":"If move signals show 'newsletter@foo.com' going to both 'Newsletters' (8 times) and 'Archive' (5 times), the pattern is split. How to handle?","options":[{"id":"a","label":"Only propose the dominant destination","description":"Propose 'newsletter@foo.com \u2192 Newsletters' (8 moves, ignoring the 5 to Archive). Simple \u2014 user gets the most common pattern."},{"id":"b","label":"Require supermajority (>70% to one destination)","description":"Only propose if one destination has a strong majority. Mixed signals = no proposal. More conservative."},{"id":"c","label":"Show the split \u2014 'newsletter@foo.com: Newsletters (8) vs Archive (5)'","description":"Let user see the ambiguity and choose. More informative but adds UI complexity."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-18","title":"List-Id based patterns","context":"move_signals captures list_id (mailing list identifier). Mailing lists may come from varying sender addresses but share the same List-Id. Should pattern detection use this?","options":[{"id":"a","label":"Yes \u2014 detect patterns by List-Id when present","description":"Group signals by list_id \u2192 destination when list_id is non-null. Catches mailing lists that use different sender addresses. Proposed rule would match on recipient or use a list-id matcher if available."},{"id":"b","label":"No \u2014 stick to sender-based patterns only","description":"Simpler. List-Id is captured in signals but not used for pattern detection. Sender matching already catches most lists. Avoids needing a list-id match field in rules."},{"id":"c","label":"Defer to a future phase","description":"Note it as a future enhancement. Sender-based patterns cover the 80% case. List-Id matching could be its own feature."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"}]}]};
+
+let state = JSON.parse(JSON.stringify(DATA));
+
+function render() {
+  const container = document.getElementById('sections');
+  container.innerHTML = '';
+
+  state.sections.forEach(section => {
+    const answeredInSection = section.questions.filter(q => q.answer).length;
+    const totalInSection = section.questions.length;
+
+    const sectionDiv = document.createElement('div');
+    sectionDiv.className = 'section';
+
+    const header = document.createElement('div');
+    header.className = 'section-header';
+    header.innerHTML = `
+      <div>
+        <span class="section-title">${section.title}</span>
+        <span class="section-count">${answeredInSection}/${totalInSection} answered</span>
+      </div>
+      <span class="section-arrow" id="arrow-${section.id}">&#9660;</span>
+    `;
+    header.onclick = () => {
+      const body = document.getElementById(`body-${section.id}`);
+      const arrow = document.getElementById(`arrow-${section.id}`);
+      body.classList.toggle('hidden');
+      arrow.classList.toggle('collapsed');
+    };
+
+    const body = document.createElement('div');
+    body.className = 'section-body';
+    body.id = `body-${section.id}`;
+
+    section.questions.forEach(q => {
+      const card = document.createElement('div');
+      card.className = 'card' + (q.answer ? ' answered' : '');
+      card.id = `card-${q.id}`;
+
+      let optionsHtml = q.options.map(opt => `
+        <label class="option">
+          <input type="radio" name="${q.id}" value="${opt.id}" ${q.answer === opt.id ? 'checked' : ''}>
+          <div class="option-content">
+            <div class="option-label">${opt.label}</div>
+            ${opt.description ? `<div class="option-desc">${opt.description}</div>` : ''}
+          </div>
+        </label>
+      `).join('');
+
+      card.innerHTML = `
+        <div class="card-header">
+          <span class="badge">${q.id}</span>
+          <span class="card-title">${q.title}</span>
+        </div>
+        <div class="card-context">${q.context}</div>
+        ${optionsHtml}
+        <textarea class="chat-more ${q.chat_more ? 'has-content' : ''}"
+          placeholder="Add context, nuance, or clarification for this question..."
+          data-qid="${q.id}">${q.chat_more || ''}</textarea>
+      `;
+
+      // Radio change handler
+      card.querySelectorAll('input[type="radio"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          const question = findQuestion(q.id);
+          question.answer = e.target.value;
+          question.status = 'answered';
+          updateStats();
+          card.className = 'card answered';
+          card.querySelector('.badge').className = 'badge';
+        });
+      });
+
+      // Textarea handler
+      const ta = card.querySelector('textarea');
+      ta.addEventListener('input', (e) => {
+        const question = findQuestion(q.id);
+        question.chat_more = e.target.value;
+        if (e.target.value && !question.answer) {
+          question.status = 'chat-more';
+        }
+        e.target.classList.toggle('has-content', !!e.target.value);
+        updateStats();
+      });
+
+      body.appendChild(card);
+    });
+
+    sectionDiv.appendChild(header);
+    sectionDiv.appendChild(body);
+    container.appendChild(sectionDiv);
+  });
+
+  updateStats();
+}
+
+function findQuestion(id) {
+  for (const s of state.sections) {
+    for (const q of s.questions) {
+      if (q.id === id) return q;
+    }
+  }
+  return null;
+}
+
+function updateStats() {
+  let total = 0, answered = 0, chatMore = 0;
+  state.sections.forEach(s => s.questions.forEach(q => {
+    total++;
+    if (q.answer) answered++;
+    if (q.chat_more && !q.answer) chatMore++;
+  }));
+  state.stats = { total, answered, chat_more: chatMore, remaining: total - answered };
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-answered').textContent = answered;
+  document.getElementById('stat-remaining').textContent = total - answered;
+  document.getElementById('progress-fill').style.width = (total ? (answered / total * 100) : 0) + '%';
+
+  // Update section counts
+  state.sections.forEach(s => {
+    const header = document.querySelector(`#body-${s.id}`)?.previousElementSibling;
+    if (header) {
+      const cnt = s.questions.filter(q => q.answer).length;
+      header.querySelector('.section-count').textContent = `${cnt}/${s.questions.length} answered`;
+    }
+  });
+}
+
+function saveAnswers() {
+  const json = JSON.stringify(state, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '11-QUESTIONS.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function resetAll() {
+  if (!confirm('Reset all answers? This cannot be undone.')) return;
+  state.sections.forEach(s => s.questions.forEach(q => {
+    q.answer = null;
+    q.chat_more = '';
+    q.status = 'unanswered';
+  }));
+  render();
+}
+
+render();
+</script>
+</body>
+</html>

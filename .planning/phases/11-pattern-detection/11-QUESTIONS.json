@@ -1,0 +1,562 @@
+{
+  "phase": "11-pattern-detection",
+  "generated_at": "2026-04-13T02:30:00.000Z",
+  "stats": {
+    "total": 18,
+    "answered": 0,
+    "chat_more": 0,
+    "remaining": 18
+  },
+  "sections": [
+    {
+      "id": "pattern-algorithm",
+      "title": "Pattern Detection Algorithm",
+      "questions": [
+        {
+          "id": "Q-01",
+          "title": "Primary grouping dimension for patterns",
+          "context": "move_signals has sender, envelope_recipient, list_id, subject, visibility, destination_folder. Need to decide what constitutes a 'pattern'. Sender→destination is the most common, but domain-level grouping catches more.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Sender email → destination folder",
+              "description": "Exact sender match. High precision — 'newsletter@foo.com always goes to Newsletters'. Misses patterns across senders from same domain."
+            },
+            {
+              "id": "b",
+              "label": "Sender domain → destination folder",
+              "description": "Domain-level grouping. Catches 'all mail from acme.com goes to Work'. Less precise — may merge different senders from same domain."
+            },
+            {
+              "id": "c",
+              "label": "Both levels with domain as fallback",
+              "description": "Try sender-level first. If a domain has multiple senders all going to the same place, surface a domain-level pattern instead. More complex but most useful."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-02",
+          "title": "Minimum signal count threshold",
+          "context": "LEARN-03 says 'configurable thresholds (minimum count, time span, burst suppression)'. Need a sensible default for how many moves before a pattern is proposed.",
+          "options": [
+            {
+              "id": "a",
+              "label": "3 moves minimum",
+              "description": "Aggressive — surfaces patterns early. Risk of false positives from small sample. Good for users who want quick suggestions."
+            },
+            {
+              "id": "b",
+              "label": "5 moves minimum",
+              "description": "Balanced — enough signal to be meaningful. Most patterns from regular senders (newsletters, notifications) will hit this within a week or two."
+            },
+            {
+              "id": "c",
+              "label": "10 moves minimum",
+              "description": "Conservative — high confidence but slow to suggest. May frustrate users who want the system to learn faster."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-03",
+          "title": "Time span for pattern analysis",
+          "context": "Signals are retained 90 days (D-08 from Phase 10). Question is how far back the pattern detector should look by default when scanning for patterns.",
+          "options": [
+            {
+              "id": "a",
+              "label": "30 days (rolling month)",
+              "description": "Recent behavior only. Avoids stale patterns from months ago. Won't catch infrequent-but-consistent senders."
+            },
+            {
+              "id": "b",
+              "label": "All available signals (up to 90 days)",
+              "description": "Maximum data. Catches monthly newsletters and infrequent senders. May surface patterns from behavior you've since changed."
+            },
+            {
+              "id": "c",
+              "label": "Configurable, default 30 days",
+              "description": "User can tune the lookback window. Default to recent, expand if they want broader detection."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-04",
+          "title": "Burst suppression strategy",
+          "context": "LEARN-03 mentions 'burst suppression'. If someone bulk-files 20 messages from one sender in one sitting, that's one decision not 20 independent signals. Need to decide how to handle this.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Deduplicate same sender→dest within 1 hour window",
+              "description": "Signals from same sender to same destination within 1 hour count as 1 event. Simple and effective for batch filing sessions."
+            },
+            {
+              "id": "b",
+              "label": "Deduplicate same sender→dest within same calendar day",
+              "description": "Coarser dedup. Even if you file morning and evening, it's one event. More conservative counting."
+            },
+            {
+              "id": "c",
+              "label": "No burst suppression — every signal counts",
+              "description": "Raw counts. 20 filed messages = count of 20. Patterns surface faster but may be triggered by one-time bulk cleanup."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-05",
+          "title": "When does pattern detection run",
+          "context": "Pattern detection is a read-only analysis query on move_signals. Could run on-demand, periodically, or on every new signal. Cost is a few SQL GROUP BY queries.",
+          "options": [
+            {
+              "id": "a",
+              "label": "On-demand only (user clicks 'Detect Patterns')",
+              "description": "No background processing. User controls when detection runs. Simplest implementation. Stale until manually refreshed."
+            },
+            {
+              "id": "b",
+              "label": "Periodic background (e.g., every 4 hours or daily)",
+              "description": "Runs automatically, fresh proposals without user action. Interval is configurable. Small overhead from periodic SQL queries."
+            },
+            {
+              "id": "c",
+              "label": "Triggered when visiting the proposals page",
+              "description": "Lazy evaluation — only analyze when the user is looking. Fresh results every visit. No background cost."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        }
+      ]
+    },
+    {
+      "id": "proposed-rule-storage",
+      "title": "Proposed Rules Data Model",
+      "questions": [
+        {
+          "id": "Q-06",
+          "title": "Where to store proposed rules",
+          "context": "Current rules live in YAML config. Proposed rules need persistence across restarts but are not active rules. Options: SQLite table (like move_signals), YAML section, or separate file.",
+          "options": [
+            {
+              "id": "a",
+              "label": "SQLite table (proposed_rules)",
+              "description": "New migration adds proposed_rules table. Natural fit — analysis is already SQL-based, results stay in DB. ConfigRepository stays focused on active rules."
+            },
+            {
+              "id": "b",
+              "label": "Separate section in YAML config",
+              "description": "Keeps everything in one config file. But proposals are transient candidates, not user-authored config. Mixes concerns."
+            },
+            {
+              "id": "c",
+              "label": "Separate JSON file",
+              "description": "Clean separation from both DB and config. Easy to inspect. But yet another persistence format to manage."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-07",
+          "title": "Proposed rule lifecycle states",
+          "context": "A proposed rule starts as 'pending' when detected. User can approve (→ real rule), modify then approve, or dismiss. Need to decide if dismissed means gone forever or just hidden.",
+          "options": [
+            {
+              "id": "a",
+              "label": "pending → approved | dismissed (dismissed = permanent)",
+              "description": "Dismissed patterns never resurface. Clean and decisive. User must be sure before dismissing."
+            },
+            {
+              "id": "b",
+              "label": "pending → approved | dismissed | snoozed",
+              "description": "Snoozed patterns resurface after a configurable period (e.g., 30 days). Dismissed is permanent. Gives user a 'not now' option."
+            },
+            {
+              "id": "c",
+              "label": "pending → approved | dismissed (dismissed can be undone)",
+              "description": "Dismissed patterns are hidden but can be viewed and restored from a 'dismissed' tab. Less permanent, more forgiving."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-08",
+          "title": "Dismissed pattern suppression key",
+          "context": "LEARN-04 says 'dismissed patterns are suppressed from future proposals'. Need to define what uniquely identifies a pattern for suppression — same sender to same folder? Same sender to any folder?",
+          "options": [
+            {
+              "id": "a",
+              "label": "sender + destination folder pair",
+              "description": "Dismissing 'newsletter@foo.com → Newsletters' won't suppress 'newsletter@foo.com → Archive' if that pattern emerges later. Precise."
+            },
+            {
+              "id": "b",
+              "label": "sender only (regardless of destination)",
+              "description": "Dismissing any pattern from newsletter@foo.com suppresses all future proposals for that sender. Broader — 'I don't want rules for this sender'."
+            },
+            {
+              "id": "c",
+              "label": "Let user choose per dismissal",
+              "description": "When dismissing, user picks 'dismiss this specific route' or 'dismiss all patterns for this sender'. Most flexible, more UI complexity."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        }
+      ]
+    },
+    {
+      "id": "approval-workflow",
+      "title": "Approve / Modify / Dismiss Workflow",
+      "questions": [
+        {
+          "id": "Q-09",
+          "title": "What happens when user approves a proposed rule",
+          "context": "Approval creates a real rule in ConfigRepository. Need to decide where in the rule order it goes and what match fields it gets. Existing rules use first-match-wins ordering.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Append to end of rule list (lowest priority)",
+              "description": "Safe default — existing rules take precedence. New rule only catches messages not matched by anything else. User can reorder later."
+            },
+            {
+              "id": "b",
+              "label": "Insert before catch-all / review rules",
+              "description": "If there's a catch-all (e.g., * → Review), insert before it. More useful immediately but requires detecting catch-all rules."
+            },
+            {
+              "id": "c",
+              "label": "Let user choose position during approval",
+              "description": "Show the rule list and let user pick where to insert. Most control but adds friction to the approval flow."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-10",
+          "title": "Modify before approve — how much editing",
+          "context": "LEARN-04 says users can 'modify' a proposed rule before approving. This could be lightweight (tweak the glob) or full (open the rule editor pre-filled).",
+          "options": [
+            {
+              "id": "a",
+              "label": "Inline editing on the proposal card",
+              "description": "Edit sender glob and destination folder directly on the proposal. Quick and contextual but limited — can't add subject match or change action type."
+            },
+            {
+              "id": "b",
+              "label": "Open rule editor modal pre-filled with proposal values",
+              "description": "Full rule editor with all fields pre-populated from the proposal. User has complete control. Reuses existing modal code."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-11",
+          "title": "Confirmation before approval takes effect",
+          "context": "REQUIREMENTS.md says 'system must never change routing without explicit user confirmation'. Approval is explicit, but should there be an extra confirmation step?",
+          "options": [
+            {
+              "id": "a",
+              "label": "Single click approve — no extra confirmation",
+              "description": "The approve button IS the confirmation. Fast and decisive. Consistent with how rule creation works today (no confirmation dialog)."
+            },
+            {
+              "id": "b",
+              "label": "Approve shows the generated rule for review, then 'Confirm'",
+              "description": "Two-step: see what will be created, then confirm. Safer but adds friction. Good for users unfamiliar with rule syntax."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        }
+      ]
+    },
+    {
+      "id": "proposals-ui",
+      "title": "Proposals UI Design",
+      "questions": [
+        {
+          "id": "Q-12",
+          "title": "Where do proposed rules appear in the UI",
+          "context": "Current nav has: Rules, Activity, Settings. Proposed rules need a home. Could be a new page, a section on the Rules page, or a notification badge.",
+          "options": [
+            {
+              "id": "a",
+              "label": "New 'Proposals' page in the nav",
+              "description": "Dedicated page with its own nav button. Clean separation from active rules. Badge on nav button when there are pending proposals."
+            },
+            {
+              "id": "b",
+              "label": "Section above the rules table on the Rules page",
+              "description": "Proposals shown at the top of the Rules page — a 'Suggested Rules' banner/section. Keeps everything rule-related on one page."
+            },
+            {
+              "id": "c",
+              "label": "Notification banner + dedicated page",
+              "description": "A banner on the Rules page says '3 new rule suggestions' with a link to the full Proposals page. Best of both — awareness + dedicated space."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-13",
+          "title": "Proposal card information density",
+          "context": "UI-02 requires: 'signal count, confidence description, example messages, and approve/modify/dismiss controls'. Question is how much detail to show per proposal.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Compact card — pattern + count + actions",
+              "description": "E.g., 'newsletter@acme.com → Newsletters (12 moves)' with approve/dismiss buttons. Clean, scannable. Examples on click/expand."
+            },
+            {
+              "id": "b",
+              "label": "Expanded card — pattern + count + confidence + 3 example subjects",
+              "description": "Shows more context upfront: signal count, 'Strong pattern' badge, recent subject lines. User can decide without expanding."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-14",
+          "title": "Confidence display — how to communicate strength",
+          "context": "UI-02 says 'plain-language confidence description'. System doesn't have a machine learning model — confidence is based on signal count and consistency. Need to decide how to present this.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Signal count only — '12 moves'",
+              "description": "Just the raw number. Let the user interpret whether 12 is enough. Honest and simple. No false precision."
+            },
+            {
+              "id": "b",
+              "label": "Tiered labels — 'Weak / Moderate / Strong'",
+              "description": "Based on count thresholds (e.g., 3-5 = Weak, 6-10 = Moderate, 11+ = Strong). Easy to scan but slightly arbitrary thresholds."
+            },
+            {
+              "id": "c",
+              "label": "Count + consistency — '12 moves, 100% to same folder'",
+              "description": "Show count plus what percentage of moves from that sender went to that specific folder. E.g., '8/10 moves → Archive' signals mixed behavior."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-15",
+          "title": "Empty state when no patterns detected",
+          "context": "When the system is new or the user hasn't moved many messages manually, there will be no proposals. Need a helpful empty state.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Simple message — 'No patterns detected yet'",
+              "description": "Brief explanation that the system needs more move data. Mention the minimum threshold. No action needed from user."
+            },
+            {
+              "id": "b",
+              "label": "Informational — explain how it works + signal count",
+              "description": "Brief explanation of the learning system, how many signals have been collected so far, and when proposals might appear. More educational."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        }
+      ]
+    },
+    {
+      "id": "conflict-handling",
+      "title": "Conflict & Edge Case Handling",
+      "questions": [
+        {
+          "id": "Q-16",
+          "title": "Pattern that overlaps an existing rule",
+          "context": "If a user already has a rule 'sender:*@acme.com → Work', and the system detects a pattern 'billing@acme.com → Work' from move signals — should it propose a redundant rule?",
+          "options": [
+            {
+              "id": "a",
+              "label": "Suppress proposals that match existing rules",
+              "description": "Before proposing, check if an existing rule already handles this sender→destination. Skip if covered. Avoids redundancy."
+            },
+            {
+              "id": "b",
+              "label": "Show but mark as 'already covered'",
+              "description": "Still show the pattern but note that an existing rule already handles it. User sees the system is working. Can dismiss easily."
+            },
+            {
+              "id": "c",
+              "label": "Propose regardless — user decides",
+              "description": "Don't analyze existing rules. Just surface all patterns above threshold. More duplicates but simpler implementation."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-17",
+          "title": "Contradictory patterns (same sender, different destinations)",
+          "context": "If move signals show 'newsletter@foo.com' going to both 'Newsletters' (8 times) and 'Archive' (5 times), the pattern is split. How to handle?",
+          "options": [
+            {
+              "id": "a",
+              "label": "Only propose the dominant destination",
+              "description": "Propose 'newsletter@foo.com → Newsletters' (8 moves, ignoring the 5 to Archive). Simple — user gets the most common pattern."
+            },
+            {
+              "id": "b",
+              "label": "Require supermajority (>70% to one destination)",
+              "description": "Only propose if one destination has a strong majority. Mixed signals = no proposal. More conservative."
+            },
+            {
+              "id": "c",
+              "label": "Show the split — 'newsletter@foo.com: Newsletters (8) vs Archive (5)'",
+              "description": "Let user see the ambiguity and choose. More informative but adds UI complexity."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-18",
+          "title": "List-Id based patterns",
+          "context": "move_signals captures list_id (mailing list identifier). Mailing lists may come from varying sender addresses but share the same List-Id. Should pattern detection use this?",
+          "options": [
+            {
+              "id": "a",
+              "label": "Yes — detect patterns by List-Id when present",
+              "description": "Group signals by list_id → destination when list_id is non-null. Catches mailing lists that use different sender addresses. Proposed rule would match on recipient or use a list-id matcher if available."
+            },
+            {
+              "id": "b",
+              "label": "No — stick to sender-based patterns only",
+              "description": "Simpler. List-Id is captured in signals but not used for pattern detection. Sender matching already catches most lists. Avoids needing a list-id match field in rules."
+            },
+            {
+              "id": "c",
+              "label": "Defer to a future phase",
+              "description": "Note it as a future enhancement. Sender-based patterns cover the 80% case. List-Id matching could be its own feature."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        }
+      ]
+    }
+  ]
+}
