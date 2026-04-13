@@ -108,7 +108,11 @@ Plans:
   2. Detected moves are cross-referenced against the activity log by Message-ID to exclude system-initiated moves (Monitor, Sweep, Batch)
   3. For each confirmed user move, sender, envelope recipient, list headers, subject, read status, visibility, source folder, and destination folder are logged to the move_signals table
   4. Move tracking runs continuously alongside Monitor without interfering with message processing
-**Plans**: TBD
+**Plans:** 3 plans
+Plans:
+- [ ] 10-01-PLAN.md — Database migration, SignalStore, config schema extension
+- [ ] 10-02-PLAN.md — MoveTracker class and DestinationResolver with UID snapshot diffing
+- [ ] 10-03-PLAN.md — Application wiring: main entry, ServerDeps, config listeners
 
 ### Phase 11: Pattern Detection & Proposed Rules
 **Goal**: System analyzes accumulated move signals, identifies repeating patterns, and surfaces them as proposed rules that the user can approve, modify, or dismiss
@@ -140,5 +144,5 @@ Note: Phase 9 (clobber restoration) must run before Move Tracking since it resto
 | 7. Extended Matchers | v0.4 | 2/2 | Complete | - |
 | 8. Extended Matchers UI | v0.4 | 3/4 | Gap closure | - |
 | 9. Restore Clobbered Features | v0.4 | 0/5 | Planned | - |
-| 10. Move Tracking | v0.4 | 0/? | Not started | - |
+| 10. Move Tracking | v0.4 | 0/3 | Planned | - |
 | 11. Pattern Detection & Proposed Rules | v0.4 | 0/? | Not started | - |
