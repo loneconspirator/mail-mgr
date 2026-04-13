@@ -120,4 +120,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-13 after Phase 10 (Move Tracking) complete — UID snapshot diffing, signal logging, two-scan confirmation, destination resolution, runtime wiring*
+*Last updated: 2026-04-13 after Phase 11 (Pattern Detection & Proposed Rules) complete — signal analysis engine, proposed_rules table, strength scoring, API endpoints, frontend with approve/modify/dismiss UI*
