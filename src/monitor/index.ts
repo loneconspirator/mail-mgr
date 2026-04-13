@@ -28,7 +28,9 @@ export class Monitor {
   private readonly reviewFolder: string;
   private readonly trashFolder: string;
   private rules: Rule[];
+  private envelopeHeader: string | undefined;
   private lastUid: number;
+  private cursorEnabled: boolean;
   private processing: boolean = false;
   private lastProcessedAt: Date | null = null;
   private messagesProcessed: number = 0;
@@ -40,8 +42,15 @@ export class Monitor {
     this.reviewFolder = config.review.folder;
     this.trashFolder = config.review.trashFolder;
     this.rules = config.rules;
-    const saved = this.activityLog.getState('lastUid');
-    this.lastUid = saved ? parseInt(saved, 10) : 0;
+    this.envelopeHeader = config.imap.envelopeHeader;
+    const cursorEnabled = this.activityLog.getState('cursorEnabled');
+    this.cursorEnabled = cursorEnabled !== 'false';  // default: enabled
+    if (this.cursorEnabled) {
+      const saved = this.activityLog.getState('lastUid');
+      this.lastUid = saved ? parseInt(saved, 10) : 0;
+    } else {
+      this.lastUid = 0;  // Full re-evaluation on restart
+    }
   }
 
   /**
@@ -102,15 +111,21 @@ export class Monitor {
       const fetched = await this.client.fetchNewMessages(this.lastUid);
 
       for (const raw of fetched) {
-        const message = parseMessage(raw as ImapFetchResult);
-        if (message.uid > this.lastUid) {
-          this.lastUid = message.uid;
-          this.activityLog.setState('lastUid', String(this.lastUid));
+        const message = parseMessage(raw as ImapFetchResult, this.envelopeHeader);
+        try {
+          await this.processMessage(message);
+          if (message.uid > this.lastUid) {
+            this.lastUid = message.uid;
+            if (this.cursorEnabled) {
+              this.activityLog.setState('lastUid', String(this.lastUid));
+            }
+          }
+        } catch (err) {
+          this.logger.error({ err, uid: message.uid }, 'Error processing message');
         }
-        await this.processMessage(message);
       }
     } catch (err) {
-      this.logger.error({ err }, 'Error fetching/processing messages');
+      this.logger.error({ err }, 'Error fetching messages');
     } finally {
       this.processing = false;
     }

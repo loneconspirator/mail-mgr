@@ -5,7 +5,7 @@ import type { StatusResponse, MoveTrackerStatusResponse, DeepScanResponse } from
 export function registerStatusRoutes(app: FastifyInstance, deps: ServerDeps): void {
   // GET /api/status — connection state, messages processed
   app.get('/api/status', async (): Promise<StatusResponse> => {
-    const state = deps.monitor.getState();
+    const state = deps.getMonitor().getState();
     return {
       connectionStatus: state.connectionStatus,
       lastProcessedAt: state.lastProcessedAt?.toISOString() ?? null,

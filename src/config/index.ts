@@ -13,8 +13,9 @@ export {
   skipActionSchema,
   deleteActionSchema,
   sweepConfigSchema,
-  moveTrackingConfigSchema,
   reviewConfigSchema,
+  visibilityMatchEnum,
+  readStatusMatchEnum,
 } from './schema.js';
 export type {
   Config,
@@ -29,6 +30,7 @@ export type {
   DeleteAction,
   EmailMatch,
   SweepConfig,
-  MoveTrackingConfig,
   ReviewConfig,
+  VisibilityMatch,
+  ReadStatusMatch,
 } from './schema.js';

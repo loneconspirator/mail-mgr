@@ -110,4 +110,126 @@ describe('evaluateRules', () => {
     const result = evaluateRules(rules, msg);
     expect(result!.id).toBe('match');
   });
+
+  describe('envelope-unavailable skip logic', () => {
+    // Skip logic: rules with deliveredTo or visibility are skipped when no envelope data
+
+    it('skips rule with deliveredTo when message has no envelopeRecipient', () => {
+      const rules = [
+        makeRule('dt', 1, { deliveredTo: '*@example.com' }),
+      ];
+      const msg = makeMessage(); // no envelopeRecipient
+      expect(evaluateRules(rules, msg)).toBeNull();
+    });
+
+    it('skips rule with visibility when message has no envelopeRecipient', () => {
+      const rules = [
+        makeRule('vis', 1, { sender: '*@example.com', visibility: 'direct' }),
+      ];
+      const msg = makeMessage(); // no envelopeRecipient
+      expect(evaluateRules(rules, msg)).toBeNull();
+    });
+
+    it('skips rule with both deliveredTo AND sender when no envelope (whole rule bypassed)', () => {
+      const rules = [
+        makeRule('combo', 1, { sender: '*@example.com', deliveredTo: '*@example.com' }),
+      ];
+      const msg = makeMessage(); // no envelopeRecipient
+      expect(evaluateRules(rules, msg)).toBeNull();
+    });
+
+    it('does NOT skip rule with only readStatus when no envelope', () => {
+      const rules = [
+        makeRule('rs', 1, { readStatus: 'unread' }),
+      ];
+      const msg = makeMessage(); // no envelopeRecipient, flags empty = unread
+      const result = evaluateRules(rules, msg);
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe('rs');
+    });
+
+    it('does NOT skip rule with only sender when no envelope', () => {
+      const rules = [
+        makeRule('sender', 1, { sender: '*@example.com' }),
+      ];
+      const msg = makeMessage(); // no envelopeRecipient
+      const result = evaluateRules(rules, msg);
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe('sender');
+    });
+
+    it('skips rule with readStatus + visibility when no envelope (visibility triggers skip)', () => {
+      const rules = [
+        makeRule('rs-vis', 1, { readStatus: 'unread', visibility: 'direct' }),
+      ];
+      const msg = makeMessage(); // no envelopeRecipient
+      expect(evaluateRules(rules, msg)).toBeNull();
+    });
+
+    // Fallthrough ordering tests
+
+    it('skipped envelope rule falls through to non-envelope rule', () => {
+      const rules = [
+        makeRule('envelope', 1, { deliveredTo: '*@example.com' }),
+        makeRule('sender', 2, { sender: '*@example.com' }),
+      ];
+      const msg = makeMessage(); // no envelopeRecipient
+      const result = evaluateRules(rules, msg);
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe('sender');
+    });
+
+    it('skipped visibility rule falls through to readStatus rule', () => {
+      const rules = [
+        makeRule('vis', 1, { visibility: 'direct' }),
+        makeRule('rs', 2, { readStatus: 'unread' }),
+      ];
+      const msg = makeMessage(); // no envelopeRecipient, flags empty = unread
+      const result = evaluateRules(rules, msg);
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe('rs');
+    });
+
+    // Normal operation (envelope available)
+
+    it('evaluates deliveredTo normally when message HAS envelopeRecipient (matching)', () => {
+      const rules = [
+        makeRule('dt', 1, { deliveredTo: '*@example.com' }),
+      ];
+      const msg = makeMessage({ envelopeRecipient: '<mike@example.com>', visibility: 'direct' });
+      const result = evaluateRules(rules, msg);
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe('dt');
+    });
+
+    it('evaluates deliveredTo normally when message HAS envelopeRecipient (non-matching)', () => {
+      const rules = [
+        makeRule('dt', 1, { deliveredTo: '*@other.com' }),
+      ];
+      const msg = makeMessage({ envelopeRecipient: '<mike@example.com>', visibility: 'direct' });
+      expect(evaluateRules(rules, msg)).toBeNull();
+    });
+
+    it('evaluates visibility normally when message HAS visibility', () => {
+      const rules = [
+        makeRule('vis', 1, { visibility: 'direct' }),
+      ];
+      const msg = makeMessage({ envelopeRecipient: '<mike@example.com>', visibility: 'direct' });
+      const result = evaluateRules(rules, msg);
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe('vis');
+    });
+
+    // readStatus works even when envelope is absent
+
+    it('readStatus unread matches unread message even when envelopeRecipient is undefined', () => {
+      const rules = [
+        makeRule('rs', 1, { readStatus: 'unread' }),
+      ];
+      const msg = makeMessage(); // flags empty = unread, no envelopeRecipient
+      const result = evaluateRules(rules, msg);
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe('rs');
+    });
+  });
 });

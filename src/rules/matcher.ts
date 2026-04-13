@@ -5,8 +5,9 @@ import type { EmailMessage } from '../imap/index.js';
 /**
  * Test whether a single rule matches a message.
  * All specified match fields must match (AND logic).
- * Recipient checks both to and cc.
- * All comparisons are case-insensitive.
+ * Fields: sender, recipient (To+CC), subject, deliveredTo (envelope),
+ * visibility (direct/cc/bcc/list), readStatus (read/unread/any).
+ * All glob comparisons are case-insensitive.
  */
 export function matchRule(rule: Rule, message: EmailMessage): boolean {
   const { match } = rule;
@@ -31,6 +32,29 @@ export function matchRule(rule: Rule, message: EmailMessage): boolean {
     if (!picomatch.isMatch(message.subject, match.subject, { nocase: true })) {
       return false;
     }
+  }
+
+  // deliveredTo: envelope recipient glob match
+  if (match.deliveredTo !== undefined) {
+    if (!message.envelopeRecipient) return false;
+    const recipient = message.envelopeRecipient.replace(/^<|>$/g, '');
+    if (!picomatch.isMatch(recipient, match.deliveredTo, { nocase: true })) {
+      return false;
+    }
+  }
+
+  // visibility: exact enum equality
+  if (match.visibility !== undefined) {
+    if (message.visibility !== match.visibility) {
+      return false;
+    }
+  }
+
+  // readStatus: check \Seen flag ('any' is pass-through)
+  if (match.readStatus !== undefined && match.readStatus !== 'any') {
+    const isRead = message.flags.has('\\Seen');
+    if (match.readStatus === 'read' && !isRead) return false;
+    if (match.readStatus === 'unread' && isRead) return false;
   }
 
   return true;

@@ -71,20 +71,20 @@ export class ActivityLog {
   /**
    * Create an ActivityLog using the standard DATA_PATH convention.
    */
-  static fromDataPath(dataPath?: string): ActivityLog {
-    const base = dataPath ?? process.env.DATA_PATH ?? './data';
-    return new ActivityLog(path.join(base, 'db.sqlite3'));
-  }
-
   /** Expose database instance for shared-db consumers (e.g., SignalStore). */
   getDb(): Database.Database {
     return this.db;
   }
 
+  static fromDataPath(dataPath?: string): ActivityLog {
+    const base = dataPath ?? process.env.DATA_PATH ?? './data';
+    return new ActivityLog(path.join(base, 'db.sqlite3'));
+  }
+
   /**
    * Log an action result with message and rule context.
    */
-  logActivity(result: ActionResult, message: EmailMessage, rule: Rule | null, source: 'arrival' | 'sweep' = 'arrival'): void {
+  logActivity(result: ActionResult, message: EmailMessage, rule: Rule | null, source: 'arrival' | 'sweep' | 'batch' = 'arrival'): void {
     const stmt = this.db.prepare(`
       INSERT INTO activity (
         timestamp, message_uid, message_id, message_from, message_to,
@@ -150,25 +150,6 @@ export class ActivityLog {
   }
 
   /**
-   * Start daily pruning. Also prunes immediately on call.
-   */
-  startAutoPrune(): void {
-    this.prune();
-    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-    this.pruneInterval = setInterval(() => this.prune(), ONE_DAY_MS);
-  }
-
-  /**
-   * Stop the auto-prune interval.
-   */
-  stopAutoPrune(): void {
-    if (this.pruneInterval) {
-      clearInterval(this.pruneInterval);
-      this.pruneInterval = null;
-    }
-  }
-
-  /**
    * Get distinct destination folders from recent successful activity, ordered by frequency.
    */
   getRecentFolders(limit: number): string[] {
@@ -185,7 +166,6 @@ export class ActivityLog {
    * Check if a message was moved by the system (Monitor, Sweep, or Batch)
    * within the last day. Used by MoveTracker to exclude system moves from
    * user-initiated move detection.
-   * T-10-04: Uses parameterized query to prevent SQL injection.
    */
   isSystemMove(messageId: string): boolean {
     const row = this.db.prepare(
@@ -194,6 +174,25 @@ export class ActivityLog {
        AND timestamp > datetime('now', '-1 day') LIMIT 1`,
     ).get(messageId);
     return row !== undefined;
+  }
+
+  /**
+   * Start daily pruning. Also prunes immediately on call.
+   */
+  startAutoPrune(): void {
+    this.prune();
+    const ONE_DAY_MS = 24 * 60 * 60 * 1000;
+    this.pruneInterval = setInterval(() => this.prune(), ONE_DAY_MS);
+  }
+
+  /**
+   * Stop the auto-prune interval.
+   */
+  stopAutoPrune(): void {
+    if (this.pruneInterval) {
+      clearInterval(this.pruneInterval);
+      this.pruneInterval = null;
+    }
   }
 
   /**

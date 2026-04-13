@@ -72,20 +72,22 @@ export class MoveTracker {
 
     this.stop();
 
+    this.deps.logger?.info('MoveTracker started (interval=%dms)', this.deps.scanIntervalMs);
+
     // Fire-and-forget first scan
     this.runScan().catch((err) => {
-      this.deps.logger?.error({ error: err }, 'MoveTracker initial scan failed');
+      this.deps.logger?.error({ err }, 'MoveTracker initial scan failed');
     });
 
     this.scanTimer = setInterval(() => {
       this.runScan().catch((err) => {
-        this.deps.logger?.error({ error: err }, 'MoveTracker scan failed');
+        this.deps.logger?.error({ err }, 'MoveTracker scan failed');
       });
     }, this.deps.scanIntervalMs);
 
     this.deepScanTimer = setInterval(() => {
       this.runDeepScan().catch((err) => {
-        this.deps.logger?.error({ error: err }, 'MoveTracker deep scan failed');
+        this.deps.logger?.error({ err }, 'MoveTracker deep scan failed');
       });
     }, 15 * 60 * 1000);
   }
@@ -135,6 +137,7 @@ export class MoveTracker {
 
       this.messagesTracked = totalTracked;
       this.lastScanAt = new Date().toISOString();
+      this.deps.logger?.debug({ tracked: totalTracked }, 'MoveTracker scan complete');
     } finally {
       this.running = false;
     }
@@ -210,6 +213,7 @@ export class MoveTracker {
     // Two-scan confirmation: first detection -> add to pending only
     if (!this.pendingConfirmation.has(confirmKey)) {
       this.pendingConfirmation.set(confirmKey, { ...msg, sourceFolder: folder });
+      this.deps.logger?.info({ folder, uid: msg.uid, subject: msg.subject }, 'Message disappeared, pending confirmation');
     }
   }
 
@@ -221,6 +225,8 @@ export class MoveTracker {
   ): Promise<void> {
     this.pendingConfirmation.delete(key);
 
+    this.deps.logger?.info({ folder, uid: entry.uid, subject: entry.subject }, 'Move confirmed, resolving destination');
+
     const destination = await this.deps.destinationResolver.resolveFast(
       entry.messageId,
       folder,
@@ -229,6 +235,7 @@ export class MoveTracker {
     if (destination) {
       this.logSignal(entry, folder, destination);
     } else {
+      this.deps.logger?.info({ messageId: entry.messageId, subject: entry.subject }, 'Fast resolve failed, queued for deep scan');
       this.pendingDeepScanMeta.set(entry.messageId, { ...entry, sourceFolder: folder });
       this.deps.destinationResolver.enqueueDeepScan(entry.messageId, folder);
     }
@@ -276,6 +283,7 @@ export class MoveTracker {
 
     this.deps.signalStore.logSignal(input);
     this.signalsLoggedCount++;
+    this.deps.logger?.info({ from: sourceFolder, to: destinationFolder, subject: msg.subject }, 'Move signal logged');
   }
 
   /** Fetch all messages in a folder with their envelope data. */
@@ -284,7 +292,8 @@ export class MoveTracker {
   ): Promise<{ messages: Map<number, TrackedMessage>; uidValidity: number }> {
     return this.deps.client.withMailboxLock(folder, async (flow: ImapFlowLike) => {
       const mailboxInfo = (flow as unknown as { mailbox?: { uidValidity?: number } }).mailbox;
-      const uidValidity = mailboxInfo?.uidValidity ?? 0;
+      // ImapFlow returns BigInt for uidValidity — coerce to Number for JSON serialization
+      const uidValidity = Number(mailboxInfo?.uidValidity ?? 0);
 
       const messages = new Map<number, TrackedMessage>();
 
@@ -304,15 +313,16 @@ export class MoveTracker {
         const flags = msg.flags ?? new Set<string>();
         const from = msg.envelope?.from?.[0];
 
+        // ImapFlow returns BigInt for uid — coerce to Number for JSON serialization
         const tracked: TrackedMessage = {
-          uid: msg.uid,
+          uid: Number(msg.uid),
           messageId: msg.envelope?.messageId ?? '',
           sender: from?.address ?? '',
           subject: msg.envelope?.subject ?? '',
           readStatus: flags.has('\\Seen') ? 'read' : 'unread',
         };
 
-        messages.set(msg.uid, tracked);
+        messages.set(Number(msg.uid), tracked);
       }
 
       return { messages, uidValidity };
