@@ -162,6 +162,19 @@ export class ActivityLog {
   }
 
   /**
+   * Get distinct destination folders from recent successful activity, ordered by frequency.
+   */
+  getRecentFolders(limit: number): string[] {
+    const rows = this.db.prepare(
+      `SELECT folder FROM activity
+       WHERE folder IS NOT NULL AND success = 1
+       AND timestamp > datetime('now', '-7 days')
+       GROUP BY folder ORDER BY COUNT(*) DESC LIMIT ?`,
+    ).all(limit) as Array<{ folder: string }>;
+    return rows.map((r) => r.folder);
+  }
+
+  /**
    * Close the database connection and stop auto-prune.
    */
   close(): void {
