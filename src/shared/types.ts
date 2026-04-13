@@ -135,3 +135,43 @@ export interface BatchStatusResponse {
 export interface DryRunResponse {
   results: DryRunGroup[];
 }
+
+// Proposed rule from pattern detection (Phase 11)
+export interface ProposedRule {
+  id: number;
+  sender: string;
+  envelopeRecipient: string | null;
+  sourceFolder: string;
+  destinationFolder: string;
+  matchingCount: number;
+  contradictingCount: number;
+  destinationCounts: Record<string, number>;
+  status: 'active' | 'approved' | 'dismissed';
+  dismissedAt: string | null;
+  signalsSinceDismiss: number;
+  approvedRuleId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  lastSignalAt: string;
+  // Computed
+  strength: number;
+}
+
+export interface ProposalKey {
+  sender: string;
+  envelopeRecipient: string | null;
+  sourceFolder: string;
+}
+
+export interface ExampleMessage {
+  subject: string;
+  date: string;
+  destinationFolder: string;
+}
+
+export interface ProposedRuleCard extends ProposedRule {
+  strengthLabel: string;
+  examples: ExampleMessage[];
+  conflictAnnotation: string | null;
+  resurfacedNotice: string | null;
+}

@@ -31,6 +31,34 @@ export const migrations: Migration[] = [
       db.exec(`CREATE INDEX IF NOT EXISTS idx_signals_destination ON move_signals(destination_folder)`);
     },
   },
+  {
+    version: '20260413_001',
+    description: 'Create proposed_rules table for pattern detection',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS proposed_rules (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sender TEXT NOT NULL,
+          envelope_recipient TEXT,
+          source_folder TEXT NOT NULL,
+          destination_folder TEXT NOT NULL,
+          matching_count INTEGER NOT NULL DEFAULT 0,
+          contradicting_count INTEGER NOT NULL DEFAULT 0,
+          destination_counts TEXT NOT NULL DEFAULT '{}',
+          status TEXT NOT NULL DEFAULT 'active',
+          dismissed_at TEXT,
+          signals_since_dismiss INTEGER NOT NULL DEFAULT 0,
+          approved_rule_id TEXT,
+          created_at TEXT NOT NULL DEFAULT (datetime('now')),
+          updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+          last_signal_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+      `);
+      db.exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_proposals_key
+        ON proposed_rules(sender, COALESCE(envelope_recipient, ''), source_folder)`);
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposed_rules(status)`);
+    },
+  },
 ];
 
 /**
