@@ -57,6 +57,9 @@ export class MoveTracker {
   /** Messages missing in scan N, awaiting scan N+1 confirmation. Keyed by "folder:uid". */
   private pendingConfirmation: Map<string, TrackedMessage & { sourceFolder: string }> = new Map();
 
+  /** Metadata for messages awaiting deep-scan destination resolution. Keyed by messageId. */
+  private pendingDeepScanMeta: Map<string, TrackedMessage & { sourceFolder: string }> = new Map();
+
   constructor(deps: MoveTrackerDeps) {
     this.deps = deps;
   }
@@ -226,7 +229,7 @@ export class MoveTracker {
     if (destination) {
       this.logSignal(entry, folder, destination);
     } else {
-      // Enqueue for deep scan
+      this.pendingDeepScanMeta.set(entry.messageId, { ...entry, sourceFolder: folder });
       this.deps.destinationResolver.enqueueDeepScan(entry.messageId, folder);
     }
   }
@@ -236,16 +239,14 @@ export class MoveTracker {
     const resolved = await this.deps.destinationResolver.runDeepScan();
 
     for (const [messageId, destinationFolder] of resolved) {
-      // Find the tracked message in pendingConfirmation
-      for (const [key, entry] of this.pendingConfirmation) {
-        if (entry.messageId === messageId) {
-          this.logSignal(entry, entry.sourceFolder, destinationFolder);
-          this.pendingConfirmation.delete(key);
-          break;
-        }
+      const entry = this.pendingDeepScanMeta.get(messageId);
+      if (entry) {
+        this.logSignal(entry, entry.sourceFolder, destinationFolder);
+        this.pendingDeepScanMeta.delete(messageId);
       }
     }
-    // D-06: Messages not resolved by deep scan are dropped by DestinationResolver
+    // D-06: Messages not resolved by deep scan are dropped
+    this.pendingDeepScanMeta.clear();
   }
 
   /** Create a signal from a confirmed move. */
@@ -326,12 +327,6 @@ export class MoveTracker {
 
   /** Count messages currently enqueued for deep scan. */
   private countPendingDeepScan(): number {
-    let count = 0;
-    for (const [_key, _entry] of this.pendingConfirmation) {
-      // Messages in pendingConfirmation that have already been enqueued for deep scan
-      // We approximate by counting all pending entries
-      count++;
-    }
-    return count;
+    return this.pendingDeepScanMeta.size;
   }
 }

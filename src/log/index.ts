@@ -3,6 +3,7 @@ import Database from 'better-sqlite3';
 import type { ActionResult } from '../actions/index.js';
 import type { EmailMessage } from '../imap/index.js';
 import type { Rule } from '../config/index.js';
+import { runMigrations } from './migrations.js';
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS activity (
@@ -53,6 +54,7 @@ export class ActivityLog {
     this.db.pragma('journal_mode = WAL');
     this.db.exec(SCHEMA);
     this.migrate();
+    runMigrations(this.db);
   }
 
   /**
