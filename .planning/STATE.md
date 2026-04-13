@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v0.4
 milestone_name: Extended Matchers & Behavioral Learning
 status: executing
-stopped_at: Phase 11 UI-SPEC approved
-last_updated: "2026-04-13T06:21:17.559Z"
-last_activity: 2026-04-13 -- Phase 11 planning complete
+stopped_at: Completed 11-02-PLAN.md
+last_updated: "2026-04-13T06:27:36.750Z"
+last_activity: 2026-04-13
 progress:
   total_phases: 6
   completed_phases: 1
   total_plans: 7
-  completed_plans: 5
-  percent: 71
+  completed_plans: 6
+  percent: 86
 ---
 
 # Project State
@@ -26,9 +26,9 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 ## Current Position
 
 Phase: 11
-Plan: 1 of 3
-Status: Executing
-Last activity: 2026-04-13 -- Completed 11-01 pattern detection engine
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-04-13
 
 Progress: [██████████] 100%
 
@@ -52,6 +52,7 @@ Progress: [██████████] 100%
 
 *Updated after each plan completion*
 | Phase 08 P04 | 1min | 2 tasks | 2 files |
+| Phase 11 P02 | 3min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -62,6 +63,7 @@ Full v0.3 decision history archived in milestones/v0.3-ROADMAP.md.
 
 - [Phase 08]: Used Record<string,string> for dynamic action payload in frontend, backend validates via Zod
 - [Phase 11]: Used read-modify-write transaction for proposal upsert (COALESCE in expression index unreliable); PatternDetector is optional dep on MoveTracker
+- [Phase 11]: mark-approved endpoint separated from approve to prevent duplicate rule creation in Modify flow
 
 ### Pending Todos
 
@@ -86,6 +88,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-04-13T06:20:38Z
-Stopped at: Completed 11-01-PLAN.md
-Resume file: .planning/phases/11-pattern-detection/11-02-PLAN.md
+Last session: 2026-04-13T06:27:36.746Z
+Stopped at: Completed 11-02-PLAN.md
+Resume file: None

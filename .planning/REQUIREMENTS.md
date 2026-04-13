@@ -21,8 +21,8 @@ Requirements for milestone v0.4: Extended Matchers and Behavioral Learning.
 - [ ] **LEARN-01**: System periodically scans Inbox and Review folders using UID snapshot diffing to detect user-initiated message moves, cross-referencing the activity log by Message-ID to exclude system-initiated moves
 - [ ] **LEARN-02**: For each detected user move, system logs sender, envelope recipient, mailing list headers, subject, read status, header visibility, source folder, and destination folder to a move_signals table
 - [x] **LEARN-03**: System performs statistical analysis on move signals to identify repeating patterns (same sender or domain routed to same destination above configurable thresholds)
-- [ ] **LEARN-04**: System surfaces detected patterns as proposed rules in the UI with approve, modify, or dismiss actions
-- [ ] **LEARN-05**: Approved proposed rules become real rules in the active ruleset, integrated with existing config hot-reload
+- [x] **LEARN-04**: System surfaces detected patterns as proposed rules in the UI with approve, modify, or dismiss actions
+- [x] **LEARN-05**: Approved proposed rules become real rules in the active ruleset, integrated with existing config hot-reload
 
 ### UI Updates
 
@@ -73,8 +73,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | LEARN-01 | Phase 10 | Pending |
 | LEARN-02 | Phase 10 | Pending |
 | LEARN-03 | Phase 10 | Complete |
-| LEARN-04 | Phase 10 | Pending |
-| LEARN-05 | Phase 10 | Pending |
+| LEARN-04 | Phase 10 | Complete |
+| LEARN-05 | Phase 10 | Complete |
 | UI-01 | Phase 8 | Complete |
 | UI-02 | Phase 10 | Pending |
 | UI-03 | Phase 8 | Complete |
