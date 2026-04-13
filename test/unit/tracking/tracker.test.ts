@@ -292,6 +292,68 @@ describe('MoveTracker', () => {
     // No scan should have been attempted
     expect(deps.client.withMailboxLock).not.toHaveBeenCalled();
   });
+
+  it('deep-scan resolved messages produce logged signals (CR-02)', async () => {
+    const deps = createMockDeps();
+    const signalStore = deps.signalStore as { logSignal: ReturnType<typeof vi.fn> };
+    const resolver = deps.destinationResolver as {
+      resolveFast: ReturnType<typeof vi.fn>;
+      enqueueDeepScan: ReturnType<typeof vi.fn>;
+      runDeepScan: ReturnType<typeof vi.fn>;
+    };
+
+    // resolveFast returns null so messages go to deep scan
+    resolver.resolveFast.mockResolvedValue(null);
+
+    // Baseline scan with UID 1 and 2
+    setupFolderMessages(deps, {
+      'INBOX': [
+        { uid: 1, messageId: '<msg-1@test.com>', sender: 'alice@test.com', subject: 'Hello' },
+        { uid: 2, messageId: '<msg-2@test.com>', sender: 'bob@test.com', subject: 'Deep scan me' },
+      ],
+      'Review': [],
+    });
+    const tracker = new MoveTracker(deps);
+
+    // Start the tracker to get the deep scan timer registered
+    tracker.start();
+    // Drain the initial fire-and-forget scan
+    await vi.advanceTimersByTimeAsync(0);
+
+    // Second scan: UID 2 disappears -- first detection, pending confirmation
+    setupFolderMessages(deps, {
+      'INBOX': [
+        { uid: 1, messageId: '<msg-1@test.com>' },
+      ],
+      'Review': [],
+    });
+    await tracker.runScanForTest();
+    expect(signalStore.logSignal).not.toHaveBeenCalled();
+
+    // Third scan: UID 2 still missing -- confirmed, resolveFast returns null -> deep scan enqueued
+    await tracker.runScanForTest();
+    expect(resolver.enqueueDeepScan).toHaveBeenCalledWith('<msg-2@test.com>', 'INBOX');
+    expect(signalStore.logSignal).not.toHaveBeenCalled(); // Not yet -- awaiting deep scan
+
+    // Now simulate deep scan returning the destination
+    resolver.runDeepScan.mockResolvedValue(new Map([['<msg-2@test.com>', 'Projects/Alpha']]));
+
+    // Trigger the deep scan timer (fires every 15 minutes)
+    await vi.advanceTimersByTimeAsync(15 * 60 * 1000);
+
+    expect(signalStore.logSignal).toHaveBeenCalledTimes(1);
+    expect(signalStore.logSignal).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messageId: '<msg-2@test.com>',
+        sender: 'bob@test.com',
+        subject: 'Deep scan me',
+        sourceFolder: 'INBOX',
+        destinationFolder: 'Projects/Alpha',
+      }),
+    );
+
+    tracker.stop();
+  });
 });
 
 /** Helper: create a tracker and run a scan, reusing the same tracker instance across calls. */

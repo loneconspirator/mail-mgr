@@ -36,9 +36,9 @@ async function main(): Promise<void> {
   // H5: SignalStore for move tracking (shared DB with ActivityLog)
   const signalStore = new SignalStore(activityLog.getDb());
   signalStore.prune();
-  const signalPruneInterval = setInterval(() => signalStore.prune(), 24 * 60 * 60 * 1000);
+  setInterval(() => signalStore.prune(), 24 * 60 * 60 * 1000).unref();
 
-  const imapClient = new ImapClient(config.imap, createImapFlow);
+  let imapClient = new ImapClient(config.imap, createImapFlow);
   let monitor = new Monitor(config, { imapClient, activityLog, logger });
   let moveTracker: MoveTracker | undefined;
 
@@ -52,27 +52,29 @@ async function main(): Promise<void> {
     if (moveTracker) moveTracker.stop();
     moveTracker = undefined;
 
+    await imapClient.disconnect();
+
     // Rebuild with new IMAP client
-    const newClient = new ImapClient(newConfig.imap, createImapFlow);
-    monitor = new Monitor(newConfig, { imapClient: newClient, activityLog, logger });
+    imapClient = new ImapClient(newConfig.imap, createImapFlow);
+    monitor = new Monitor(newConfig, { imapClient, activityLog, logger });
     await monitor.start();
 
     // Rebuild MoveTracker with new client
     const newDestResolver = new DestinationResolver({
-      client: newClient,
+      client: imapClient,
       activityLog,
-      listFolders: () => newClient.listMailboxes(),
+      listFolders: () => imapClient.listMailboxes(),
       logger,
     });
     moveTracker = new MoveTracker({
-      client: newClient,
+      client: imapClient,
       activityLog,
       signalStore,
       destinationResolver: newDestResolver,
       inboxFolder: 'INBOX',
       reviewFolder: newConfig.review.folder,
-      scanIntervalMs: (newConfig.review.moveTracking?.scanInterval ?? 30) * 1000,
-      enabled: newConfig.review.moveTracking?.enabled ?? true,
+      scanIntervalMs: newConfig.review.moveTracking.scanInterval * 1000,
+      enabled: newConfig.review.moveTracking.enabled,
       logger,
     });
     moveTracker.start();
@@ -104,8 +106,8 @@ async function main(): Promise<void> {
     destinationResolver,
     inboxFolder: 'INBOX',
     reviewFolder: config.review.folder,
-    scanIntervalMs: (config.review.moveTracking?.scanInterval ?? 30) * 1000,
-    enabled: config.review.moveTracking?.enabled ?? true,
+    scanIntervalMs: config.review.moveTracking.scanInterval * 1000,
+    enabled: config.review.moveTracking.enabled,
     logger,
   });
   moveTracker.start();
