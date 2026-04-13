@@ -11,6 +11,8 @@ import { BatchEngine } from './batch/index.js';
 import { MoveTracker } from './tracking/index.js';
 import { SignalStore } from './tracking/signals.js';
 import { DestinationResolver } from './tracking/destinations.js';
+import { ProposalStore } from './tracking/proposals.js';
+import { PatternDetector } from './tracking/detector.js';
 import { ImapFlow } from 'imapflow';
 import pino from 'pino';
 
@@ -40,6 +42,10 @@ async function main(): Promise<void> {
   const signalStore = new SignalStore(activityLog.getDb());
   signalStore.prune();
   setInterval(() => signalStore.prune(), 24 * 60 * 60 * 1000).unref();
+
+  // H5b: ProposalStore and PatternDetector for behavioral learning
+  const proposalStore = new ProposalStore(activityLog.getDb());
+  const patternDetector = new PatternDetector(proposalStore);
 
   let imapClient = new ImapClient(config.imap, createImapFlow);
   let folderCache = new FolderCache({ imapClient, ttlMs: 300_000 });
@@ -170,6 +176,7 @@ async function main(): Promise<void> {
       reviewFolder: updatedConfig.review.folder,
       scanIntervalMs: updatedConfig.review.moveTracking.scanInterval * 1000,
       enabled: updatedConfig.review.moveTracking.enabled,
+      patternDetector,
       logger,
     });
     moveTracker.start();
@@ -184,6 +191,7 @@ async function main(): Promise<void> {
     getFolderCache: () => folderCache,
     getBatchEngine: () => batchEngine,
     getMoveTracker: () => moveTracker,
+    getProposalStore: () => proposalStore,
   });
 
   await app.listen({ port: config.server.port, host: config.server.host });
@@ -236,6 +244,7 @@ async function main(): Promise<void> {
     reviewFolder: config.review.folder,
     scanIntervalMs: config.review.moveTracking.scanInterval * 1000,
     enabled: config.review.moveTracking.enabled,
+    patternDetector,
     logger,
   });
   moveTracker.start();

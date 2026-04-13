@@ -9,6 +9,7 @@ import type { ReviewSweeper } from '../sweep/index.js';
 import type { FolderCache } from '../folders/index.js';
 import type { BatchEngine } from '../batch/index.js';
 import type { MoveTracker } from '../tracking/index.js';
+import type { ProposalStore } from '../tracking/proposals.js';
 import { registerRuleRoutes } from './routes/rules.js';
 import { registerActivityRoutes } from './routes/activity.js';
 import { registerStatusRoutes } from './routes/status.js';
@@ -18,6 +19,7 @@ import { registerReviewRoutes } from './routes/review.js';
 import { registerReviewConfigRoutes } from './routes/review-config.js';
 import { registerFolderRoutes } from './routes/folders.js';
 import { registerBatchRoutes } from './routes/batch.js';
+import { registerProposedRuleRoutes } from './routes/proposed-rules.js';
 
 export interface ServerDeps {
   configRepo: ConfigRepository;
@@ -28,6 +30,7 @@ export interface ServerDeps {
   getFolderCache: () => FolderCache;
   getBatchEngine: () => BatchEngine;
   getMoveTracker: () => MoveTracker | undefined;
+  getProposalStore: () => ProposalStore;
   /** Override static files root for testing (defaults to dist/public) */
   staticRoot?: string;
 }
@@ -63,6 +66,7 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   registerReviewConfigRoutes(app, deps);
   registerFolderRoutes(app, deps);
   registerBatchRoutes(app, deps);
+  registerProposedRuleRoutes(app, deps);
 
   return app;
 }
