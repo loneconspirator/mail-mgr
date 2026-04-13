@@ -84,6 +84,15 @@ export const sweepConfigSchema = z.object({
   unreadMaxAgeDays: z.number().int().positive().default(sweepDefaults.unreadMaxAgeDays),
 });
 
+// --- Move tracking config schema ---
+
+const moveTrackingDefaults = { enabled: true, scanInterval: 30 } as const;
+
+export const moveTrackingConfigSchema = z.object({
+  enabled: z.boolean().default(true),
+  scanInterval: z.number().int().positive().default(30),
+});
+
 // --- Review config schema ---
 
 const reviewDefaults = {
@@ -91,6 +100,7 @@ const reviewDefaults = {
   defaultArchiveFolder: 'MailingLists',
   trashFolder: 'Trash',
   sweep: sweepDefaults,
+  moveTracking: moveTrackingDefaults,
 } as const;
 
 export const reviewConfigSchema = z.object({
@@ -98,6 +108,7 @@ export const reviewConfigSchema = z.object({
   defaultArchiveFolder: z.string().min(1).default(reviewDefaults.defaultArchiveFolder),
   trashFolder: z.string().min(1).default(reviewDefaults.trashFolder),
   sweep: sweepConfigSchema.default(sweepDefaults),
+  moveTracking: moveTrackingConfigSchema.default(moveTrackingDefaults),
 });
 
 // --- Full config schema ---
@@ -117,6 +128,7 @@ export type SkipAction = z.infer<typeof skipActionSchema>;
 export type DeleteAction = z.infer<typeof deleteActionSchema>;
 export type Action = z.infer<typeof actionSchema>;
 export type SweepConfig = z.infer<typeof sweepConfigSchema>;
+export type MoveTrackingConfig = z.infer<typeof moveTrackingConfigSchema>;
 export type ReviewConfig = z.infer<typeof reviewConfigSchema>;
 export type EmailMatch = z.infer<typeof emailMatchSchema>;
 export type Rule = z.infer<typeof ruleSchema>;
