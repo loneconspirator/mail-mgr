@@ -3,10 +3,12 @@
 import type { Rule, ImapConfig, ImapConfigResponse, ReviewConfig } from '../../shared/types.js';
 import type { ActivityEntry, StatusResponse, ReviewStatusResponse, FolderTreeResponse, MoveTrackerStatusResponse, DeepScanResponse } from '../../shared/types.js';
 import type { BatchStatusResponse, DryRunResponse, DryRunGroup } from '../../shared/types.js';
+import type { ProposedRuleCard } from '../../shared/types.js';
 
 // Re-export for frontend consumers
 export type { Rule, ImapConfig, ImapConfigResponse, ReviewConfig, ActivityEntry, StatusResponse, ReviewStatusResponse, FolderTreeResponse, MoveTrackerStatusResponse, DeepScanResponse };
 export type { BatchStatusResponse, DryRunResponse, DryRunGroup };
+export type { ProposedRuleCard };
 
 async function request<T>(url: string, opts?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {};
@@ -65,5 +67,12 @@ export const api = {
   tracking: {
     status: () => request<MoveTrackerStatusResponse>('/api/tracking/status'),
     triggerDeepScan: () => request<DeepScanResponse>('/api/tracking/deep-scan', { method: 'POST' }),
+  },
+  proposed: {
+    list: () => request<ProposedRuleCard[]>('/api/proposed-rules'),
+    approve: (id: number) => request<Rule>(`/api/proposed-rules/${id}/approve`, { method: 'POST' }),
+    dismiss: (id: number) => request<void>(`/api/proposed-rules/${id}/dismiss`, { method: 'POST' }),
+    getModifyData: (id: number) => request<{ proposalId: number; sender: string; envelopeRecipient: string | null; destinationFolder: string; sourceFolder: string }>(`/api/proposed-rules/${id}/modify`, { method: 'POST' }),
+    markApproved: (id: number, ruleId: string) => request<void>(`/api/proposed-rules/${id}/mark-approved`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ruleId }) }),
   },
 };

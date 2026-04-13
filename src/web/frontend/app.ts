@@ -1,5 +1,5 @@
 import { api } from './api.js';
-import type { Rule, ActivityEntry, ImapConfigResponse, ReviewConfig, BatchStatusResponse, DryRunGroup } from './api.js';
+import type { Rule, ActivityEntry, ImapConfigResponse, ReviewConfig, BatchStatusResponse, DryRunGroup, ProposedRuleCard } from './api.js';
 import type { Action } from '../../shared/types.js';
 import { renderFolderPicker } from './folder-picker.js';
 import { generateBehaviorDescription } from './rule-display.js';
@@ -8,6 +8,7 @@ import { generateBehaviorDescription } from './rule-display.js';
 let currentPage = 'rules';
 let activityTimer: ReturnType<typeof setInterval> | null = null;
 let batchPollTimer: ReturnType<typeof setInterval> | null = null;
+let pendingProposalApproval: number | null = null;
 
 // --- Helpers ---
 function $(sel: string): HTMLElement { return document.querySelector(sel)!; }
@@ -58,6 +59,8 @@ function navigate(page: string) {
   else if (page === 'activity') renderActivity();
   else if (page === 'settings') renderSettings();
   else if (page === 'batch') renderBatch();
+  else if (page === 'proposed') renderProposed();
+  updateProposedBadge();
 }
 
 // --- Rules Page ---
@@ -224,8 +227,8 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true) {
   actionSelect.addEventListener('change', updateFolderVisibility);
   updateFolderVisibility();
 
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-  document.getElementById('m-cancel')!.addEventListener('click', () => overlay.remove());
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) { pendingProposalApproval = null; overlay.remove(); } });
+  document.getElementById('m-cancel')!.addEventListener('click', () => { pendingProposalApproval = null; overlay.remove(); });
   document.getElementById('m-save')!.addEventListener('click', async () => {
     const name = (document.getElementById('m-name') as HTMLInputElement).value.trim();
     const sender = (document.getElementById('m-sender') as HTMLInputElement).value.trim();
@@ -275,8 +278,23 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true) {
         await api.rules.update(rule!.id, payload);
         toast('Rule updated');
       } else {
-        await api.rules.create(payload);
+        const createdRule = await api.rules.create(payload);
         toast('Rule created');
+        // If this was a Modify from proposed rules, mark the proposal as approved.
+        // CRITICAL: Use markApproved (not approve) because the rule was ALREADY created
+        // by api.rules.create() above. The approve endpoint would call configRepo.addRule()
+        // again, creating a duplicate rule.
+        if (pendingProposalApproval !== null) {
+          try {
+            await api.proposed.markApproved(pendingProposalApproval, createdRule.id);
+          } catch { /* proposal approval is best-effort */ }
+          pendingProposalApproval = null;
+          if (currentPage === 'proposed') {
+            overlay.remove();
+            renderProposed();
+            return;
+          }
+        }
       }
       overlay.remove();
       renderRules();
@@ -908,10 +926,206 @@ function renderBatchResults(app: HTMLElement, state: BatchStatusResponse): void 
   app.append(card);
 }
 
+// --- Proposed Rules Page ---
+
+async function updateProposedBadge(): Promise<void> {
+  try {
+    const proposals = await api.proposed.list();
+    const badge = document.getElementById('proposed-badge');
+    if (!badge) return;
+    const count = proposals.length;
+    if (count > 0) {
+      badge.textContent = String(count);
+      badge.style.display = '';
+    } else {
+      badge.style.display = 'none';
+    }
+  } catch {
+    // Silently ignore badge update failures
+  }
+}
+
+async function renderProposed(): Promise<void> {
+  const app = $('#app');
+  app.innerHTML = '<p class="loading-pulse">Loading...</p>';
+
+  try {
+    const proposals = await api.proposed.list();
+    app.innerHTML = '';
+
+    const toolbar = h('div', { className: 'toolbar' },
+      h('h2', {}, 'Proposed Rules'),
+    );
+    app.append(toolbar);
+
+    if (proposals.length === 0) {
+      app.append(h('div', { className: 'empty' },
+        h('h3', {}, 'No proposed rules yet'),
+        h('p', {}, 'As you move messages manually, Mail Manager will detect patterns and suggest rules here.'),
+      ));
+      return;
+    }
+
+    const cardList = h('div', { className: 'proposal-list' });
+
+    for (const p of proposals) {
+      const card = renderProposalCard(p);
+      cardList.append(card);
+    }
+
+    app.append(cardList);
+  } catch {
+    toast('Failed to load proposals. Check your connection and refresh.', true);
+    app.innerHTML = '';
+  }
+}
+
+function renderProposalCard(p: ProposedRuleCard): HTMLElement {
+  const card = h('div', { className: 'proposal-card' });
+
+  // Header row: strength badge + source folder
+  const strengthClass = getStrengthClass(p.strength);
+  const header = h('div', { className: 'proposal-header' },
+    h('span', { className: `strength-badge ${strengthClass}` }, p.strengthLabel),
+    h('span', { className: 'proposal-source' }, p.sourceFolder),
+  );
+  card.append(header);
+
+  // Route: sender -> destination
+  const route = h('div', { className: 'proposal-route' },
+    h('span', {}, p.sender),
+    h('span', { className: 'proposal-route-arrow' }, ' \u2192 '),
+    h('span', { className: 'proposal-route-dest' }, p.destinationFolder),
+  );
+  card.append(route);
+
+  // Envelope recipient (if present)
+  if (p.envelopeRecipient) {
+    card.append(h('div', { className: 'proposal-envelope' }, `Envelope: ${p.envelopeRecipient}`));
+  }
+
+  // Example subjects
+  if (p.examples.length > 0) {
+    const exList = h('div', { className: 'proposal-examples' },
+      h('div', { className: 'proposal-examples-label' }, 'Recent examples:'),
+    );
+    for (const ex of p.examples) {
+      const subjectText = ex.subject.length > 60 ? ex.subject.slice(0, 60) + '\u2026' : ex.subject;
+      const dateStr = formatShortDate(ex.date);
+      exList.append(h('div', { className: 'proposal-example' },
+        h('span', {}, `\u201C${subjectText}\u201D`),
+        h('span', { className: 'proposal-example-date' }, ` (${dateStr})`),
+      ));
+    }
+    card.append(exList);
+  }
+
+  // Conflict annotation (D-06)
+  if (p.conflictAnnotation) {
+    card.append(h('div', { className: 'proposal-conflict' }, p.conflictAnnotation));
+  }
+
+  // Resurfaced notice (D-09)
+  if (p.resurfacedNotice) {
+    card.append(h('div', { className: 'proposal-resurfaced' }, p.resurfacedNotice));
+  }
+
+  // Action buttons
+  const actions = h('div', { className: 'proposal-actions' });
+
+  const approveBtn = h('button', { className: 'btn btn-primary' }, 'Approve Rule');
+  approveBtn.addEventListener('click', async () => {
+    approveBtn.innerHTML = '<span class="spinner"></span>';
+    actions.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = true);
+    try {
+      await api.proposed.approve(p.id);
+      toast('Rule created and active.');
+      card.style.opacity = '0';
+      card.style.transition = 'opacity 200ms';
+      setTimeout(() => { card.remove(); updateProposedBadge(); }, 200);
+    } catch (err: any) {
+      toast(err.message || 'Failed to approve', true);
+      approveBtn.textContent = 'Approve Rule';
+      actions.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = false);
+    }
+  });
+
+  const modifyBtn = h('button', { className: 'btn' }, 'Modify');
+  modifyBtn.addEventListener('click', async () => {
+    try {
+      const data = await api.proposed.getModifyData(p.id);
+      // Check envelope availability before opening modal
+      const envStatus = await api.config.getEnvelopeStatus().catch(() => ({ envelopeHeader: null }));
+      const envelopeAvailable = envStatus.envelopeHeader !== null;
+
+      // Build a pseudo-Rule to pre-fill the modal
+      const prefill: Rule = {
+        id: '',
+        name: `Auto: ${data.sender}`,
+        match: {
+          sender: data.sender,
+          ...(data.envelopeRecipient ? { deliveredTo: data.envelopeRecipient } : {}),
+        },
+        action: { type: 'move' as const, folder: data.destinationFolder },
+        enabled: true,
+        order: 0,
+      };
+
+      // Store the proposal ID so after save we can call mark-approved.
+      // CRITICAL: We use markApproved (not approve) because openRuleModal already
+      // creates the rule via api.rules.create(). Calling approve would create a
+      // duplicate rule via configRepo.addRule().
+      pendingProposalApproval = data.proposalId;
+      openRuleModal(prefill, envelopeAvailable);
+    } catch (err: any) {
+      toast(err.message || 'Failed to load proposal data', true);
+    }
+  });
+
+  const dismissBtn = h('button', { className: 'btn btn-dismiss' }, 'Dismiss');
+  dismissBtn.addEventListener('click', async () => {
+    dismissBtn.innerHTML = '<span class="spinner"></span>';
+    actions.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = true);
+    try {
+      await api.proposed.dismiss(p.id);
+      toast('Proposal dismissed.');
+      card.style.opacity = '0';
+      card.style.transition = 'opacity 200ms';
+      setTimeout(() => { card.remove(); updateProposedBadge(); }, 200);
+    } catch (err: any) {
+      toast(err.message || 'Failed to dismiss', true);
+      dismissBtn.textContent = 'Dismiss';
+      actions.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = false);
+    }
+  });
+
+  actions.append(approveBtn, modifyBtn, dismissBtn);
+  card.append(actions);
+
+  return card;
+}
+
+function getStrengthClass(strength: number): string {
+  if (strength >= 5) return 'strength-strong';
+  if (strength >= 2) return 'strength-moderate';
+  if (strength >= 1) return 'strength-weak';
+  return 'strength-ambiguous';
+}
+
+function formatShortDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  } catch {
+    return dateStr;
+  }
+}
+
 // --- Init ---
 document.addEventListener('DOMContentLoaded', () => {
   initNav();
   navigate('rules');
+  updateProposedBadge();
 
   // Refresh on focus
   document.addEventListener('visibilitychange', () => {

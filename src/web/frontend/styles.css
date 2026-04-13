@@ -472,3 +472,149 @@ tr:last-child td { border-bottom: none; }
 .rule-description { line-height: 1.4; }
 .rule-behavior { display: block; font-weight: normal; }
 .rule-name-secondary { display: block; font-size: 0.85em; color: #666; }
+
+/* --- Phase 11: Proposed Rules --- */
+
+.proposal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.proposal-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.proposal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.proposal-source {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.strength-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.strength-strong {
+  color: #166534;
+  background: #dcfce7;
+}
+
+.strength-moderate {
+  color: #1e40af;
+  background: #dbeafe;
+}
+
+.strength-weak {
+  color: #854d0e;
+  background: #fef9c3;
+}
+
+.strength-ambiguous {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
+.proposal-route {
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.proposal-route-arrow {
+  color: #999;
+}
+
+.proposal-route-dest {
+  font-weight: 600;
+}
+
+.proposal-envelope {
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 12px;
+}
+
+.proposal-examples {
+  margin: 12px 0;
+}
+
+.proposal-examples-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 4px;
+}
+
+.proposal-example {
+  font-size: 0.8rem;
+  color: #444;
+  padding: 2px 0;
+}
+
+.proposal-example-date {
+  color: #888;
+}
+
+.proposal-conflict {
+  font-size: 0.8rem;
+  color: #854d0e;
+  background: #fef9c3;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+.proposal-resurfaced {
+  font-size: 0.8rem;
+  color: #854d0e;
+  background: #fef9c3;
+  padding: 6px 10px;
+  border-radius: 4px;
+  margin: 8px 0;
+}
+
+.proposal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.btn-dismiss {
+  color: #dc2626;
+  border-color: #dc2626;
+  background: transparent;
+}
+
+.btn-dismiss:hover {
+  background: #fef2f2;
+}
+
+.nav-badge {
+  display: inline-block;
+  background: #2563eb;
+  color: #fff;
+  font-size: 10px;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  border-radius: 50%;
+  margin-left: 4px;
+  vertical-align: middle;
+}
