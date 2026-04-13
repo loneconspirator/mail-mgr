@@ -234,19 +234,26 @@ export class MoveTracker {
     }
   }
 
-  /** Run deep scan and log signals for resolved messages. */
-  private async runDeepScan(): Promise<void> {
-    const resolved = await this.deps.destinationResolver.runDeepScan();
+  /** Manually trigger a deep scan and return how many messages were resolved. */
+  async triggerDeepScan(): Promise<{ resolved: number }> {
+    const results = await this.deps.destinationResolver.runDeepScan();
 
-    for (const [messageId, destinationFolder] of resolved) {
+    for (const [messageId, destinationFolder] of results) {
       const entry = this.pendingDeepScanMeta.get(messageId);
       if (entry) {
         this.logSignal(entry, entry.sourceFolder, destinationFolder);
         this.pendingDeepScanMeta.delete(messageId);
       }
     }
+    const resolved = results.size;
     // D-06: Messages not resolved by deep scan are dropped
     this.pendingDeepScanMeta.clear();
+    return { resolved };
+  }
+
+  /** Run deep scan and log signals for resolved messages. */
+  private async runDeepScan(): Promise<void> {
+    await this.triggerDeepScan();
   }
 
   /** Create a signal from a confirmed move. */

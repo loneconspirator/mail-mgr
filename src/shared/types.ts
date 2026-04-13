@@ -63,3 +63,17 @@ export interface StatusResponse {
   lastProcessedAt: string | null;
   messagesProcessed: number;
 }
+
+// GET /api/tracking/status response
+export interface MoveTrackerStatusResponse {
+  enabled: boolean;
+  lastScanAt: string | null;
+  messagesTracked: number;
+  signalsLogged: number;
+  pendingDeepScan: number;
+}
+
+// POST /api/tracking/deep-scan response
+export interface DeepScanResponse {
+  resolved: number;
+}
