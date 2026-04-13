@@ -48,6 +48,7 @@ async function main(): Promise<void> {
     configRepo,
     activityLog,
     monitor,
+    getMoveTracker: () => undefined,
   });
 
   await app.listen({ port: config.server.port, host: config.server.host });
