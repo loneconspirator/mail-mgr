@@ -29,7 +29,7 @@ Full details: [milestones/v0.3-ROADMAP.md](milestones/v0.3-ROADMAP.md)
 - [ ] **Phase 8: Extended Matchers UI** - Rule editor updates for new match fields and IMAP settings auto-discovery controls
 - [ ] **Phase 9: Restore Clobbered Features** - Recover sweep, batch, folders, review config, and UI features destroyed by Phase 7 commit f453be7
 - [x] **Phase 10: Move Tracking** - UID snapshot diffing to detect user-initiated moves and log signals to SQLite (completed 2026-04-13)
-- [ ] **Phase 11: Pattern Detection & Proposed Rules** - Statistical analysis on move signals, proposed rules API and UI, approve/modify/dismiss workflow
+- [x] **Phase 11: Pattern Detection & Proposed Rules** - Statistical analysis on move signals, proposed rules API and UI, approve/modify/dismiss workflow (completed 2026-04-13)
 
 ## Phase Details
 
@@ -125,11 +125,11 @@ Plans:
   3. User can approve a proposed rule (creating a real rule in the active ruleset), modify it before approving, or dismiss it
   4. Dismissed patterns are suppressed from future proposals
   5. Approved rules integrate with existing config hot-reload so they take effect immediately
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 Plans:
 - [x] 11-01-PLAN.md — Database migration, ProposalStore, PatternDetector, MoveTracker hook
 - [x] 11-02-PLAN.md — API routes, ServerDeps extension, main.ts lifecycle wiring
-- [ ] 11-03-PLAN.md — Frontend: Proposed nav tab, proposal cards, approve/modify/dismiss UI
+- [x] 11-03-PLAN.md — Frontend: Proposed nav tab, proposal cards, approve/modify/dismiss UI
 **UI hint**: yes
 
 ## Progress
@@ -150,4 +150,4 @@ Note: Phase 9 (clobber restoration) must run before Move Tracking since it resto
 | 8. Extended Matchers UI | v0.4 | 3/4 | Gap closure | - |
 | 9. Restore Clobbered Features | v0.4 | 0/5 | Planned | - |
 | 10. Move Tracking | v0.4 | 4/4 | Complete    | 2026-04-13 |
-| 11. Pattern Detection & Proposed Rules | v0.4 | 2/3 | In Progress|  |
+| 11. Pattern Detection & Proposed Rules | v0.4 | 3/3 | Complete   | 2026-04-13 |
