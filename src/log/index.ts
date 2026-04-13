@@ -175,6 +175,21 @@ export class ActivityLog {
   }
 
   /**
+   * Check if a message was moved by the system (Monitor, Sweep, or Batch)
+   * within the last day. Used by MoveTracker to exclude system moves from
+   * user-initiated move detection.
+   * T-10-04: Uses parameterized query to prevent SQL injection.
+   */
+  isSystemMove(messageId: string): boolean {
+    const row = this.db.prepare(
+      `SELECT 1 FROM activity WHERE message_id = ? AND success = 1
+       AND source IN ('arrival', 'sweep', 'batch')
+       AND timestamp > datetime('now', '-1 day') LIMIT 1`,
+    ).get(messageId);
+    return row !== undefined;
+  }
+
+  /**
    * Close the database connection and stop auto-prune.
    */
   close(): void {
