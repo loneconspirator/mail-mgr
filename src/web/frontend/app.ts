@@ -262,7 +262,11 @@ async function renderSettings() {
   app.innerHTML = '<p>Loading...</p>';
 
   try {
-    const [imapCfg, status] = await Promise.all([api.config.getImap(), api.status.get()]);
+    const [imapCfg, status, trackingStatus] = await Promise.all([
+      api.config.getImap(),
+      api.status.get(),
+      api.tracking.status().catch(() => null),
+    ]);
     app.innerHTML = '';
 
     const card = h('div', { className: 'settings-card' });
@@ -306,6 +310,45 @@ async function renderSettings() {
         renderSettings();
       } catch (e: any) { toast(e.message, true); }
     });
+
+    // Move Tracking card
+    if (trackingStatus) {
+      const trackingCard = h('div', { className: 'settings-card' });
+      const pendingCount = trackingStatus.pendingDeepScan;
+      const btnLabel = pendingCount > 0
+        ? `Run Deep Scan (${pendingCount} pending)`
+        : 'Run Deep Scan';
+      const btnDisabled = !trackingStatus.enabled || pendingCount === 0;
+      trackingCard.innerHTML = `
+        <h2>Move Tracking</h2>
+        <div class="review-stats">
+          <div class="stat-item"><div class="stat-value">${trackingStatus.messagesTracked}</div><div class="stat-label">Tracked</div></div>
+          <div class="stat-item"><div class="stat-value">${trackingStatus.signalsLogged}</div><div class="stat-label">Signals</div></div>
+          <div class="stat-item"><div class="stat-value">${pendingCount}</div><div class="stat-label">Pending Deep Scan</div></div>
+        </div>
+        ${trackingStatus.lastScanAt ? `<p class="sweep-info">Last scan: ${new Date(trackingStatus.lastScanAt).toLocaleString()}</p>` : ''}
+        <div class="form-actions">
+          <button class="btn${btnDisabled ? '' : ' btn-primary'}" id="t-deep-scan" ${btnDisabled ? 'disabled' : ''}>${btnLabel}</button>
+        </div>
+      `;
+      app.append(trackingCard);
+
+      document.getElementById('t-deep-scan')?.addEventListener('click', async (e) => {
+        const btn = e.target as HTMLButtonElement;
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Scanning...';
+        try {
+          const result = await api.tracking.triggerDeepScan();
+          toast(`Deep scan complete: ${result.resolved} message(s) resolved`);
+          renderSettings();
+        } catch (err: unknown) {
+          toast(err instanceof Error ? err.message : String(err), true);
+          btn.disabled = false;
+          btn.innerHTML = originalText || 'Run Deep Scan';
+        }
+      });
+    }
 
   } catch (e: any) {
     app.innerHTML = '';

@@ -1,10 +1,10 @@
 // API wrapper — all fetch calls to the backend
 
 import type { Rule, ImapConfig } from '../../shared/types.js';
-import type { ActivityEntry, StatusResponse } from '../../shared/types.js';
+import type { ActivityEntry, StatusResponse, MoveTrackerStatusResponse, DeepScanResponse } from '../../shared/types.js';
 
 // Re-export for frontend consumers
-export type { Rule, ImapConfig, ActivityEntry, StatusResponse };
+export type { Rule, ImapConfig, ActivityEntry, StatusResponse, MoveTrackerStatusResponse, DeepScanResponse };
 
 async function request<T>(url: string, opts?: RequestInit): Promise<T> {
   const res = await fetch(url, {
@@ -36,5 +36,9 @@ export const api = {
   config: {
     getImap: () => request<ImapConfig>('/api/config/imap'),
     updateImap: (cfg: ImapConfig) => request<ImapConfig>('/api/config/imap', { method: 'PUT', body: JSON.stringify(cfg) }),
+  },
+  tracking: {
+    status: () => request<MoveTrackerStatusResponse>('/api/tracking/status'),
+    triggerDeepScan: () => request<DeepScanResponse>('/api/tracking/deep-scan', { method: 'POST' }),
   },
 };
