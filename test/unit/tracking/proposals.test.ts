@@ -246,6 +246,18 @@ describe('ProposalStore', () => {
       expect(remaining).toHaveLength(1);
       expect(remaining[0].sender).toBe('b@example.com');
     });
+
+    it('excludes dismissed proposals from the list', () => {
+      store.upsertProposal(makeKey({ sender: 'a@example.com' }), 'Archive', 1);
+      store.upsertProposal(makeKey({ sender: 'b@example.com' }), 'Archive', 2);
+
+      const proposals = store.getProposals();
+      store.dismissProposal(proposals[0].id);
+
+      const remaining = store.getProposals();
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].sender).toBe('b@example.com');
+    });
   });
 
   describe('getById', () => {

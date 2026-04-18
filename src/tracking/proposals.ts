@@ -134,7 +134,7 @@ export class ProposalStore {
     const rows = this.db.prepare(`
       SELECT *, (matching_count - contradicting_count) AS strength
       FROM proposed_rules
-      WHERE status != 'approved'
+      WHERE status = 'active'
       ORDER BY strength DESC, last_signal_at DESC
     `).all() as Array<Record<string, unknown>>;
     return rows.map(rowToProposal);

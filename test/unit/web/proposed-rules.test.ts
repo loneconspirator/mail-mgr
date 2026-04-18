@@ -311,6 +311,18 @@ describe('POST /api/proposed-rules/:id/modify', () => {
     });
     expect(res.statusCode).toBe(404);
   });
+
+  it('modify flow: does not create a rule via configRepo.addRule', async () => {
+    const id = insertProposal(db, { sender: 'modify@e.com' });
+
+    // Modify endpoint only returns pre-fill data — does NOT create a rule
+    const res = await app.inject({ method: 'POST', url: `/api/proposed-rules/${id}/modify` });
+    expect(res.statusCode).toBe(200);
+    expect(mockAddRule).not.toHaveBeenCalled();
+
+    // Proposal stays active (not approved yet)
+    expect(proposalStore.getById(id)?.status).toBe('active');
+  });
 });
 
 describe('POST /api/proposed-rules/:id/mark-approved', () => {

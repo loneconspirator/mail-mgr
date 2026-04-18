@@ -152,8 +152,8 @@ async function renderRules() {
   }
 }
 
-function openRuleModal(rule?: Rule, envelopeAvailable = true) {
-  const isEdit = !!rule;
+function openRuleModal(rule?: Rule, envelopeAvailable = true, forceCreate = false) {
+  const isEdit = !!rule && !forceCreate;
   const overlay = h('div', { className: 'modal-overlay' });
   const modal = h('div', { className: 'modal' });
 
@@ -1076,7 +1076,7 @@ function renderProposalCard(p: ProposedRuleCard): HTMLElement {
       // creates the rule via api.rules.create(). Calling approve would create a
       // duplicate rule via configRepo.addRule().
       pendingProposalApproval = data.proposalId;
-      openRuleModal(prefill, envelopeAvailable);
+      openRuleModal(prefill, envelopeAvailable, true);
     } catch (err: any) {
       toast(err.message || 'Failed to load proposal data', true);
     }
