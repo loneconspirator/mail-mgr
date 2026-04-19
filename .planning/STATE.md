@@ -84,6 +84,7 @@ Full v0.3 decision history archived in milestones/v0.3-ROADMAP.md.
 | 260411-fmv | Rebuild BatchEngine on review config change | 2026-04-11 | c0c918d | [260411-fmv](./quick/260411-fmv-rebuild-batchengine-on-review-config-cha/) |
 | 260412-sob | Add a button to manually trigger the deep scan for non-standard move destinations | 2026-04-13 | 423479a | [260412-sob](./quick/260412-sob-add-a-button-to-manually-trigger-the-dee/) |
 | 260419-l2l | Assign order = max+1 when approving proposals so new rules sort to bottom | 2026-04-19 | 13a64ec | [260419-l2l](./quick/260419-l2l-when-approving-a-proposal-assign-order-t/) |
+| 260419-ltm | Prevent redundant proposed rules and handle rule ordering conflicts | 2026-04-19 | 8bbccec | [260419-ltm](./quick/260419-ltm-prevent-redundant-proposed-rules-and-han/) |
 
 ### Roadmap Evolution
 
@@ -96,5 +97,5 @@ None active.
 ## Session Continuity
 
 Last session: 2026-04-19T22:10:18.386Z
-Last activity: 2026-04-19 - Completed quick task 260419-l2l: Assign order = max+1 when approving proposals
+Last activity: 2026-04-19 - Completed quick task 260419-ltm: Prevent redundant proposed rules and handle rule ordering conflicts
 Resume file: None
