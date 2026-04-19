@@ -18,8 +18,8 @@ Requirements for milestone v0.4: Extended Matchers and Behavioral Learning.
 
 ### Behavioral Learning
 
-- [ ] **LEARN-01**: System periodically scans Inbox and Review folders using UID snapshot diffing to detect user-initiated message moves, cross-referencing the activity log by Message-ID to exclude system-initiated moves
-- [ ] **LEARN-02**: For each detected user move, system logs sender, envelope recipient, mailing list headers, subject, read status, header visibility, source folder, and destination folder to a move_signals table
+- [x] **LEARN-01**: System periodically scans Inbox and Review folders using UID snapshot diffing to detect user-initiated message moves, cross-referencing the activity log by Message-ID to exclude system-initiated moves
+- [x] **LEARN-02**: For each detected user move, system logs sender, envelope recipient, mailing list headers, subject, read status, header visibility, source folder, and destination folder to a move_signals table
 - [x] **LEARN-03**: System performs statistical analysis on move signals to identify repeating patterns (same sender or domain routed to same destination above configurable thresholds)
 - [x] **LEARN-04**: System surfaces detected patterns as proposed rules in the UI with approve, modify, or dismiss actions
 - [x] **LEARN-05**: Approved proposed rules become real rules in the active ruleset, integrated with existing config hot-reload
@@ -64,14 +64,14 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| MATCH-01 | Phase 6 | Pending |
-| MATCH-02 | Phase 6 | Pending |
-| MATCH-03 | Phase 7 | Pending |
-| MATCH-04 | Phase 7 | Pending |
-| MATCH-05 | Phase 7 | Pending |
-| MATCH-06 | Phase 6 | Pending |
-| LEARN-01 | Phase 10 | Pending |
-| LEARN-02 | Phase 10 | Pending |
+| MATCH-01 | Phase 12 (gap closure) | Pending |
+| MATCH-02 | Phase 12 (gap closure) | Pending |
+| MATCH-03 | Phase 12 (gap closure) | Pending |
+| MATCH-04 | Phase 12 (gap closure) | Pending |
+| MATCH-05 | Phase 12 (gap closure) | Pending |
+| MATCH-06 | Phase 12 (gap closure) | Pending |
+| LEARN-01 | Phase 10 | Complete |
+| LEARN-02 | Phase 10 | Complete |
 | LEARN-03 | Phase 10 | Complete |
 | LEARN-04 | Phase 10 | Complete |
 | LEARN-05 | Phase 10 | Complete |

@@ -30,6 +30,7 @@ Full details: [milestones/v0.3-ROADMAP.md](milestones/v0.3-ROADMAP.md)
 - [ ] **Phase 9: Restore Clobbered Features** - Recover sweep, batch, folders, review config, and UI features destroyed by Phase 7 commit f453be7
 - [x] **Phase 10: Move Tracking** - UID snapshot diffing to detect user-initiated moves and log signals to SQLite (completed 2026-04-13)
 - [x] **Phase 11: Pattern Detection & Proposed Rules** - Statistical analysis on move signals, proposed rules API and UI, approve/modify/dismiss workflow (completed 2026-04-13)
+- [ ] **Phase 12: Retroactive Verification (Gap Closure)** - Verify orphaned phases 6-9 code with formal VERIFICATION.md artifacts; no new implementation
 
 ## Phase Details
 
@@ -132,11 +133,23 @@ Plans:
 - [x] 11-03-PLAN.md — Frontend: Proposed nav tab, proposal cards, approve/modify/dismiss UI
 **UI hint**: yes
 
+### Phase 12: Retroactive Verification (Gap Closure)
+**Goal**: Verify that all code implemented in orphaned phases 6-9 meets requirements, producing formal VERIFICATION.md artifacts — no new implementation needed
+**Depends on**: Phase 11
+**Requirements**: MATCH-01, MATCH-02, MATCH-03, MATCH-04, MATCH-05, MATCH-06
+**Gap Closure**: Closes orphaned verification gaps from v0.4 milestone audit
+**Success Criteria** (what must be TRUE):
+  1. Envelope header auto-discovery code verified functional (src/imap/discovery.ts probeEnvelopeHeaders)
+  2. Auto-discovery triggers on IMAP config change and via manual POST endpoint
+  3. matchRule() correctly evaluates deliveredTo glob, visibility multi-select, and readStatus conditions
+  4. needsEnvelopeData() skip logic confirmed — rules using unavailable envelope data are skipped gracefully
+  5. VERIFICATION.md produced confirming all 6 MATCH requirements satisfied
+**Plans:** 0 plans
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11
-Note: Phase 9 (clobber restoration) must run before Move Tracking since it restores sweep/batch infrastructure that Phase 10 needs.
+Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
@@ -151,3 +164,4 @@ Note: Phase 9 (clobber restoration) must run before Move Tracking since it resto
 | 9. Restore Clobbered Features | v0.4 | 0/5 | Planned | - |
 | 10. Move Tracking | v0.4 | 4/4 | Complete    | 2026-04-13 |
 | 11. Pattern Detection & Proposed Rules | v0.4 | 3/3 | Complete    | 2026-04-13 |
+| 12. Retroactive Verification | v0.4 | 0/0 | Not started | - |
