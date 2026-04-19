@@ -178,6 +178,7 @@ async function main(): Promise<void> {
       enabled: updatedConfig.review.moveTracking.enabled,
       patternDetector,
       logger,
+      envelopeHeader: updatedConfig.imap.envelopeHeader,
     });
     moveTracker.start();
   });
@@ -251,6 +252,7 @@ async function main(): Promise<void> {
     enabled: config.review.moveTracking.enabled,
     patternDetector,
     logger,
+    envelopeHeader: config.imap.envelopeHeader,
   });
   moveTracker.start();
 }

@@ -114,7 +114,7 @@ function buildApp(): FastifyInstance {
 
   const deps = {
     getProposalStore: () => proposalStore,
-    configRepo: { addRule: mockAddRule },
+    configRepo: { addRule: mockAddRule, nextOrder: vi.fn().mockReturnValue(0) },
   } as unknown as ServerDeps;
 
   const fastify = Fastify({ logger: false });

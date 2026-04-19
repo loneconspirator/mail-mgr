@@ -1,4 +1,5 @@
 import type { ImapClient, ImapFlowLike } from '../imap/index.js';
+import { parseHeaderLines } from '../imap/index.js';
 import type { ActivityLog } from '../log/index.js';
 import type { SignalStore, MoveSignalInput } from './signals.js';
 import type { DestinationResolver } from './destinations.js';
@@ -16,6 +17,7 @@ export interface MoveTrackerDeps {
   enabled: boolean;
   logger?: pino.Logger;
   patternDetector?: PatternDetector;
+  envelopeHeader?: string;
 }
 
 export interface MoveTrackerState {
@@ -316,7 +318,13 @@ export class MoveTracker {
 
       const messages = new Map<number, TrackedMessage>();
 
-      for await (const raw of flow.fetch('1:*', { uid: true, envelope: true, flags: true }, { uid: true })) {
+      const query: Record<string, unknown> = { uid: true, envelope: true, flags: true };
+      const envHeader = this.deps.envelopeHeader;
+      if (envHeader) {
+        query.headers = [envHeader, 'List-Id'];
+      }
+
+      for await (const raw of flow.fetch('1:*', query, { uid: true })) {
         const msg = raw as {
           uid: number;
           envelope?: {
@@ -327,10 +335,22 @@ export class MoveTracker {
             subject?: string;
           };
           flags?: Set<string>;
+          headers?: Buffer;
         };
 
         const flags = msg.flags ?? new Set<string>();
         const from = msg.envelope?.from?.[0];
+
+        let envelopeRecipient: string | undefined;
+        let listId: string | undefined;
+        if (envHeader && msg.headers) {
+          const hdrs = parseHeaderLines(msg.headers);
+          const recipientVal = hdrs.get(envHeader.toLowerCase());
+          if (recipientVal && recipientVal.includes('@')) {
+            envelopeRecipient = recipientVal;
+          }
+          listId = hdrs.get('list-id') ?? undefined;
+        }
 
         // ImapFlow returns BigInt for uid — coerce to Number for JSON serialization
         const tracked: TrackedMessage = {
@@ -339,6 +359,8 @@ export class MoveTracker {
           sender: from?.address ?? '',
           subject: msg.envelope?.subject ?? '',
           readStatus: flags.has('\\Seen') ? 'read' : 'unread',
+          envelopeRecipient,
+          listId,
         };
 
         messages.set(Number(msg.uid), tracked);

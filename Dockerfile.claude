@@ -1,0 +1,31 @@
+FROM node:22-bookworm
+
+# System deps for Claude Code
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    ripgrep \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Claude Code globally
+RUN npm install -g @anthropic-ai/claude-code
+
+# Create non-root user matching host UID for volume permissions
+ARG HOST_UID=501
+ARG HOST_HOME=/Users/mike
+RUN useradd -m -s /bin/bash -u $HOST_UID claude \
+    && mkdir -p "$(dirname $HOST_HOME)" \
+    && ln -s /home/claude "$HOST_HOME"
+
+WORKDIR /app
+
+# Install project deps (will be overridden by mount, but cached layer helps)
+COPY package.json package-lock.json ./
+RUN npm ci
+
+RUN chown -R claude:claude /app
+
+USER claude
+
+# Default to bash so you can launch claude manually, or override CMD
+CMD ["bash"]
