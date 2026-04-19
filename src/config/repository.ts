@@ -65,6 +65,12 @@ export class ConfigRepository {
     return true;
   }
 
+  nextOrder(): number {
+    const rules = this.getRules();
+    if (rules.length === 0) return 0;
+    return Math.max(...rules.map(r => r.order)) + 1;
+  }
+
   reorderRules(pairs: Array<{ id: string; order: number }>): Rule[] {
     for (const pair of pairs) {
       const rule = this.config.rules.find((r) => r.id === pair.id);

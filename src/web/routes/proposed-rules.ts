@@ -64,7 +64,7 @@ export function registerProposedRuleRoutes(app: FastifyInstance, deps: ServerDep
       match,
       action: { type: 'move', folder: proposal.destinationFolder },
       enabled: true,
-      order: 0,
+      order: deps.configRepo.nextOrder(),
     });
 
     store.approveProposal(id, newRule.id);
