@@ -99,6 +99,9 @@ let app: FastifyInstance;
 let db: Database.Database;
 let proposalStore: ProposalStore;
 let mockAddRule: ReturnType<typeof vi.fn>;
+let mockGetRules: ReturnType<typeof vi.fn>;
+let mockReorderRules: ReturnType<typeof vi.fn>;
+let mockNextOrder: ReturnType<typeof vi.fn>;
 
 function buildApp(): FastifyInstance {
   db = createTestDb();
@@ -111,10 +114,18 @@ function buildApp(): FastifyInstance {
     enabled: true,
     order: 0,
   });
+  mockGetRules = vi.fn().mockReturnValue([]);
+  mockReorderRules = vi.fn().mockReturnValue([]);
+  mockNextOrder = vi.fn().mockReturnValue(0);
 
   const deps = {
     getProposalStore: () => proposalStore,
-    configRepo: { addRule: mockAddRule, nextOrder: vi.fn().mockReturnValue(0) },
+    configRepo: {
+      addRule: mockAddRule,
+      nextOrder: mockNextOrder,
+      getRules: mockGetRules,
+      reorderRules: mockReorderRules,
+    },
   } as unknown as ServerDeps;
 
   const fastify = Fastify({ logger: false });
@@ -363,5 +374,104 @@ describe('POST /api/proposed-rules/:id/mark-approved', () => {
       payload: { ruleId: 'some-id' },
     });
     expect(res.statusCode).toBe(404);
+  });
+});
+
+describe('POST /api/proposed-rules/:id/approve — conflict detection', () => {
+  it('returns 409 with conflict details when exact match found', async () => {
+    const id = insertProposal(db, { sender: 'dup@example.com', destination_folder: 'Archive' });
+
+    // Existing rule with same sender
+    mockGetRules.mockReturnValue([{
+      id: 'existing-1',
+      name: 'Existing Rule',
+      match: { sender: 'dup@example.com' },
+      action: { type: 'move', folder: 'Archive' },
+      enabled: true,
+      order: 0,
+    }]);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/proposed-rules/${id}/approve`,
+    });
+    expect(res.statusCode).toBe(409);
+    const body = JSON.parse(res.payload);
+    expect(body.conflict.type).toBe('exact');
+    expect(body.conflict.rule.id).toBe('existing-1');
+    expect(mockAddRule).not.toHaveBeenCalled();
+  });
+
+  it('returns 409 with conflict details when shadow found', async () => {
+    const id = insertProposal(db, { sender: 'foo@example.com', destination_folder: 'Work' });
+
+    mockGetRules.mockReturnValue([{
+      id: 'broad-1',
+      name: 'Broad Rule',
+      match: { sender: '*@example.com' },
+      action: { type: 'move', folder: 'Catchall' },
+      enabled: true,
+      order: 0,
+    }]);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/proposed-rules/${id}/approve`,
+    });
+    expect(res.statusCode).toBe(409);
+    const body = JSON.parse(res.payload);
+    expect(body.conflict.type).toBe('shadow');
+    expect(body.conflict.rule.id).toBe('broad-1');
+    expect(mockAddRule).not.toHaveBeenCalled();
+  });
+
+  it('insertBefore query param allows shadow override with reordering', async () => {
+    const id = insertProposal(db, { sender: 'foo@example.com', destination_folder: 'Work' });
+
+    mockGetRules.mockReturnValue([{
+      id: 'broad-1',
+      name: 'Broad Rule',
+      match: { sender: '*@example.com' },
+      action: { type: 'move', folder: 'Catchall' },
+      enabled: true,
+      order: 5,
+    }]);
+    mockNextOrder.mockReturnValue(10);
+    mockAddRule.mockReturnValue({
+      id: 'new-rule-1',
+      name: 'Auto: foo@example.com',
+      match: { sender: 'foo@example.com' },
+      action: { type: 'move', folder: 'Work' },
+      enabled: true,
+      order: 4,
+    });
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/proposed-rules/${id}/approve?insertBefore=broad-1`,
+    });
+    expect(res.statusCode).toBe(200);
+    expect(mockReorderRules).toHaveBeenCalled();
+    expect(mockAddRule).toHaveBeenCalled();
+  });
+
+  it('insertBefore with exact match still returns 409', async () => {
+    const id = insertProposal(db, { sender: 'dup@example.com', destination_folder: 'Archive' });
+
+    mockGetRules.mockReturnValue([{
+      id: 'existing-1',
+      name: 'Existing Rule',
+      match: { sender: 'dup@example.com' },
+      action: { type: 'move', folder: 'Archive' },
+      enabled: true,
+      order: 0,
+    }]);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: `/api/proposed-rules/${id}/approve?insertBefore=existing-1`,
+    });
+    expect(res.statusCode).toBe(409);
+    expect(mockAddRule).not.toHaveBeenCalled();
   });
 });
