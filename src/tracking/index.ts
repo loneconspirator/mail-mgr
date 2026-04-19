@@ -140,6 +140,15 @@ export class MoveTracker {
       this.messagesTracked = totalTracked;
       this.lastScanAt = new Date().toISOString();
       this.deps.logger?.debug({ tracked: totalTracked }, 'MoveTracker scan complete');
+    } catch (err) {
+      // Transient NoConnection errors happen during ImapFlow's internal IDLE recovery.
+      // The connection will re-establish on its own — just log at debug level and retry next interval.
+      const code = (err as { code?: string })?.code;
+      if (code === 'NoConnection' || code === 'ETIMEOUT') {
+        this.deps.logger?.debug({ err }, 'MoveTracker scan skipped (transient IMAP error)');
+      } else {
+        throw err;
+      }
     } finally {
       this.running = false;
     }

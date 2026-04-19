@@ -89,6 +89,14 @@ export class Monitor {
     });
 
     await this.client.connect();
+
+    // If already connected (e.g. connect() was called before start()),
+    // the 'connected' event already fired before we registered our listener.
+    // Trigger the initial scan explicitly.
+    if (this.client.state === 'connected') {
+      this.logger.info('IMAP already connected, running initial scan');
+      this.processNewMessages();
+    }
   }
 
   /**

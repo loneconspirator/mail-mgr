@@ -197,6 +197,11 @@ async function main(): Promise<void> {
   await app.listen({ port: config.server.port, host: config.server.host });
   logger.info('mail-mgr listening on %s:%d', config.server.host, config.server.port);
 
+  // Register error listener before connect to avoid unhandled error events
+  imapClient.on('error', (err) => {
+    logger.error({ err }, 'IMAP error');
+  });
+
   // H4a: Run initial envelope header discovery before Monitor starts (D-01, D-03)
   await imapClient.connect();
   let initialHeader: string | null = null;
