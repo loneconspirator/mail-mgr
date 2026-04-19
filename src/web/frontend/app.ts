@@ -265,12 +265,23 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true, forceCreate = fals
       action = { type: 'delete' };
     }
 
+    // For new rules, compute next order so they sort to the bottom
+    let orderValue = rule?.order ?? 0;
+    if (!isEdit) {
+      try {
+        const existingRules = await api.rules.list();
+        if (existingRules.length > 0) {
+          orderValue = Math.max(...existingRules.map((r: Rule) => r.order)) + 1;
+        }
+      } catch { /* fallback to 0 */ }
+    }
+
     const payload = {
       name,
       match,
       action,
       enabled: rule?.enabled ?? true,
-      order: rule?.order ?? 0,
+      order: orderValue,
     };
 
     try {
