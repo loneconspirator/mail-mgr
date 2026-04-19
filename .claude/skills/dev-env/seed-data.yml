@@ -1,0 +1,160 @@
+# Dev Environment Seed Data
+# Edit this file to change what gets populated in the test environment.
+# Used by seed.ts to populate GreenMail (via SMTP) and SQLite (direct inserts).
+
+# Rules baked into the generated config.yml
+rules:
+  - id: amazon-receipts
+    name: Amazon Receipts
+    match:
+      sender: "*@amazon.com"
+    action:
+      type: move
+      folder: Receipts
+    order: 0
+
+  - id: github-notifications
+    name: GitHub Notifications
+    match:
+      sender: "notifications@github.com"
+    action:
+      type: review
+    order: 1
+
+# Emails to inject via SMTP (delivered to INBOX)
+emails:
+  - from: "order-update@amazon.com"
+    subject: "Your order has shipped (#112-345)"
+    body: "Your package is on its way. Track your delivery at amazon.com/orders."
+
+  - from: "order-update@amazon.com"
+    subject: "Your order has been delivered (#112-789)"
+    body: "Your package was delivered today. Rate your experience."
+
+  - from: "notifications@github.com"
+    subject: "[mail-mgr] New issue: Fix IDLE timeout"
+    body: "mike opened a new issue in mail-mgr/mail-mgr."
+
+  - from: "notifications@github.com"
+    subject: "[mail-mgr] PR #42: Refactor batch engine"
+    body: "mike requested your review on this pull request."
+
+  - from: "newsletters@techcrunch.com"
+    subject: "TechCrunch Daily - April 19"
+    body: "Today's top stories in tech."
+
+  - from: "newsletters@techcrunch.com"
+    subject: "TechCrunch Daily - April 18"
+    body: "Yesterday's top stories in tech."
+
+  - from: "noreply@linkedin.com"
+    subject: "You have 3 new connection requests"
+    body: "See who wants to connect with you on LinkedIn."
+
+  - from: "boss@work.com"
+    subject: "Meeting tomorrow at 10am"
+    body: "Don't forget the standup. Bring your laptop."
+
+  - from: "alerts@bank.com"
+    subject: "Transaction alert: $42.00 at Coffee Shop"
+    body: "A transaction was posted to your account."
+
+# Move signals inserted directly into SQLite (for proposed rule generation)
+# count: N generates N individual signal rows with fake message_ids
+move_signals:
+  - sender: "newsletters@techcrunch.com"
+    source_folder: INBOX
+    destination_folder: Newsletters
+    subject: "TechCrunch Daily"
+    count: 5
+
+  - sender: "noreply@linkedin.com"
+    source_folder: INBOX
+    destination_folder: Newsletters
+    subject: "LinkedIn notification"
+    count: 3
+
+  - sender: "noreply@linkedin.com"
+    source_folder: INBOX
+    destination_folder: Trash
+    subject: "LinkedIn spam"
+    count: 1
+
+  - sender: "alerts@bank.com"
+    source_folder: INBOX
+    destination_folder: Finance
+    subject: "Transaction alert"
+    count: 4
+
+# Proposed rules inserted directly into SQLite
+proposed_rules:
+  - sender: "newsletters@techcrunch.com"
+    source_folder: INBOX
+    destination_folder: Newsletters
+    matching_count: 5
+    contradicting_count: 0
+    destination_counts: '{"Newsletters": 5}'
+    status: active
+
+  - sender: "noreply@linkedin.com"
+    source_folder: INBOX
+    destination_folder: Newsletters
+    matching_count: 3
+    contradicting_count: 1
+    destination_counts: '{"Newsletters": 3, "Trash": 1}'
+    status: active
+
+  - sender: "alerts@bank.com"
+    source_folder: INBOX
+    destination_folder: Finance
+    matching_count: 4
+    contradicting_count: 0
+    destination_counts: '{"Finance": 4}'
+    status: active
+
+# Activity log entries inserted directly into SQLite
+activity:
+  - message_from: "order-update@amazon.com"
+    message_subject: "Your March order shipped"
+    rule_name: Amazon Receipts
+    rule_id: amazon-receipts
+    action: move
+    folder: Receipts
+    source: arrival
+    success: true
+
+  - message_from: "order-update@amazon.com"
+    message_subject: "Your February order delivered"
+    rule_name: Amazon Receipts
+    rule_id: amazon-receipts
+    action: move
+    folder: Receipts
+    source: arrival
+    success: true
+
+  - message_from: "notifications@github.com"
+    message_subject: "[mail-mgr] PR review requested"
+    rule_name: GitHub Notifications
+    rule_id: github-notifications
+    action: review
+    folder: Review
+    source: arrival
+    success: true
+
+  - message_from: "notifications@github.com"
+    message_subject: "[mail-mgr] Issue comment"
+    rule_name: GitHub Notifications
+    rule_id: github-notifications
+    action: review
+    folder: Review
+    source: arrival
+    success: true
+
+  - message_from: "newsletters@techcrunch.com"
+    message_subject: "TechCrunch Daily - April 10"
+    rule_name: null
+    rule_id: null
+    action: skip
+    folder: null
+    source: arrival
+    success: true
