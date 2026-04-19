@@ -71,6 +71,7 @@ Full v0.3 decision history archived in milestones/v0.3-ROADMAP.md.
 ### Pending Todos
 
 1. **Restore all features wiped by Phase 7 clobber** — f453be7 deleted 10 source files, 8 test files, stripped 11 more; all v0.3 features (sweep, batch, folders, review config, UI) need restoration
+2. **Add approve as review button for proposed rules** — On proposed rule cards, add option to approve as review rule instead of move rule (same sender/destination)
 
 ### Quick Tasks Completed
 
