@@ -169,6 +169,17 @@ export interface ExampleMessage {
   destinationFolder: string;
 }
 
+export interface ProposalConflict {
+  type: 'exact' | 'shadow';
+  rule: {
+    id: string;
+    name?: string;
+    match: Record<string, string | undefined>;
+    order: number;
+    action: { type: string; folder?: string };
+  };
+}
+
 export interface ProposedRuleCard extends ProposedRule {
   strengthLabel: string;
   examples: ExampleMessage[];
