@@ -588,6 +588,26 @@ tr:last-child td { border-bottom: none; }
   margin: 8px 0;
 }
 
+.proposal-conflict-notice {
+  font-size: 0.85rem;
+  color: #78350f;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin: 12px 0;
+  line-height: 1.5;
+}
+
+.proposal-conflict-notice strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.proposal-conflict-notice .btn {
+  margin-top: 8px;
+}
+
 .proposal-actions {
   display: flex;
   justify-content: flex-end;

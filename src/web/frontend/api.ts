@@ -9,6 +9,17 @@ import type { ProposedRuleCard } from '../../shared/types.js';
 export type { Rule, ImapConfig, ImapConfigResponse, ReviewConfig, ActivityEntry, StatusResponse, ReviewStatusResponse, FolderTreeResponse, MoveTrackerStatusResponse, DeepScanResponse };
 export type { BatchStatusResponse, DryRunResponse, DryRunGroup };
 export type { ProposedRuleCard };
+export { ApiError };
+
+class ApiError extends Error {
+  conflict?: { type: 'exact' | 'shadow'; rule: { id: string; name?: string; match: Record<string, string | undefined>; order: number; action: { type: string; folder?: string } } };
+
+  constructor(message: string, conflict?: ApiError['conflict']) {
+    super(message);
+    this.name = 'ApiError';
+    this.conflict = conflict;
+  }
+}
 
 async function request<T>(url: string, opts?: RequestInit): Promise<T> {
   const headers: Record<string, string> = {};
@@ -21,7 +32,10 @@ async function request<T>(url: string, opts?: RequestInit): Promise<T> {
   });
   if (!res.ok) {
     const body = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(body.error || `HTTP ${res.status}`);
+    if (res.status === 409 && body.conflict) {
+      throw new ApiError(body.error || 'Conflict', body.conflict);
+    }
+    throw new ApiError(body.error || `HTTP ${res.status}`);
   }
   if (res.status === 204) return undefined as T;
   return res.json();
@@ -71,6 +85,7 @@ export const api = {
   proposed: {
     list: () => request<ProposedRuleCard[]>('/api/proposed-rules'),
     approve: (id: number) => request<Rule>(`/api/proposed-rules/${id}/approve`, { method: 'POST' }),
+    approveInsertBefore: (id: number, beforeRuleId: string) => request<Rule>(`/api/proposed-rules/${id}/approve?insertBefore=${beforeRuleId}`, { method: 'POST' }),
     dismiss: (id: number) => request<void>(`/api/proposed-rules/${id}/dismiss`, { method: 'POST' }),
     getModifyData: (id: number) => request<{ proposalId: number; sender: string; envelopeRecipient: string | null; destinationFolder: string; sourceFolder: string }>(`/api/proposed-rules/${id}/modify`, { method: 'POST' }),
     markApproved: (id: number, ruleId: string) => request<void>(`/api/proposed-rules/${id}/mark-approved`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ruleId }) }),

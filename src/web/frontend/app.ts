@@ -1,4 +1,4 @@
-import { api } from './api.js';
+import { api, ApiError } from './api.js';
 import type { Rule, ActivityEntry, ImapConfigResponse, ReviewConfig, BatchStatusResponse, DryRunGroup, ProposedRuleCard } from './api.js';
 import type { Action } from '../../shared/types.js';
 import { renderFolderPicker } from './folder-picker.js';
@@ -1055,9 +1055,55 @@ function renderProposalCard(p: ProposedRuleCard): HTMLElement {
       card.style.transition = 'opacity 200ms';
       setTimeout(() => { card.remove(); updateProposedBadge(); }, 200);
     } catch (err: any) {
-      toast(err.message || 'Failed to approve', true);
-      approveBtn.textContent = 'Approve Rule';
-      actions.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = false);
+      // Remove any existing conflict notice
+      card.querySelector('.proposal-conflict-notice')?.remove();
+
+      if (err instanceof ApiError && err.conflict) {
+        const conflict = err.conflict;
+        const ruleName = conflict.rule.name || `Rule: ${conflict.rule.match.sender || '?'} → ${conflict.rule.action.folder || conflict.rule.action.type}`;
+        const notice = h('div', { className: 'proposal-conflict-notice' });
+
+        if (conflict.type === 'exact') {
+          notice.innerHTML = `<strong>Duplicate rule exists:</strong> "${esc(ruleName)}" already matches the same criteria. Use <em>Modify</em> to change the criteria, or <em>Dismiss</em> this proposal.`;
+          approveBtn.textContent = 'Approve Rule';
+          (approveBtn as HTMLButtonElement).disabled = true;
+          // Re-enable modify and dismiss
+          (modifyBtn as HTMLButtonElement).disabled = false;
+          (dismissBtn as HTMLButtonElement).disabled = false;
+        } else {
+          notice.innerHTML = `<strong>Shadowed by existing rule:</strong> "${esc(ruleName)}" (priority #${conflict.rule.order}) already catches these messages. This rule would never fire.`;
+          approveBtn.textContent = 'Approve Rule';
+          (approveBtn as HTMLButtonElement).disabled = true;
+
+          // Add "Save Ahead" button
+          const saveAheadBtn = h('button', { className: 'btn btn-primary' }, 'Save Ahead');
+          saveAheadBtn.addEventListener('click', async () => {
+            saveAheadBtn.innerHTML = '<span class="spinner"></span>';
+            card.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = true);
+            try {
+              await api.proposed.approveInsertBefore(p.id, conflict.rule.id);
+              toast('Rule created ahead of shadowing rule.');
+              card.style.opacity = '0';
+              card.style.transition = 'opacity 200ms';
+              setTimeout(() => { card.remove(); updateProposedBadge(); }, 200);
+            } catch (e: any) {
+              toast(e.message || 'Failed to save ahead', true);
+              saveAheadBtn.textContent = 'Save Ahead';
+              card.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = false);
+              (approveBtn as HTMLButtonElement).disabled = true; // keep approve disabled
+            }
+          });
+          notice.append(document.createElement('br'), saveAheadBtn);
+          (modifyBtn as HTMLButtonElement).disabled = false;
+          (dismissBtn as HTMLButtonElement).disabled = false;
+        }
+        // Insert notice before the actions bar
+        card.insertBefore(notice, actions);
+      } else {
+        toast(err.message || 'Failed to approve', true);
+        approveBtn.textContent = 'Approve Rule';
+        actions.querySelectorAll('button').forEach(b => (b as HTMLButtonElement).disabled = false);
+      }
     }
   });
 
