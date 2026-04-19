@@ -73,6 +73,7 @@ Full v0.3 decision history archived in milestones/v0.3-ROADMAP.md.
 1. **Restore all features wiped by Phase 7 clobber** — f453be7 deleted 10 source files, 8 test files, stripped 11 more; all v0.3 features (sweep, batch, folders, review config, UI) need restoration
 2. **Add approve as review button for proposed rules** — On proposed rule cards, add option to approve as review rule instead of move rule (same sender/destination)
 3. **Prevent redundant proposed rules and handle rule ordering conflicts** — Block approval of rules that duplicate existing criteria; warn when shadowed by higher-priority rules with reorder option
+4. **Populate delivered-to field in proposed rules and modify form** — Include delivered-to as matcher in proposals, prepopulate in Modify modal
 
 ### Quick Tasks Completed
 
