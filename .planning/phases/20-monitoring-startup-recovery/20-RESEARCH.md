@@ -376,12 +376,11 @@ Alternatively, a simpler approach: add a `fetchActionFolderMessages(folder)` met
 | A1 | `reviewMessageToEmailMessage()` provides all fields needed by `processMessage()` (specifically `from.address`) | fetchAllMessages Compatibility | Would need a custom fetch method instead — minor rework |
 | A2 | ImapClient can handle concurrent `status()` calls on different folders without lock contention | Architecture Patterns | Would need sequential status checks — slight latency increase |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **reviewMessageToEmailMessage field completeness**
+1. **reviewMessageToEmailMessage field completeness** (RESOLVED)
    - What we know: The converter exists and is exported
-   - What's unclear: Whether it populates `from.address` correctly for the `extractSender()` function
-   - Recommendation: Verify in implementation; if not, use a direct fetch approach
+   - Resolution: Verified — `reviewMessageToEmailMessage()` at `src/imap/messages.ts:69-82` sets `from: rm.envelope.from` which includes `.address`. The `extractSender()` function receives a valid `from.address` field. No fallback needed.
 
 ## Sources
 
