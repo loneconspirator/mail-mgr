@@ -84,7 +84,7 @@ export class ActivityLog {
   /**
    * Log an action result with message and rule context.
    */
-  logActivity(result: ActionResult, message: EmailMessage, rule: Rule | null, source: 'arrival' | 'sweep' | 'batch' = 'arrival'): void {
+  logActivity(result: ActionResult, message: EmailMessage, rule: Rule | null, source: 'arrival' | 'sweep' | 'batch' | 'action-folder' = 'arrival'): void {
     const stmt = this.db.prepare(`
       INSERT INTO activity (
         timestamp, message_uid, message_id, message_from, message_to,
@@ -170,7 +170,7 @@ export class ActivityLog {
   isSystemMove(messageId: string): boolean {
     const row = this.db.prepare(
       `SELECT 1 FROM activity WHERE message_id = ? AND success = 1
-       AND source IN ('arrival', 'sweep', 'batch')
+       AND source IN ('arrival', 'sweep', 'batch', 'action-folder')
        AND timestamp > datetime('now', '-1 day') LIMIT 1`,
     ).get(messageId);
     return row !== undefined;

@@ -261,4 +261,39 @@ describe('ActivityLog', () => {
       expect(entries[0].source).toBe('arrival');
     });
   });
+
+  describe('action-folder source', () => {
+    it('stores action-folder source with rule_id and rule_name', () => {
+      log.logActivity(makeResult(), makeMessage(), makeRule(), 'action-folder');
+      const entries = log.getRecentActivity();
+      expect(entries).toHaveLength(1);
+      expect(entries[0].source).toBe('action-folder');
+      expect(entries[0].rule_id).toBe('test-rule');
+      expect(entries[0].rule_name).toBe('Test Rule');
+    });
+
+    it('stores action-folder source with null rule_id and rule_name when rule is null', () => {
+      log.logActivity(makeResult(), makeMessage(), null, 'action-folder');
+      const entries = log.getRecentActivity();
+      expect(entries).toHaveLength(1);
+      expect(entries[0].source).toBe('action-folder');
+      expect(entries[0].rule_id).toBeNull();
+      expect(entries[0].rule_name).toBeNull();
+    });
+
+    it('isSystemMove returns true for action-folder source', () => {
+      log.logActivity(makeResult({ timestamp: new Date() }), makeMessage(), makeRule(), 'action-folder');
+      expect(log.isSystemMove('<msg-42@example.com>')).toBe(true);
+    });
+
+    it('isSystemMove still returns true for sweep source (regression)', () => {
+      log.logActivity(makeResult({ timestamp: new Date() }), makeMessage(), makeRule(), 'sweep');
+      expect(log.isSystemMove('<msg-42@example.com>')).toBe(true);
+    });
+
+    it('isSystemMove returns false for unknown message_id', () => {
+      log.logActivity(makeResult({ timestamp: new Date() }), makeMessage(), makeRule(), 'action-folder');
+      expect(log.isSystemMove('<unknown@example.com>')).toBe(false);
+    });
+  });
 });
