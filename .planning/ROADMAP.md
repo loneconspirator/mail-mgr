@@ -145,3 +145,13 @@ Full details: [milestones/v0.5-ROADMAP.md](milestones/v0.5-ROADMAP.md)
 | 19. Action Processing Core | v0.6 | 0/? | Not started | - |
 | 20. Monitoring & Startup Recovery | v0.6 | 0/? | Not started | - |
 | 21. Idempotency & Edge Cases | v0.6 | 0/? | Not started | - |
+
+### Phase 22: Add folder rename UI to settings page with IMAP folder rename
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 21
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 22 to break down)

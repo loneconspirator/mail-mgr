@@ -47,6 +47,10 @@ Recent decisions affecting current work:
 1. **Prevent redundant proposed rules and handle rule ordering conflicts** — Block approval of rules that duplicate existing criteria; warn when shadowed by higher-priority rules with reorder option
 2. **Populate delivered-to field in proposed rules and modify form** — Include delivered-to as matcher in proposals, prepopulate in Modify modal
 
+### Roadmap Evolution
+
+- Phase 22 added: Add folder rename UI to settings page with IMAP folder rename
+
 ### Blockers/Concerns
 
 - Verify `status()` can be called while INBOX is IDLEing (Phase 20 live check against Fastmail)
