@@ -5,6 +5,7 @@ status: draft
 shadcn_initialized: false
 preset: none
 created: 2026-04-19
+revised: 2026-04-19
 ---
 
 # Phase 16 — UI Design Contract
@@ -52,11 +53,13 @@ Source: inherited from Phase 14/15 spacing scale.
 | Role | Size | Weight | Line Height |
 |------|------|--------|-------------|
 | Body | 14px (0.9rem) | 400 (regular) | 1.5 |
-| Label | 13px (0.8rem) | 600 (semibold) | 1.5 |
+| Label | 14px (0.9rem) | 600 (semibold) | 1.5 |
 | Heading | 18px (1.1rem) | 600 (semibold) | 1.2 |
 | Page title | 20px (1.25rem) | 600 (semibold) | 1.2 |
 
-Source: inherited from Phase 14/15 typography scale.
+Labels share the same 14px size as body text. Hierarchy between body and label is conveyed by weight alone (400 regular vs 600 semibold). This eliminates the previous 13px/14px near-collision.
+
+Source: inherited from Phase 14/15 typography scale, consolidated per checker feedback.
 
 ---
 
@@ -66,17 +69,17 @@ Source: inherited from Phase 14/15 typography scale.
 |------|-------|-------|
 | Dominant (60%) | `#f5f5f5` | Page background |
 | Secondary (30%) | `#ffffff` | Cards, tables, modals, add-sender input area |
-| Accent (10%) | `#2563eb` | "Add Sender" primary CTA button, active nav tab indicator, toggle active state |
+| Accent (10%) | `#2563eb` | "Add Sender" primary CTA button, active nav tab indicator, toggle active state, "Edit Rule" text links |
 | Destructive | `#dc2626` | "Remove" button text/border, delete confirmation CTA, error toasts |
 
-Accent reserved for: "Add Sender" button (`.btn-primary`), active nav tab (`.nav-btn.active`). NOT used for "Edit" links or passive table row content.
+Accent reserved for: "Add Sender" button (`.btn-primary`), active nav tab (`.nav-btn.active`), "Edit Rule" text links (`.disposition-edit-link`). NOT used for "Remove" buttons or passive table row content.
 
 Additional semantic colors (existing, reused):
 - Header/nav background: `#1a1a2e` (dark navy)
 - Nav button text (inactive/active): `#ccc` / `#fff`
 - Table header background: `#f8f8f8`
 - Muted text: `#666` (labels), `#888` (empty states, rule names)
-- "Edit" link color: `#2563eb` (accent, used as text link only)
+- "Edit Rule" link color: `#2563eb` (accent, used as text link)
 - Warning: `#fef9c3` background / `#854d0e` text
 
 Source: inherited from Phase 14/15 and existing `styles.css`.
@@ -92,7 +95,7 @@ Source: inherited from Phase 14/15 and existing `styles.css`.
 | Add Sender toolbar button | Primary CTA button in toolbar next to heading, per disposition view | Existing `+ Add Rule` button pattern in rules toolbar |
 | Add Sender modal | Modal with sender input field, action pre-selected based on view, optional folder picker for Archived | Existing `openRuleModal` pattern (`.modal-overlay` + `.modal`) |
 | Remove button (per row) | Small danger-styled button in each sender row to delete the underlying rule | Existing `.btn .btn-sm .btn-danger` pattern |
-| Edit link (per row) | Text link in each sender row to open the full rule in the rule editor modal | New `.disposition-edit-link` styled as text link |
+| Edit Rule link (per row) | Text link in each sender row to open the full rule in the rule editor modal | New `.disposition-edit-link` styled as text link |
 | Delete confirmation toast/inline | Confirmation step before removing a sender rule | Browser `confirm()` dialog (consistent with existing delete pattern) |
 
 ### Existing Components Reused
@@ -102,9 +105,9 @@ Source: inherited from Phase 14/15 and existing `styles.css`.
 | `.modal-overlay` + `.modal` | Add Sender modal container |
 | `.form-group` | Sender input field wrapper |
 | `.form-group input` | Sender pattern text input |
-| `.form-actions` | Modal button row (Cancel + Add) |
-| `.btn-primary` | "Add" button in modal |
-| `.btn` | "Cancel" button in modal |
+| `.form-actions` | Modal button row (Discard + Add Sender) |
+| `.btn-primary` | "Add Sender" button in modal |
+| `.btn` | "Discard" button in modal |
 | `.btn-sm` | Compact action buttons in table rows |
 | `.btn-danger` | "Remove" button styling |
 | `.toolbar` | Section heading + "Add Sender" button container |
@@ -112,7 +115,7 @@ Source: inherited from Phase 14/15 and existing `styles.css`.
 | `.toast` | Success/error feedback after add/remove operations |
 | `table` / `thead` / `tbody` | Extended sender table with new Actions column |
 | `.folder-group-header` / `.folder-group-senders` | Folder-grouped views get inline actions added |
-| `openRuleModal()` | Existing function called when user clicks "Edit" on a row (MGMT-04) |
+| `openRuleModal()` | Existing function called when user clicks "Edit Rule" on a row (MGMT-04) |
 
 ### Sender Table Layout (Updated)
 
@@ -122,17 +125,19 @@ All four disposition views get an Actions column added to their sender tables:
 |--------|---------|-------|
 | Sender | Sender pattern from rule match (e.g., `*@example.com`) | auto (flex) |
 | Rule Name | Optional rule name, muted if absent | 200px max |
-| Actions | Edit link + Remove button | auto (shrink) |
+| Actions | Edit Rule link + Remove button | auto (shrink) |
 
 ### Actions Column Layout
 
 ```
-| *@example.com | Newsletter rule | Edit  Remove |
+| *@example.com | Newsletter rule | Edit Rule  Remove |
 ```
 
-- "Edit" is a text link (anchor-styled, accent color, no underline, underline on hover)
+- "Edit Rule" is a text link (anchor-styled, accent color, no underline, underline on hover)
 - "Remove" is a small danger button (`.btn .btn-sm .btn-danger`)
-- 8px gap between Edit and Remove
+- 8px gap between Edit Rule and Remove
+
+Note on table action label brevity: "Remove" is kept as a single word without a noun because the table row context makes the target unambiguous (each row is a sender). "Edit Rule" includes the noun "Rule" because the action navigates away from the sender view into the rule editor, so the noun clarifies the target of the edit.
 
 ---
 
@@ -145,8 +150,8 @@ All four disposition views get an Actions column added to their sender tables:
    - Title: "Add {View Name}" (e.g., "Add Priority Sender")
    - Sender input field (required, placeholder `*@example.com`)
    - For Archived view only: folder picker appears below sender input (MGMT-03)
-   - Cancel + Add buttons in `.form-actions`
-3. User types sender pattern and clicks "Add"
+   - Discard + Add Sender buttons in `.form-actions`
+3. User types sender pattern and clicks "Add Sender"
 4. Frontend calls `api.rules.create()` with:
    - `match: { sender: inputValue }`
    - `action`: determined by view type:
@@ -164,7 +169,7 @@ All four disposition views get an Actions column added to their sender tables:
 When opening "Add Sender" from the Archived view:
 1. Modal includes folder picker below the sender input field
 2. Folder picker uses existing `renderFolderPicker()` component
-3. "Add" button is disabled until both sender AND folder are filled
+3. "Add Sender" button is disabled until both sender AND folder are filled
 4. Created rule uses `{ type: 'move', folder: selectedFolder }`
 
 ### Remove Sender Flow (MGMT-02)
@@ -177,7 +182,7 @@ When opening "Add Sender" from the Archived view:
 
 ### Edit Rule Navigation (MGMT-04)
 
-1. User clicks "Edit" link on a sender row
+1. User clicks "Edit Rule" link on a sender row
 2. Frontend calls `api.config.getEnvelopeStatus()` to check envelope availability
 3. Opens existing `openRuleModal(rule, envelopeAvailable)` with the full rule
 4. After save or cancel: view re-renders to reflect any changes
@@ -191,7 +196,7 @@ When opening "Add Sender" from the Archived view:
 | Empty | `.empty` div with heading + body + "Add Sender" button |
 | Error | `.empty` div with error message (existing pattern) |
 | Modal open | `.modal-overlay` with add-sender form |
-| Adding sender | "Add" button shows `Adding...` text and is disabled |
+| Adding sender | "Add Sender" button shows `Adding...` text and is disabled |
 | Removing sender | "Remove" button shows `...` text and is disabled |
 
 ### Empty State Enhancement
@@ -223,12 +228,12 @@ When a view is empty, the empty state now includes an "Add Sender" button below 
 | Sender input label | `Sender Pattern` |
 | Sender input placeholder | `*@example.com` |
 | Folder picker label (Archived only) | `Destination Folder` |
-| Modal cancel button | `Cancel` |
-| Modal add button | `Add` |
-| Modal add button (loading) | `Adding...` |
+| Modal dismiss button | `Discard` |
+| Modal submit button | `Add Sender` |
+| Modal submit button (loading) | `Adding...` |
 | Remove button (row) | `Remove` |
 | Remove button (loading) | `...` |
-| Edit link (row) | `Edit` |
+| Edit link (row) | `Edit Rule` |
 | Remove confirmation | `Remove sender "{senderPattern}"? This will delete the underlying rule.` |
 | Success toast (add) | `Sender added` |
 | Success toast (remove) | `Sender removed` |
@@ -237,6 +242,8 @@ When a view is empty, the empty state now includes an "Add Sender" button below 
 | Empty state add button (Blocked) | `+ Add Blocked Sender` |
 | Empty state add button (Reviewed) | `+ Add Reviewed Sender` |
 | Empty state add button (Archived) | `+ Add Archived Sender` |
+
+Table row action label note: "Remove" is intentionally kept without a noun due to table density constraints -- the sender being removed is unambiguous from the row context. "Edit Rule" includes the noun to clarify the user is editing the underlying rule, not the sender entry itself.
 
 Existing empty state headings and bodies from Phase 14/15 remain unchanged. The "Add Sender" button is appended below them.
 
@@ -247,11 +254,11 @@ Existing empty state headings and bodies from Phase 14/15 remain unchanged. The 
 New classes needed for Phase 16 (follow existing naming conventions):
 
 ```css
-/* Edit link in disposition table rows */
+/* Edit Rule link in disposition table rows */
 .disposition-edit-link {
   color: #2563eb;
   text-decoration: none;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   cursor: pointer;
   background: none;
   border: none;
@@ -276,6 +283,8 @@ New classes needed for Phase 16 (follow existing naming conventions):
 }
 ```
 
+Note: `.disposition-edit-link` font-size updated from 0.85rem to 0.9rem (14px) to match the consolidated typography scale.
+
 No other new classes needed. All modal, button, form, toast, and folder picker styles already exist.
 
 ---
@@ -296,7 +305,7 @@ No component registries used. Vanilla TypeScript + CSS project.
 |-------------|----------------|
 | Add Sender button | Use `<button>` element with descriptive text, keyboard-focusable |
 | Remove button | Use `<button>` element with `aria-label="Remove sender {pattern}"` for screen readers |
-| Edit link | Use `<button>` element styled as link, keyboard-focusable |
+| Edit Rule link | Use `<button>` element styled as link, keyboard-focusable |
 | Modal focus | Focus moves to sender input when modal opens; returns to trigger button on close |
 | Modal escape | Pressing Escape closes the modal (existing overlay click-to-close pattern) |
 | Confirmation dialog | Browser `confirm()` is natively accessible |
