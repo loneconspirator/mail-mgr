@@ -48,23 +48,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| VIEW-01 | — | Pending |
-| VIEW-02 | — | Pending |
-| VIEW-03 | — | Pending |
-| VIEW-04 | — | Pending |
-| VIEW-05 | — | Pending |
-| MGMT-01 | — | Pending |
-| MGMT-02 | — | Pending |
-| MGMT-03 | — | Pending |
-| MGMT-04 | — | Pending |
-| NAV-01 | — | Pending |
-| NAV-02 | — | Pending |
+| VIEW-01 | Phase 14 | Pending |
+| VIEW-02 | Phase 14 | Pending |
+| VIEW-03 | Phase 15 | Pending |
+| VIEW-04 | Phase 15 | Pending |
+| VIEW-05 | Phase 13 | Pending |
+| MGMT-01 | Phase 16 | Pending |
+| MGMT-02 | Phase 16 | Pending |
+| MGMT-03 | Phase 16 | Pending |
+| MGMT-04 | Phase 16 | Pending |
+| NAV-01 | Phase 14 | Pending |
+| NAV-02 | Phase 14 | Pending |
 
 **Coverage:**
 - v0.5 requirements: 11 total
-- Mapped to phases: 0
-- Unmapped: 11
+- Mapped to phases: 11
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-19*
-*Last updated: 2026-04-19 after initial definition*
+*Last updated: 2026-04-19 after roadmap creation*
