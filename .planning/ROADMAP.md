@@ -149,7 +149,7 @@ Plans:
 | 15. Folder-Grouped Views | v0.5 | 1/1 | Complete | 2026-04-20 |
 | 16. Inline Sender Management | v0.5 | 1/1 | Complete | 2026-04-20 |
 | 17. Configuration & Folder Lifecycle | v0.6 | 2/2 | Complete    | 2026-04-20 |
-| 18. Safety Predicates & Activity Log | v0.6 | 2/2 | Complete   | 2026-04-20 |
+| 18. Safety Predicates & Activity Log | v0.6 | 2/2 | Complete    | 2026-04-20 |
 | 19. Action Processing Core | v0.6 | 0/? | Not started | - |
 | 20. Monitoring & Startup Recovery | v0.6 | 0/? | Not started | - |
 | 21. Idempotency & Edge Cases | v0.6 | 0/? | Not started | - |
