@@ -55,7 +55,7 @@ Full details: [milestones/v0.5-ROADMAP.md](milestones/v0.5-ROADMAP.md)
 
 **Milestone Goal:** Let users manage sender dispositions directly from their mail client by moving messages to special IMAP folders.
 
-- [ ] **Phase 17: Configuration & Folder Lifecycle** - Schema, config validation, and IMAP folder auto-creation
+- [x] **Phase 17: Configuration & Folder Lifecycle** - Schema, config validation, and IMAP folder auto-creation (completed 2026-04-20)
 - [ ] **Phase 18: Safety Predicates & Activity Log** - MoveTracker exclusions, shared predicates, action registry, logging extension
 - [ ] **Phase 19: Action Processing Core** - Sender extraction, rule CRUD, message routing for all four action types
 - [ ] **Phase 20: Monitoring & Startup Recovery** - Poll integration, priority processing, startup pre-scan, always-empty invariant
@@ -75,8 +75,8 @@ Full details: [milestones/v0.5-ROADMAP.md](milestones/v0.5-ROADMAP.md)
 **Plans**: 2 plans
 
 Plans:
-- [ ] 17-01-PLAN.md — Zod config schema, ConfigRepository methods, default.yml
-- [ ] 17-02-PLAN.md — Folder creation logic, ImapClient update, startup wiring
+- [x] 17-01-PLAN.md — Zod config schema, ConfigRepository methods, default.yml
+- [x] 17-02-PLAN.md — Folder creation logic, ImapClient update, startup wiring
 
 ### Phase 18: Safety Predicates & Activity Log
 **Goal**: MoveTracker correctly ignores action folder moves and the system has reusable building blocks for action processing
@@ -144,7 +144,7 @@ Plans:
 | 14. Navigation Shell & Simple Views | v0.5 | 1/1 | Complete | 2026-04-20 |
 | 15. Folder-Grouped Views | v0.5 | 1/1 | Complete | 2026-04-20 |
 | 16. Inline Sender Management | v0.5 | 1/1 | Complete | 2026-04-20 |
-| 17. Configuration & Folder Lifecycle | v0.6 | 0/2 | Not started | - |
+| 17. Configuration & Folder Lifecycle | v0.6 | 2/2 | Complete    | 2026-04-20 |
 | 18. Safety Predicates & Activity Log | v0.6 | 0/? | Not started | - |
 | 19. Action Processing Core | v0.6 | 0/? | Not started | - |
 | 20. Monitoring & Startup Recovery | v0.6 | 0/? | Not started | - |
@@ -155,7 +155,7 @@ Plans:
 **Goal:** [To be planned]
 **Requirements**: TBD
 **Depends on:** Phase 21
-**Plans:** 0 plans
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 22 to break down)

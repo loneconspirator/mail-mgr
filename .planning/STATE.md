@@ -1,15 +1,15 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.5
-milestone_name: Sender Disposition Views
-status: planning
-last_updated: "2026-04-20T17:45:02.955Z"
+milestone: v0.6
+milestone_name: Action Folders
+status: Between milestones
+last_updated: "2026-04-20T20:42:31.792Z"
 last_activity: 2026-04-20
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 5
-  completed_plans: 5
+  total_phases: 6
+  completed_phases: 1
+  total_plans: 2
+  completed_plans: 2
   percent: 100
 ---
 
@@ -34,7 +34,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 27 (v0.4)
+- Total plans completed: 29 (v0.4)
 - Average duration: —
 - Total execution time: —
 
@@ -46,6 +46,7 @@ Progress: [██████████] 100%
 | 14 | 1 | - | - |
 | 15 | 1 | - | - |
 | 16 | 1 | - | - |
+| 17 | 2 | - | - |
 
 *Updated after each plan completion*
 
