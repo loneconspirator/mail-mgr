@@ -282,17 +282,17 @@ describe('ActivityLog', () => {
     });
 
     it('isSystemMove returns true for action-folder source', () => {
-      log.logActivity(makeResult(), makeMessage(), makeRule(), 'action-folder');
+      log.logActivity(makeResult({ timestamp: new Date() }), makeMessage(), makeRule(), 'action-folder');
       expect(log.isSystemMove('<msg-42@example.com>')).toBe(true);
     });
 
     it('isSystemMove still returns true for sweep source (regression)', () => {
-      log.logActivity(makeResult(), makeMessage(), makeRule(), 'sweep');
+      log.logActivity(makeResult({ timestamp: new Date() }), makeMessage(), makeRule(), 'sweep');
       expect(log.isSystemMove('<msg-42@example.com>')).toBe(true);
     });
 
     it('isSystemMove returns false for unknown message_id', () => {
-      log.logActivity(makeResult(), makeMessage(), makeRule(), 'action-folder');
+      log.logActivity(makeResult({ timestamp: new Date() }), makeMessage(), makeRule(), 'action-folder');
       expect(log.isSystemMove('<unknown@example.com>')).toBe(false);
     });
   });
