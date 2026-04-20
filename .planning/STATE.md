@@ -63,15 +63,20 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 1. **Prevent redundant proposed rules and handle rule ordering conflicts** — Block approval of rules that duplicate existing criteria; warn when shadowed by higher-priority rules with reorder option
 2. **Populate delivered-to field in proposed rules and modify form** — Include delivered-to as matcher in proposals, prepopulate in Modify modal
-3. **Add optional folder finder to New Rule modal** — Reviewed disposition's New Rule modal should include an optional folder picker/browser
 4. **Rename skip rule display to leave in place** — UI-only rename of "skip" to "leave in place"; backend stays "skip"; update docs too
 
 ### Blockers/Concerns
 
 None active.
 
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260420-did | Add optional folder finder to New Rule modal | 2026-04-20 | a31a7ce | [260420-did-add-optional-folder-finder-to-new-rule-m](./quick/260420-did-add-optional-folder-finder-to-new-rule-m/) |
+
 ## Session Continuity
 
-Last session: 2026-04-19
-Last activity: 2026-04-19 — Roadmap created for v0.5 milestone
+Last session: 2026-04-20
+Last activity: 2026-04-20 - Completed quick task 260420-did: Add optional folder finder to New Rule modal
 Resume file: None
