@@ -361,17 +361,17 @@ actionFolders:
 | A2 | Fastmail IMAP server correctly handles emoji characters in folder names via modified UTF-7 | Pitfall 4 | Folder names would be garbled; would need to fall back to ASCII-only defaults |
 | A3 | `status()` can be called for folders without disrupting INBOX IDLE | Architecture Pattern 3 | Would need alternative existence check approach; this is also flagged in STATE.md as a concern for Phase 20 |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **status() behavior for non-existent folders**
    - What we know: IMAP STATUS command requires the mailbox to exist per RFC 3501. ImapFlow wraps this.
    - What's unclear: Whether ImapFlow throws, returns null, or returns zero-count for non-existent mailboxes.
-   - Recommendation: Test during implementation. If status() doesn't throw, use `listMailboxes()` as fallback existence check.
+   - RESOLVED: Use try/catch on status() — if it throws, folder doesn't exist and needs creation. If it doesn't throw (returns zero-count), folder exists. Fallback to `listMailboxes()` if status() behaves unexpectedly. Implementation uses try/catch pattern documented in Pattern 3.
 
 2. **Emoji folder name display across clients**
    - What we know: ImapFlow handles modified UTF-7 encoding. Fastmail web client should display Unicode fine.
    - What's unclear: How Apple Mail, Thunderbird, etc. display emoji-prefixed IMAP folder names.
-   - Recommendation: Test with Fastmail first (primary target). Emoji is a nice-to-have in the defaults; users can override with ASCII names via config.
+   - RESOLVED: Proceed with emoji defaults (⭐ 🚫 ↩️ ✅). Fastmail is the primary target. Users can override with ASCII names via config if their client displays oddly. Non-blocking UX concern.
 
 ## Validation Architecture
 
