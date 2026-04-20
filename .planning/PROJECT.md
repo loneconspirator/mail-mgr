@@ -17,7 +17,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Move-to-folder action with activity logging — v0.1
 - ✓ SQLite-backed activity log and rule storage — v0.1
 - ✓ Web UI for rule CRUD, activity viewing, settings management — v0.1
-- ✓ Four routing dispositions: move, review, skip, delete — v0.2
+- ✓ Four routing dispositions: move, review, skip (displayed as "Leave in Place"), delete — v0.2
 - ✓ Review folder with configurable name — v0.2
 - ✓ Review lifecycle sweeps (read items >7 days, unread >14 days auto-archived) — v0.2
 - ✓ Multi-folder monitoring (INBOX + Review) — v0.2
@@ -114,6 +114,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 | Separate mark-approved endpoint from approve | Prevents duplicate rule creation in Modify flow | ✓ Good |
 | Read-modify-write transaction for proposal upsert | COALESCE in expression index proved unreliable | ✓ Good |
 | Retroactive verification for orphaned phases | Phase 12 formally verified code that existed but lacked audit trail | ✓ Good |
+| "Skip" displayed as "Leave in Place" in UI | "Skip" was ambiguous — "Leave in Place" clearly communicates the email stays untouched. Backend/API/storage retains `skip` as the canonical value; only UI display text changed. | ✓ Good |
 
 ## Evolution
 

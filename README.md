@@ -333,7 +333,7 @@ For each rule:
 All specified fields match? → Return this rule (first match wins)
     │
     ▼
-No rules match → Skip message (stays in INBOX)
+No rules match → Leave in Place (stays in INBOX)
 ```
 
 ## Components
