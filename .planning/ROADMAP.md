@@ -144,7 +144,9 @@ Plans:
   3. matchRule() correctly evaluates deliveredTo glob, visibility multi-select, and readStatus conditions
   4. needsEnvelopeData() skip logic confirmed — rules using unavailable envelope data are skipped gracefully
   5. VERIFICATION.md produced confirming all 6 MATCH requirements satisfied
-**Plans:** 0 plans
+**Plans:** 1 plan
+Plans:
+- [ ] 12-01-PLAN.md — Audit MATCH-01 through MATCH-06 against source code and produce formal 12-VERIFICATION.md
 
 ## Progress
 
@@ -164,4 +166,4 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12
 | 9. Restore Clobbered Features | v0.4 | 0/5 | Planned | - |
 | 10. Move Tracking | v0.4 | 4/4 | Complete    | 2026-04-13 |
 | 11. Pattern Detection & Proposed Rules | v0.4 | 3/3 | Complete    | 2026-04-13 |
-| 12. Retroactive Verification | v0.4 | 0/0 | Not started | - |
+| 12. Retroactive Verification | v0.4 | 0/1 | Not started | - |
