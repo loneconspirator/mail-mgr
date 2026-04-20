@@ -183,12 +183,11 @@ if (match.visibility !== undefined) {
 |---|-------|---------|---------------|
 | A1 | Visibility single-select is an acceptable interpretation of MATCH-04's "multi-select" wording | Pitfall 1 | User may want actual multi-select behavior where a rule matches multiple visibility types |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Visibility multi-select vs single-select**
+1. **Visibility multi-select vs single-select** (RESOLVED)
    - What we know: MATCH-04 says "multi-select field" but implementation uses single enum. The UI renders a standard dropdown. Each message can only have one visibility classification, so single-select covers the logical use case.
-   - What's unclear: Whether the user intentionally approved single-select as sufficient or expects the rule to accept an array of visibility values (e.g., "match if direct OR cc").
-   - Recommendation: Flag as PARTIAL in verification. If user confirms single-select is fine, mark as VERIFIED with note. If user wants multi-select, that's new implementation work (out of scope for this verification phase).
+   - **Resolution:** User confirmed single-select is acceptable. Each message has exactly one visibility value (direct/cc/bcc/list), so single-select is the correct design. Mark MATCH-04 as fully satisfied in verification.
 
 ## Sources
 
