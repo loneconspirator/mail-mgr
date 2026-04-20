@@ -71,7 +71,9 @@ Plans:
   2. Main rule list continues to show all rules including sender-only ones
   3. Priority Senders view shows all sender-only rules with "leave in inbox" action
   4. Blocked Senders view shows all sender-only rules with "delete" action
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 14-01-PLAN.md — Dispositions API client, Priority/Blocked nav tabs, sender list views with empty/error states
 **UI hint**: yes
 
 ### Phase 15: Folder-Grouped Views
@@ -119,6 +121,6 @@ Phases execute in numeric order: 13 → 14 → 15 → 16
 | 11. Pattern Detection & Proposed Rules | v0.4 | 3/3 | Complete | 2026-04-13 |
 | 12. Retroactive Verification | v0.4 | 1/1 | Complete | 2026-04-20 |
 | 13. Disposition Query API | v0.5 | 2/2 | Complete    | 2026-04-20 |
-| 14. Navigation Shell & Simple Views | v0.5 | 0/? | Not started | - |
+| 14. Navigation Shell & Simple Views | v0.5 | 0/1 | Planning | - |
 | 15. Archived Senders View | v0.5 | 0/? | Not started | - |
 | 16. Inline Sender Management | v0.5 | 0/? | Not started | - |
