@@ -108,6 +108,36 @@ describe('isSenderOnly', () => {
     const rule = makeRule({ match: { subject: 'hello' } });
     expect(isSenderOnly(rule)).toBe(false);
   });
+
+  it('returns false when deliveredTo also set', () => {
+    const rule = makeRule({ match: { sender: '*@test.com', deliveredTo: 'list@z.com' } });
+    expect(isSenderOnly(rule)).toBe(false);
+  });
+
+  it('returns false when visibility also set', () => {
+    const rule = makeRule({ match: { sender: '*@test.com', visibility: 'personal' } });
+    expect(isSenderOnly(rule)).toBe(false);
+  });
+
+  it('returns false when readStatus is read', () => {
+    const rule = makeRule({ match: { sender: '*@test.com', readStatus: 'read' } });
+    expect(isSenderOnly(rule)).toBe(false);
+  });
+
+  it('returns false when readStatus is unread', () => {
+    const rule = makeRule({ match: { sender: '*@test.com', readStatus: 'unread' } });
+    expect(isSenderOnly(rule)).toBe(false);
+  });
+
+  it('returns true when readStatus is any', () => {
+    const rule = makeRule({ match: { sender: '*@test.com', readStatus: 'any' } });
+    expect(isSenderOnly(rule)).toBe(true);
+  });
+
+  it('returns true when readStatus is undefined', () => {
+    const rule = makeRule({ match: { sender: '*@test.com' } });
+    expect(isSenderOnly(rule)).toBe(true);
+  });
 });
 
 // --- isValidDispositionType ---
@@ -157,6 +187,12 @@ describe('GET /api/dispositions', () => {
       makeRule({ id: 'r6', name: 'No Sender', match: { subject: 'alert' }, action: { type: 'skip' }, order: 5 }),
       // Rule 7: disabled sender-only -- should be included
       makeRule({ id: 'r7', name: 'Disabled F', match: { sender: 'f@test.com' }, action: { type: 'skip' }, enabled: false, order: 6 }),
+      // Rule 8: multi-criteria (sender + deliveredTo) -- should be excluded
+      makeRule({ id: 'r8', name: 'Multi Delivered', match: { sender: 'g@test.com', deliveredTo: 'list@z.com' }, action: { type: 'skip' }, order: 7 }),
+      // Rule 9: sender + readStatus any -- should be INCLUDED (any is same as undefined)
+      makeRule({ id: 'r9', name: 'ReadAny', match: { sender: 'h@test.com', readStatus: 'any' }, action: { type: 'skip' }, order: 8 }),
+      // Rule 10: sender + readStatus read -- should be EXCLUDED
+      makeRule({ id: 'r10', name: 'ReadSpecific', match: { sender: 'i@test.com', readStatus: 'read' }, action: { type: 'skip' }, order: 9 }),
     ]);
   }
 
@@ -165,16 +201,19 @@ describe('GET /api/dispositions', () => {
     const res = await app.inject({ method: 'GET', url: '/api/dispositions' });
     expect(res.statusCode).toBe(200);
     const body = res.json();
-    // r1, r2, r3, r4, r7 are sender-only (r5 has subject, r6 has no sender)
-    expect(body).toHaveLength(5);
+    // r1, r2, r3, r4, r7, r9 are sender-only (r5 has subject, r6 has no sender, r8 has deliveredTo, r10 has readStatus read)
+    expect(body).toHaveLength(6);
     const ids = body.map((r: any) => r.id);
     expect(ids).toContain('r1');
     expect(ids).toContain('r2');
     expect(ids).toContain('r3');
     expect(ids).toContain('r4');
     expect(ids).toContain('r7');
+    expect(ids).toContain('r9');
     expect(ids).not.toContain('r5');
     expect(ids).not.toContain('r6');
+    expect(ids).not.toContain('r8');
+    expect(ids).not.toContain('r10');
   });
 
   it('returns 200 with filtered rules when ?type=skip', async () => {
@@ -182,8 +221,8 @@ describe('GET /api/dispositions', () => {
     const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=skip' });
     expect(res.statusCode).toBe(200);
     const body = res.json();
-    // r1 (skip, enabled) and r7 (skip, disabled)
-    expect(body).toHaveLength(2);
+    // r1 (skip, enabled), r7 (skip, disabled), r9 (skip, readStatus any)
+    expect(body).toHaveLength(3);
     expect(body.every((r: any) => r.action.type === 'skip')).toBe(true);
   });
 

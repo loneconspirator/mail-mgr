@@ -10,7 +10,10 @@ export function isSenderOnly(rule: Rule): boolean {
   return (
     m.sender !== undefined &&
     m.recipient === undefined &&
-    m.subject === undefined
+    m.subject === undefined &&
+    m.deliveredTo === undefined &&
+    m.visibility === undefined &&
+    (m.readStatus === undefined || m.readStatus === 'any')
   );
 }
 
