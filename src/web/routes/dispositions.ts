@@ -1,21 +1,12 @@
 import type { FastifyInstance } from 'fastify';
-import type { Rule } from '../../config/schema.js';
 import type { ServerDeps } from '../server.js';
+
+// Re-export for backward compatibility; also used locally in registerDispositionRoutes
+export { isSenderOnly } from '../../rules/sender-utils.js';
+import { isSenderOnly } from '../../rules/sender-utils.js';
 
 const DISPOSITION_TYPES = ['skip', 'delete', 'review', 'move'] as const;
 type DispositionType = typeof DISPOSITION_TYPES[number];
-
-export function isSenderOnly(rule: Rule): boolean {
-  const m = rule.match;
-  return (
-    m.sender !== undefined &&
-    m.recipient === undefined &&
-    m.subject === undefined &&
-    m.deliveredTo === undefined &&
-    m.visibility === undefined &&
-    (m.readStatus === undefined || m.readStatus === 'any')
-  );
-}
 
 export function isValidDispositionType(type: string): type is DispositionType {
   return (DISPOSITION_TYPES as readonly string[]).includes(type);
