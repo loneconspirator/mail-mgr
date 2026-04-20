@@ -57,7 +57,7 @@ Full details: [milestones/v0.5-ROADMAP.md](milestones/v0.5-ROADMAP.md)
 
 - [x] **Phase 17: Configuration & Folder Lifecycle** - Schema, config validation, and IMAP folder auto-creation (completed 2026-04-20)
 - [x] **Phase 18: Safety Predicates & Activity Log** - MoveTracker exclusions, shared predicates, action registry, logging extension (completed 2026-04-20)
-- [ ] **Phase 19: Action Processing Core** - Sender extraction, rule CRUD, message routing for all four action types
+- [x] **Phase 19: Action Processing Core** - Sender extraction, rule CRUD, message routing for all four action types (completed 2026-04-20)
 - [ ] **Phase 20: Monitoring & Startup Recovery** - Poll integration, priority processing, startup pre-scan, always-empty invariant
 - [ ] **Phase 21: Idempotency & Edge Cases** - Duplicate prevention, undo-with-no-match, crash recovery resilience
 
@@ -108,7 +108,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 19-01-PLAN.md — TDD: ActionFolderProcessor with sender extraction, rule CRUD, conflict resolution, message routing
+- [x] 19-01-PLAN.md — TDD: ActionFolderProcessor with sender extraction, rule CRUD, conflict resolution, message routing
 
 ### Phase 20: Monitoring & Startup Recovery
 **Goal**: Action folders are continuously monitored and any pending messages are processed on startup before normal operation
@@ -122,7 +122,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 19-01-PLAN.md — TDD: ActionFolderProcessor with sender extraction, rule CRUD, conflict resolution, message routing
+- [x] 19-01-PLAN.md — TDD: ActionFolderProcessor with sender extraction, rule CRUD, conflict resolution, message routing
 
 ### Phase 21: Idempotency & Edge Cases
 **Goal**: Processing is resilient to duplicates, missing rules, and crash recovery scenarios
@@ -159,7 +159,7 @@ Plans:
 | 16. Inline Sender Management | v0.5 | 1/1 | Complete | 2026-04-20 |
 | 17. Configuration & Folder Lifecycle | v0.6 | 2/2 | Complete    | 2026-04-20 |
 | 18. Safety Predicates & Activity Log | v0.6 | 2/2 | Complete    | 2026-04-20 |
-| 19. Action Processing Core | v0.6 | 0/1 | Not started | - |
+| 19. Action Processing Core | v0.6 | 1/1 | Complete    | 2026-04-20 |
 | 20. Monitoring & Startup Recovery | v0.6 | 0/? | Not started | - |
 | 21. Idempotency & Edge Cases | v0.6 | 0/? | Not started | - |
 
@@ -168,7 +168,7 @@ Plans:
 **Goal:** [To be planned]
 **Requirements**: TBD
 **Depends on:** Phase 21
-**Plans:** 2/2 plans complete
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 22 to break down)
