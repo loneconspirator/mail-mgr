@@ -1,9 +1,9 @@
 ---
 phase: 13
 slug: disposition-query-api
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-19
 ---
 
@@ -17,18 +17,18 @@ created: 2026-04-19
 
 | Property | Value |
 |----------|-------|
-| **Framework** | jest 29.x (via ts-jest) |
-| **Config file** | jest.config.ts |
-| **Quick run command** | `npx jest --testPathPattern disposition` |
-| **Full suite command** | `npx jest` |
+| **Framework** | vitest 4.0.18 |
+| **Config file** | vitest.config.ts |
+| **Quick run command** | `npx vitest run test/unit/web/dispositions.test.ts` |
+| **Full suite command** | `npx vitest run` |
 | **Estimated runtime** | ~5 seconds |
 
 ---
 
 ## Sampling Rate
 
-- **After every task commit:** Run `npx jest --testPathPattern disposition`
-- **After every plan wave:** Run `npx jest`
+- **After every task commit:** Run `npx vitest run test/unit/web/dispositions.test.ts`
+- **After every plan wave:** Run `npx vitest run`
 - **Before `/gsd-verify-work`:** Full suite must be green
 - **Max feedback latency:** 5 seconds
 
@@ -38,7 +38,7 @@ created: 2026-04-19
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 13-01-01 | 01 | 1 | VIEW-05 | — | N/A | unit | `npx jest --testPathPattern disposition` | ❌ W0 | ⬜ pending |
+| 13-01-01 | 01 | 1 | VIEW-05 | — | N/A | unit | `npx vitest run test/unit/web/dispositions.test.ts` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -46,7 +46,7 @@ created: 2026-04-19
 
 ## Wave 0 Requirements
 
-- [ ] `src/web/routes/__tests__/dispositions.test.ts` — test stubs for VIEW-05
+- [ ] `test/unit/web/dispositions.test.ts` — test stubs for VIEW-05
 - [ ] Shared fixtures for rule test data with various match criteria
 
 *If none: "Existing infrastructure covers all phase requirements."*
