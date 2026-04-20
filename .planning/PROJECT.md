@@ -44,6 +44,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Navigation tabs for disposition views alongside main rule list — v0.5
 - ✓ Priority and Blocked sender views (flat list by disposition) — v0.5
 - ✓ Reviewed and Archived sender views (folder-grouped accordion layout) — v0.5
+- ✓ Inline sender add/remove from disposition views without rule editor — v0.5
 
 ## Current Milestone: v0.5 Sender Disposition Views
 
@@ -132,4 +133,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-20 after Phase 15 complete — Folder-Grouped Views (Reviewed/Archived sender views with folder-grouped accordion layout)*
+*Last updated: 2026-04-20 after Phase 16 complete — Inline Sender Management (add/remove senders directly from disposition views)*
