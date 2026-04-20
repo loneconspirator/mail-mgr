@@ -44,7 +44,7 @@ Full details: [milestones/v0.4-ROADMAP.md](milestones/v0.4-ROADMAP.md)
 
 - [x] **Phase 13: Disposition Query API** - Backend endpoint to filter sender-only rules by disposition type (gap closure in progress) (completed 2026-04-20)
 - [x] **Phase 14: Navigation Shell & Simple Views** - Tab navigation and Priority/Blocked sender views (completed 2026-04-20)
-- [ ] **Phase 15: Folder-Grouped Views** - Reviewed and Archived senders, both grouped by destination folder
+- [x] **Phase 15: Folder-Grouped Views** - Reviewed and Archived senders, both grouped by destination folder (completed 2026-04-20)
 - [ ] **Phase 16: Inline Sender Management** - Add/remove senders from views, folder picker for archived, link to rule editor
 
 ## Phase Details
@@ -88,7 +88,7 @@ Plans:
   5. Both views share the same folder-grouped display pattern
 **Plans**: 1 plan
 Plans:
-- [ ] 15-01-PLAN.md — Reviewed/Archived nav tabs, folder-grouped accordion views, shared renderFolderGroupedView
+- [x] 15-01-PLAN.md — Reviewed/Archived nav tabs, folder-grouped accordion views, shared renderFolderGroupedView
 **UI hint**: yes
 
 ### Phase 16: Inline Sender Management
@@ -124,5 +124,5 @@ Phases execute in numeric order: 13 → 14 → 15 → 16
 | 12. Retroactive Verification | v0.4 | 1/1 | Complete | 2026-04-20 |
 | 13. Disposition Query API | v0.5 | 2/2 | Complete    | 2026-04-20 |
 | 14. Navigation Shell & Simple Views | v0.5 | 1/1 | Complete    | 2026-04-20 |
-| 15. Folder-Grouped Views | v0.5 | 0/1 | Planning | - |
+| 15. Folder-Grouped Views | v0.5 | 1/1 | Complete    | 2026-04-20 |
 | 16. Inline Sender Management | v0.5 | 0/? | Not started | - |
