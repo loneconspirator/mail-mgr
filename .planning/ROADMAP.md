@@ -30,7 +30,7 @@ Full details: [milestones/v0.3-ROADMAP.md](milestones/v0.3-ROADMAP.md)
 - [ ] **Phase 9: Restore Clobbered Features** - Recover sweep, batch, folders, review config, and UI features destroyed by Phase 7 commit f453be7
 - [x] **Phase 10: Move Tracking** - UID snapshot diffing to detect user-initiated moves and log signals to SQLite (completed 2026-04-13)
 - [x] **Phase 11: Pattern Detection & Proposed Rules** - Statistical analysis on move signals, proposed rules API and UI, approve/modify/dismiss workflow (completed 2026-04-13)
-- [ ] **Phase 12: Retroactive Verification (Gap Closure)** - Verify orphaned phases 6-9 code with formal VERIFICATION.md artifacts; no new implementation
+- [x] **Phase 12: Retroactive Verification (Gap Closure)** - Verify orphaned phases 6-9 code with formal VERIFICATION.md artifacts; no new implementation (completed 2026-04-20)
 
 ## Phase Details
 
@@ -144,9 +144,9 @@ Plans:
   3. matchRule() correctly evaluates deliveredTo glob, visibility multi-select, and readStatus conditions
   4. needsEnvelopeData() skip logic confirmed — rules using unavailable envelope data are skipped gracefully
   5. VERIFICATION.md produced confirming all 6 MATCH requirements satisfied
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 12-01-PLAN.md — Audit MATCH-01 through MATCH-06 against source code and produce formal 12-VERIFICATION.md
+- [x] 12-01-PLAN.md — Audit MATCH-01 through MATCH-06 against source code and produce formal 12-VERIFICATION.md
 
 ## Progress
 
@@ -166,4 +166,4 @@ Phases execute in numeric order: 6 -> 7 -> 8 -> 9 -> 10 -> 11 -> 12
 | 9. Restore Clobbered Features | v0.4 | 0/5 | Planned | - |
 | 10. Move Tracking | v0.4 | 4/4 | Complete    | 2026-04-13 |
 | 11. Pattern Detection & Proposed Rules | v0.4 | 3/3 | Complete    | 2026-04-13 |
-| 12. Retroactive Verification | v0.4 | 0/1 | Not started | - |
+| 12. Retroactive Verification | v0.4 | 1/1 | Complete    | 2026-04-20 |
