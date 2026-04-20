@@ -86,7 +86,9 @@ Plans:
   3. Each entry displays the sender pattern and its target folder
   4. Reviewed Senders uses default Review folder when rule doesn't specify explicit destination
   5. Both views share the same folder-grouped display pattern
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 15-01-PLAN.md — Reviewed/Archived nav tabs, folder-grouped accordion views, shared renderFolderGroupedView
 **UI hint**: yes
 
 ### Phase 16: Inline Sender Management
@@ -122,5 +124,5 @@ Phases execute in numeric order: 13 → 14 → 15 → 16
 | 12. Retroactive Verification | v0.4 | 1/1 | Complete | 2026-04-20 |
 | 13. Disposition Query API | v0.5 | 2/2 | Complete    | 2026-04-20 |
 | 14. Navigation Shell & Simple Views | v0.5 | 1/1 | Complete    | 2026-04-20 |
-| 15. Archived Senders View | v0.5 | 0/? | Not started | - |
+| 15. Folder-Grouped Views | v0.5 | 0/1 | Planning | - |
 | 16. Inline Sender Management | v0.5 | 0/? | Not started | - |
