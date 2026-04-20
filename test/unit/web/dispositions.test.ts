@@ -54,7 +54,7 @@ function makeDeps(config: Config): ServerDeps {
   return {
     configRepo,
     activityLog,
-    monitor: {
+    getMonitor: () => ({
       getState() {
         return {
           connectionStatus: 'connected',
@@ -62,7 +62,16 @@ function makeDeps(config: Config): ServerDeps {
           messagesProcessed: 42,
         };
       },
-    } as any,
+    } as any),
+    getSweeper: () => undefined,
+    getFolderCache: () => ({
+      hasFolder: () => true,
+      getTree: async () => [],
+      getResponse: () => ({ folders: [], cachedAt: new Date().toISOString(), stale: false }),
+    } as any),
+    getBatchEngine: () => ({
+      getState: () => ({ status: 'idle' }),
+    } as any),
   };
 }
 

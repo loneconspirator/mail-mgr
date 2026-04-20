@@ -20,6 +20,7 @@ import { registerReviewConfigRoutes } from './routes/review-config.js';
 import { registerFolderRoutes } from './routes/folders.js';
 import { registerBatchRoutes } from './routes/batch.js';
 import { registerProposedRuleRoutes } from './routes/proposed-rules.js';
+import { registerDispositionRoutes } from './routes/dispositions.js';
 
 export interface ServerDeps {
   configRepo: ConfigRepository;
@@ -67,6 +68,7 @@ export function buildServer(deps: ServerDeps): FastifyInstance {
   registerFolderRoutes(app, deps);
   registerBatchRoutes(app, deps);
   registerProposedRuleRoutes(app, deps);
+  registerDispositionRoutes(app, deps);
 
   return app;
 }
