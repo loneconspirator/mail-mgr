@@ -171,7 +171,10 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   async status(path: string): Promise<{ messages: number; unseen: number }> {
     if (!this.flow) throw new Error('Not connected');
     const result = await this.flow.status(path, { messages: true, unseen: true });
-    return { messages: result.messages, unseen: result.unseen };
+    return {
+      messages: result.messages ?? 0,
+      unseen: result.unseen ?? 0,
+    };
   }
 
   async createMailbox(path: string | string[]): Promise<void> {
