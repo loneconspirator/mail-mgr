@@ -63,6 +63,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 1. **Prevent redundant proposed rules and handle rule ordering conflicts** — Block approval of rules that duplicate existing criteria; warn when shadowed by higher-priority rules with reorder option
 2. **Populate delivered-to field in proposed rules and modify form** — Include delivered-to as matcher in proposals, prepopulate in Modify modal
+3. **Add optional folder finder to New Rule modal** — Reviewed disposition's New Rule modal should include an optional folder picker/browser
 
 ### Blockers/Concerns
 
