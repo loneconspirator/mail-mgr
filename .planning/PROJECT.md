@@ -41,9 +41,21 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Pattern detection (statistical analysis on logged moves, threshold-based candidate identification) — v0.4
 - ✓ Proposed rules (UI for approving, modifying, or dismissing learned patterns) — v0.4
 
+## Current Milestone: v0.5 Sender Disposition Views
+
+**Goal:** Surface sender-centric filtered views of routing rules organized by disposition, with inline add/remove management.
+
+**Target features:**
+- Priority Senders view (sender-only rules with "leave in inbox" action)
+- Blocked Senders view (sender-only rules with "delete" action)
+- Reviewed Senders view (sender-only rules with "route to Review" action)
+- Archived Senders view (sender-only rules with "move to folder" action, grouped by destination folder)
+- Navigation tabs/sections alongside main rule list with links to full rule editor
+- Inline sender add/remove without navigating to rule editor
+
 ### Active
 
-(None yet — next milestone will define active requirements)
+(Defined in REQUIREMENTS.md for v0.5)
 
 ### Out of Scope
 
@@ -116,4 +128,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-20 after v0.4 milestone — Extended Matchers & Behavioral Learning shipped*
+*Last updated: 2026-04-19 after v0.5 milestone started — Sender Disposition Views*

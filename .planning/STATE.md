@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.4
-milestone_name: Extended Matchers & Behavioral Learning
-status: executing
-last_updated: "2026-04-20T01:28:59.929Z"
-last_activity: 2026-04-20
+milestone: v0.5
+milestone_name: Sender Disposition Views
+status: planning
+last_updated: "2026-04-19"
+last_activity: 2026-04-19
 progress:
-  total_phases: 7
-  completed_phases: 3
-  total_plans: 8
-  completed_plans: 8
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -24,12 +24,10 @@ See: .planning/PROJECT.md (updated 2026-04-11)
 
 ## Current Position
 
-Phase: 12
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-04-20
-
-Progress: [██████████] 100%
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-19 — Milestone v0.5 started
 
 ## Performance Metrics
 
