@@ -119,10 +119,13 @@ Plans:
   2. Action folder processing takes priority over regular arrival routing
   3. On startup, pending messages in action folders are processed before entering normal monitoring loop
   4. Action folders are always empty after processing completes (no messages left behind)
-**Plans**: 1 plan
+**Plans**: 2 plans
 
 Plans:
-- [x] 19-01-PLAN.md — TDD: ActionFolderProcessor with sender extraction, rule CRUD, conflict resolution, message routing
+- [ ] 20-01-PLAN.md — TDD: ActionFolderPoller class with poll/scan/always-empty logic
+- [ ] 20-02-PLAN.md — Wire poller into index.ts lifecycle (startup, config, shutdown)
+
+
 
 ### Phase 21: Idempotency & Edge Cases
 **Goal**: Processing is resilient to duplicates, missing rules, and crash recovery scenarios
