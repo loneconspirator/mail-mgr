@@ -13,3 +13,14 @@ server:
   host: 0.0.0.0
 
 rules: []
+
+# Action Folders - drag messages here to create sender rules
+actionFolders:
+  enabled: true
+  prefix: Actions
+  pollInterval: 15  # seconds
+  folders:
+    vip: "\u2B50 VIP Sender"
+    block: "\uD83D\uDEAB Block Sender"
+    undoVip: "\u21A9\uFE0F Undo VIP"
+    unblock: "\u2705 Unblock Sender"

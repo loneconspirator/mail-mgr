@@ -7,7 +7,6 @@
 - ✅ **v0.3 Folder Taxonomy & Batch Filing** — Phases 1-5 (shipped 2026-04-11)
 - ✅ **v0.4 Extended Matchers & Behavioral Learning** — Phases 6-12 (shipped 2026-04-20)
 - ✅ **v0.5 Sender Disposition Views** — Phases 13-16 (shipped 2026-04-20)
-- 🚧 **v0.6 Action Folders** — Phases 17-21 (in progress)
 
 ## Phases
 
@@ -51,79 +50,6 @@ Full details: [milestones/v0.5-ROADMAP.md](milestones/v0.5-ROADMAP.md)
 
 </details>
 
-### 🚧 v0.6 Action Folders (In Progress)
-
-**Milestone Goal:** Let users manage sender dispositions directly from their mail client by moving messages to special IMAP folders.
-
-- [ ] **Phase 17: Configuration & Folder Lifecycle** - Schema, config validation, and IMAP folder auto-creation
-- [ ] **Phase 18: Safety Predicates & Activity Log** - MoveTracker exclusions, shared predicates, action registry, logging extension
-- [ ] **Phase 19: Action Processing Core** - Sender extraction, rule CRUD, message routing for all four action types
-- [ ] **Phase 20: Monitoring & Startup Recovery** - Poll integration, priority processing, startup pre-scan, always-empty invariant
-- [ ] **Phase 21: Idempotency & Edge Cases** - Duplicate prevention, undo-with-no-match, crash recovery resilience
-
-## Phase Details
-
-### Phase 17: Configuration & Folder Lifecycle
-**Goal**: System has a validated configuration for action folders and creates the folder hierarchy on startup
-**Depends on**: Nothing (first phase of v0.6)
-**Requirements**: CONF-01, CONF-02, CONF-03, FOLD-01
-**Success Criteria** (what must be TRUE):
-  1. Action folder prefix and individual folder names are configurable with sensible defaults
-  2. Action folders feature can be enabled/disabled via config and poll interval is configurable
-  3. System creates the full `Actions/` folder hierarchy on startup if folders do not already exist
-  4. Folder creation uses array-form paths (separator-safe) and handles already-exists gracefully
-**Plans**: 2 plans
-
-Plans:
-- [ ] 17-01-PLAN.md — Zod config schema, ConfigRepository methods, default.yml
-- [ ] 17-02-PLAN.md — Folder creation logic, ImapClient update, startup wiring
-
-### Phase 18: Safety Predicates & Activity Log
-**Goal**: MoveTracker correctly ignores action folder moves and the system has reusable building blocks for action processing
-**Depends on**: Phase 17
-**Requirements**: LOG-01, LOG-02, EXT-01
-**Success Criteria** (what must be TRUE):
-  1. Action folder paths are excluded from MoveTracker's user-move detection (isSystemMove recognizes action-folder source)
-  2. Activity log entries with source `action-folder` include rule_id and rule_name fields
-  3. Action types are defined in a registry pattern where each entry specifies folder name, processing function, and message destination
-  4. Shared `findSenderRule(sender, actionType)` predicate exists for reuse by processor
-**Plans**: TBD
-
-### Phase 19: Action Processing Core
-**Goal**: Users can VIP, block, undo-VIP, and unblock senders by moving messages to action folders
-**Depends on**: Phase 18
-**Requirements**: PROC-01, PROC-02, PROC-03, PROC-04, PROC-05, PROC-06, PROC-09, PROC-10, RULE-01, RULE-02, RULE-03, RULE-04
-**Success Criteria** (what must be TRUE):
-  1. Moving a message to VIP Sender creates a sender-only skip rule and returns message to INBOX
-  2. Moving a message to Block Sender creates a sender-only delete rule and moves message to Trash
-  3. Moving a message to Undo VIP or Unblock Sender removes the matching rule and returns message to INBOX
-  4. Created rules pass Zod validation, have UUID + descriptive name, append at end of list, and appear in disposition views
-  5. Messages with unparseable From address are moved to INBOX with an error logged
-  6. If a conflicting sender-only rule exists, it is removed and replaced; both removal and creation are logged
-  7. If a more specific rule exists for the same sender (multi-field match), it is preserved and the action folder rule is appended after it
-**Plans**: TBD
-
-### Phase 20: Monitoring & Startup Recovery
-**Goal**: Action folders are continuously monitored and any pending messages are processed on startup before normal operation
-**Depends on**: Phase 19
-**Requirements**: MON-01, MON-02, FOLD-02, FOLD-03
-**Success Criteria** (what must be TRUE):
-  1. Action folders are polled via STATUS checks alongside INBOX/Review monitoring
-  2. Action folder processing takes priority over regular arrival routing
-  3. On startup, pending messages in action folders are processed before entering normal monitoring loop
-  4. Action folders are always empty after processing completes (no messages left behind)
-**Plans**: TBD
-
-### Phase 21: Idempotency & Edge Cases
-**Goal**: Processing is resilient to duplicates, missing rules, and crash recovery scenarios
-**Depends on**: Phase 20
-**Requirements**: PROC-07, PROC-08
-**Success Criteria** (what must be TRUE):
-  1. Processing the same message twice does not create duplicate rules (idempotent check-before-create)
-  2. Undo operations with no matching rule still move the message to its destination without error
-  3. Crash-recovery scenario (rule created but message not yet moved) is handled correctly on restart
-**Plans**: TBD
-
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -144,18 +70,3 @@ Plans:
 | 14. Navigation Shell & Simple Views | v0.5 | 1/1 | Complete | 2026-04-20 |
 | 15. Folder-Grouped Views | v0.5 | 1/1 | Complete | 2026-04-20 |
 | 16. Inline Sender Management | v0.5 | 1/1 | Complete | 2026-04-20 |
-| 17. Configuration & Folder Lifecycle | v0.6 | 0/2 | Not started | - |
-| 18. Safety Predicates & Activity Log | v0.6 | 0/? | Not started | - |
-| 19. Action Processing Core | v0.6 | 0/? | Not started | - |
-| 20. Monitoring & Startup Recovery | v0.6 | 0/? | Not started | - |
-| 21. Idempotency & Edge Cases | v0.6 | 0/? | Not started | - |
-
-### Phase 22: Add folder rename UI to settings page with IMAP folder rename
-
-**Goal:** [To be planned]
-**Requirements**: TBD
-**Depends on:** Phase 21
-**Plans:** 0 plans
-
-Plans:
-- [ ] TBD (run /gsd-plan-phase 22 to break down)

@@ -14,6 +14,7 @@ export {
   deleteActionSchema,
   sweepConfigSchema,
   reviewConfigSchema,
+  actionFolderConfigSchema,
   visibilityMatchEnum,
   readStatusMatchEnum,
 } from './schema.js';
@@ -31,6 +32,7 @@ export type {
   EmailMatch,
   SweepConfig,
   ReviewConfig,
+  ActionFolderConfig,
   VisibilityMatch,
   ReadStatusMatch,
 } from './schema.js';
