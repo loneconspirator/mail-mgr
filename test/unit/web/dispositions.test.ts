@@ -42,6 +42,7 @@ function makeRule(overrides: Partial<Config['rules'][0]> = {}): Config['rules'][
 let tmpDir: string;
 let configPath: string;
 let activityLog: ActivityLog;
+let app: ReturnType<typeof buildServer> | undefined;
 
 function writeConfig(config: Config): void {
   fs.writeFileSync(configPath, stringifyYaml(config), 'utf-8');
@@ -72,6 +73,8 @@ function makeDeps(config: Config): ServerDeps {
     getBatchEngine: () => ({
       getState: () => ({ status: 'idle' }),
     } as any),
+    getMoveTracker: () => undefined,
+    getProposalStore: () => ({} as any),
   };
 }
 
@@ -81,7 +84,9 @@ beforeEach(() => {
   activityLog = new ActivityLog(path.join(tmpDir, 'test.db'));
 });
 
-afterEach(() => {
+afterEach(async () => {
+  await app?.close();
+  app = undefined;
   activityLog.close();
   fs.rmSync(tmpDir, { recursive: true, force: true });
 });
@@ -197,7 +202,7 @@ describe('GET /api/dispositions', () => {
   }
 
   it('returns 200 with array of only sender-only rules when no type param', async () => {
-    const app = buildServer(makeDeps(makeTestConfig()));
+    app = buildServer(makeDeps(makeTestConfig()));
     const res = await app.inject({ method: 'GET', url: '/api/dispositions' });
     expect(res.statusCode).toBe(200);
     const body = res.json();
@@ -217,7 +222,7 @@ describe('GET /api/dispositions', () => {
   });
 
   it('returns 200 with filtered rules when ?type=skip', async () => {
-    const app = buildServer(makeDeps(makeTestConfig()));
+    app = buildServer(makeDeps(makeTestConfig()));
     const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=skip' });
     expect(res.statusCode).toBe(200);
     const body = res.json();
@@ -227,7 +232,7 @@ describe('GET /api/dispositions', () => {
   });
 
   it('returns 200 with filtered rules when ?type=delete', async () => {
-    const app = buildServer(makeDeps(makeTestConfig()));
+    app = buildServer(makeDeps(makeTestConfig()));
     const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=delete' });
     expect(res.statusCode).toBe(200);
     const body = res.json();
@@ -236,7 +241,7 @@ describe('GET /api/dispositions', () => {
   });
 
   it('returns 200 with filtered rules when ?type=review', async () => {
-    const app = buildServer(makeDeps(makeTestConfig()));
+    app = buildServer(makeDeps(makeTestConfig()));
     const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=review' });
     expect(res.statusCode).toBe(200);
     const body = res.json();
@@ -245,7 +250,7 @@ describe('GET /api/dispositions', () => {
   });
 
   it('returns 200 with filtered rules when ?type=move', async () => {
-    const app = buildServer(makeDeps(makeTestConfig()));
+    app = buildServer(makeDeps(makeTestConfig()));
     const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=move' });
     expect(res.statusCode).toBe(200);
     const body = res.json();
@@ -254,7 +259,7 @@ describe('GET /api/dispositions', () => {
   });
 
   it('returns 400 with error message when ?type=invalid', async () => {
-    const app = buildServer(makeDeps(makeTestConfig()));
+    app = buildServer(makeDeps(makeTestConfig()));
     const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=invalid' });
     expect(res.statusCode).toBe(400);
     const body = res.json();
@@ -267,14 +272,14 @@ describe('GET /api/dispositions', () => {
       makeRule({ id: 'r1', match: { sender: 'a@test.com', subject: 'x' }, action: { type: 'skip' }, order: 0 }),
       makeRule({ id: 'r2', match: { subject: 'alert' }, action: { type: 'skip' }, order: 1 }),
     ]);
-    const app = buildServer(makeDeps(config));
+    app = buildServer(makeDeps(config));
     const res = await app.inject({ method: 'GET', url: '/api/dispositions' });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual([]);
   });
 
   it('excludes multi-criteria rules from all responses', async () => {
-    const app = buildServer(makeDeps(makeTestConfig()));
+    app = buildServer(makeDeps(makeTestConfig()));
     const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=delete' });
     const body = res.json();
     // r5 is sender+subject delete, should NOT appear
@@ -283,7 +288,7 @@ describe('GET /api/dispositions', () => {
   });
 
   it('includes disabled sender-only rules in results', async () => {
-    const app = buildServer(makeDeps(makeTestConfig()));
+    app = buildServer(makeDeps(makeTestConfig()));
     const res = await app.inject({ method: 'GET', url: '/api/dispositions' });
     const body = res.json();
     const ids = body.map((r: any) => r.id);

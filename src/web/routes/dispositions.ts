@@ -26,8 +26,8 @@ export function registerDispositionRoutes(app: FastifyInstance, deps: ServerDeps
     const rules = deps.configRepo.getRules();
     const senderOnly = rules.filter(isSenderOnly);
 
-    const query = request.query as Record<string, string>;
-    const type = query.type;
+    const raw = (request.query as Record<string, unknown>).type;
+    const type = typeof raw === 'string' ? raw : undefined;
 
     if (type !== undefined) {
       if (!isValidDispositionType(type)) {
