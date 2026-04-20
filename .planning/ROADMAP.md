@@ -51,7 +51,7 @@ Full details: [milestones/v0.5-ROADMAP.md](milestones/v0.5-ROADMAP.md)
 
 </details>
 
-### 🚧 v0.6 Action Folders (In Progress)
+### v0.6 Action Folders (In Progress)
 
 **Milestone Goal:** Let users manage sender dispositions directly from their mail client by moving messages to special IMAP folders.
 
@@ -87,7 +87,11 @@ Plans:
   2. Activity log entries with source `action-folder` include rule_id and rule_name fields
   3. Action types are defined in a registry pattern where each entry specifies folder name, processing function, and message destination
   4. Shared `findSenderRule(sender, actionType)` predicate exists for reuse by processor
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 18-01-PLAN.md — Extend isSystemMove and logActivity source union for action-folder
+- [ ] 18-02-PLAN.md — Action type registry and sender-utils extraction
 
 ### Phase 19: Action Processing Core
 **Goal**: Users can VIP, block, undo-VIP, and unblock senders by moving messages to action folders
@@ -145,7 +149,7 @@ Plans:
 | 15. Folder-Grouped Views | v0.5 | 1/1 | Complete | 2026-04-20 |
 | 16. Inline Sender Management | v0.5 | 1/1 | Complete | 2026-04-20 |
 | 17. Configuration & Folder Lifecycle | v0.6 | 2/2 | Complete    | 2026-04-20 |
-| 18. Safety Predicates & Activity Log | v0.6 | 0/? | Not started | - |
+| 18. Safety Predicates & Activity Log | v0.6 | 0/2 | Not started | - |
 | 19. Action Processing Core | v0.6 | 0/? | Not started | - |
 | 20. Monitoring & Startup Recovery | v0.6 | 0/? | Not started | - |
 | 21. Idempotency & Edge Cases | v0.6 | 0/? | Not started | - |
