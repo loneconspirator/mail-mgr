@@ -36,6 +36,9 @@ export async function ensureActionFolders(
   ];
 
   for (const entry of folderEntries) {
+    // NOTE: uses '/' as path separator — matches Gmail/most providers.
+    // Servers using '.' as delimiter will fail the status() check and
+    // trigger repeated (harmless but noisy) creation attempts.
     const fullPath = `${config.prefix}/${entry.name}`;
     const exists = await folderExists(client, fullPath);
     if (exists) {
