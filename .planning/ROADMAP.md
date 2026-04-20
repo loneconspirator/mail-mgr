@@ -45,7 +45,7 @@ Full details: [milestones/v0.4-ROADMAP.md](milestones/v0.4-ROADMAP.md)
 - [x] **Phase 13: Disposition Query API** - Backend endpoint to filter sender-only rules by disposition type (gap closure in progress) (completed 2026-04-20)
 - [x] **Phase 14: Navigation Shell & Simple Views** - Tab navigation and Priority/Blocked sender views (completed 2026-04-20)
 - [x] **Phase 15: Folder-Grouped Views** - Reviewed and Archived senders, both grouped by destination folder (completed 2026-04-20)
-- [ ] **Phase 16: Inline Sender Management** - Add/remove senders from views, folder picker for archived, link to rule editor
+- [x] **Phase 16: Inline Sender Management** - Add/remove senders from views, folder picker for archived, link to rule editor (completed 2026-04-20)
 
 ## Phase Details
 
@@ -102,7 +102,7 @@ Plans:
   4. Each entry in a disposition view has a link/button to open its full rule in the rule editor
 **Plans**: 1 plan
 Plans:
-- [ ] 16-01-PLAN.md — Add/remove sender inline, Edit Rule link, Add Sender modal with folder picker for Archived
+- [x] 16-01-PLAN.md — Add/remove sender inline, Edit Rule link, Add Sender modal with folder picker for Archived
 **UI hint**: yes
 
 ## Progress
@@ -127,4 +127,4 @@ Phases execute in numeric order: 13 → 14 → 15 → 16
 | 13. Disposition Query API | v0.5 | 2/2 | Complete    | 2026-04-20 |
 | 14. Navigation Shell & Simple Views | v0.5 | 1/1 | Complete    | 2026-04-20 |
 | 15. Folder-Grouped Views | v0.5 | 1/1 | Complete    | 2026-04-20 |
-| 16. Inline Sender Management | v0.5 | 0/1 | Not started | - |
+| 16. Inline Sender Management | v0.5 | 1/1 | Complete    | 2026-04-20 |
