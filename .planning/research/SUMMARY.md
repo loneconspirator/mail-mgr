@@ -32,7 +32,8 @@ No new dependencies. imapflow already exposes every IMAP primitive needed for ac
 - Restart recovery (pre-scan all action folders before poll timer starts)
 - Correct sender extraction (lowercase bare address, validated)
 - Idempotent rule creation/removal (check existing before creating)
-- Message destination routing (VIP/Undo VIP → archive, Block → Trash, Unblock → INBOX)
+- Message destination routing (VIP/Undo VIP/Unblock → INBOX, Block → Trash)
+- Conflict handling (replace conflicting sender-only rules, preserve more specific multi-field rules)
 - Activity logging with `'action-folder'` source
 - Descriptive auto-generated rule names (`"VIP: sender@example.com"`)
 - Error handling for malformed/missing From (move to INBOX, log, never leave in action folder)

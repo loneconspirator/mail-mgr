@@ -20,14 +20,16 @@ The system creates and monitors four folders under an `Actions/` prefix in the I
 
 | Folder | Effect on Rules | Message Destination |
 |--------|----------------|-------------------|
-| `Actions/VIP Sender` | Creates a sender-only `skip` rule (leave in inbox) for the message's From address | Archived to default archive folder |
+| `Actions/VIP Sender` | Creates a sender-only `skip` rule (leave in inbox) for the message's From address | Moved to INBOX |
 | `Actions/Block Sender` | Creates a sender-only `delete` rule for the message's From address | Moved to Trash |
-| `Actions/Undo VIP` | Removes any sender-only `skip` rule matching the message's From address | Archived to default archive folder |
+| `Actions/Undo VIP` | Removes any sender-only `skip` rule matching the message's From address | Moved to INBOX |
 | `Actions/Unblock Sender` | Removes any sender-only `delete` rule matching the message's From address | Moved to INBOX |
 
 **Duplicate prevention:** If a rule already exists for the target sender with the matching action type, no duplicate is created. The message is still moved to its destination.
 
 **No matching rule (undo operations):** If `Undo VIP` or `Unblock Sender` finds no matching rule to remove, the message is still moved to its destination. This is not an error.
+
+**Conflicting rules:** If a sender-only rule of a different type already exists for the same sender (e.g., a `delete` rule when the user VIP-s the sender), the conflicting rule is removed and the new rule is created. Both the removal and creation are logged to activity. If a more specific rule exists for the same sender (matching on additional fields beyond sender), it is preserved and the action folder rule is appended after it in the rule list.
 
 ### AF-02: Folder Lifecycle
 
