@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.5
-milestone_name: Sender Disposition Views
+milestone: v0.6
+milestone_name: Action Folders
 status: planning
-last_updated: "2026-04-20T17:45:02.955Z"
+last_updated: "2026-04-20"
 last_activity: 2026-04-20
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 5
-  completed_plans: 5
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -20,34 +20,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** Dramatically reduce inbox volume without losing visibility
-**Current focus:** v0.5 shipped — planning next milestone
+**Current focus:** v0.6 Action Folders — defining requirements
 
 ## Current Position
 
-Milestone: v0.5 shipped (2026-04-20)
-Status: Between milestones
-Last activity: 2026-04-20
-
-Progress: [██████████] 100%
-
-## Performance Metrics
-
-**Velocity:**
-
-- Total plans completed: 27 (v0.4)
-- Average duration: —
-- Total execution time: —
-
-**By Phase:**
-
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 13 | 2 | - | - |
-| 14 | 1 | - | - |
-| 15 | 1 | - | - |
-| 16 | 1 | - | - |
-
-*Updated after each plan completion*
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-20 — Milestone v0.6 started
 
 ## Accumulated Context
 

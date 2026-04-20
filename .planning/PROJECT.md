@@ -49,7 +49,18 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 
 ### Active
 
-(No active milestone — run `/gsd-new-milestone` to define next)
+## Current Milestone: v0.6 Action Folders
+
+**Goal:** Let users manage sender dispositions directly from their mail client by moving messages to special IMAP folders.
+
+**Target features:**
+- Action folder set (VIP Sender, Block Sender, Undo VIP, Unblock Sender) under configurable `Actions/` prefix
+- Automatic folder creation on startup, always-empty-after-processing, restart recovery
+- Sender extraction and standard sender-only rule creation/removal
+- Idempotent processing with duplicate prevention
+- Activity logging with `action-folder` source
+- Multi-folder monitoring integration (IDLE/poll alongside INBOX and Review)
+- Configurable folder names and extensible action type registry
 
 ### Out of Scope
 
@@ -125,4 +136,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-20 after v0.5 milestone — Sender Disposition Views shipped*
+*Last updated: 2026-04-20 after v0.6 milestone started — Action Folders*
