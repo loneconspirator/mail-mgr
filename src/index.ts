@@ -9,6 +9,7 @@ import type { ImapFlowLike } from './imap/index.js';
 import { FolderCache } from './folders/index.js';
 import { BatchEngine } from './batch/index.js';
 import { MoveTracker } from './tracking/index.js';
+import { ensureActionFolders } from './action-folders/index.js';
 import { SignalStore } from './tracking/signals.js';
 import { DestinationResolver } from './tracking/destinations.js';
 import { ProposalStore } from './tracking/proposals.js';
@@ -106,6 +107,18 @@ async function main(): Promise<void> {
     });
   });
 
+  // H-AF1: Re-create action folders when config changes (D-11)
+  configRepo.onActionFolderConfigChange(async (afConfig) => {
+    if (!afConfig.enabled) {
+      logger.info('Action folders disabled via config change');
+      return;
+    }
+    const ok = await ensureActionFolders(imapClient, afConfig, logger);
+    if (!ok) {
+      logger.warn('Action folder creation failed after config change — monitoring will not start');
+    }
+  });
+
   // H3: Stop/rebuild sweeper, monitor, and moveTracker on IMAP config change
   configRepo.onImapConfigChange(async (newConfig) => {
     if (sweeper) sweeper.stop();
@@ -159,6 +172,15 @@ async function main(): Promise<void> {
       logger,
     });
     sweeper.start();
+
+    // Re-ensure action folders on new IMAP connection
+    const reconnectAfConfig = configRepo.getActionFolderConfig();
+    if (reconnectAfConfig.enabled) {
+      const reconnectFoldersOk = await ensureActionFolders(newClient, reconnectAfConfig, logger);
+      if (!reconnectFoldersOk) {
+        logger.warn('Action folder creation failed after IMAP reconnect');
+      }
+    }
 
     // Rebuild MoveTracker with new client
     const newDestResolver = new DestinationResolver({
@@ -222,6 +244,16 @@ async function main(): Promise<void> {
 
   // H4b: Start sweeper after monitor (resolve trash folder now that IMAP is connected)
   await monitor.start();
+
+  // H-AF2: Ensure action folders exist (D-07: lazy on first monitoring start, D-10: after IMAP connect)
+  const afConfig = configRepo.getActionFolderConfig();
+  if (afConfig.enabled) {
+    const foldersOk = await ensureActionFolders(imapClient, afConfig, logger);
+    if (!foldersOk) {
+      logger.warn('Action folder creation failed — action folder monitoring will be disabled');
+    }
+  }
+
   const resolvedTrash = await imapClient.getSpecialUseFolder('\\Trash')
     ?? config.review.trashFolder;
   sweeper = new ReviewSweeper({
