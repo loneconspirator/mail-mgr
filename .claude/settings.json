@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "input=$(cat); echo \"$input\" >> /tmp/claude_hook_debug.log; echo \"$input\" | grep -qi '/gsd' && touch /tmp/claude_gsd_ran || true"
+        }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "if [ -f /tmp/claude_gsd_ran ] && git -C \"$CLAUDE_PROJECT_DIR\" status --porcelain | grep -q .; then echo 'REMINDER: You ran a gsd command and there are uncommitted changes — did you forget a git commit?'; fi; rm -f /tmp/claude_gsd_ran"
+        }]
+      }
+    ]
+  }
+}
