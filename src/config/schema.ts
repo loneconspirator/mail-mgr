@@ -126,6 +126,32 @@ export const reviewConfigSchema = z.object({
   moveTracking: moveTrackingConfigSchema.default(moveTrackingDefaults),
 });
 
+// --- Action folder config schema ---
+
+const actionFolderDefaults = {
+  enabled: true,
+  prefix: 'Actions',
+  pollInterval: 15,
+  folders: {
+    vip: '\u2B50 VIP Sender',
+    block: '\uD83D\uDEAB Block Sender',
+    undoVip: '\u21A9\uFE0F Undo VIP',
+    unblock: '\u2705 Unblock Sender',
+  },
+} as const;
+
+export const actionFolderConfigSchema = z.object({
+  enabled: z.boolean().default(true),
+  prefix: z.string().min(1).default('Actions'),
+  pollInterval: z.number().int().positive().default(15),
+  folders: z.object({
+    vip: z.string().min(1).default('\u2B50 VIP Sender'),
+    block: z.string().min(1).default('\uD83D\uDEAB Block Sender'),
+    undoVip: z.string().min(1).default('\u21A9\uFE0F Undo VIP'),
+    unblock: z.string().min(1).default('\u2705 Unblock Sender'),
+  }).default(actionFolderDefaults.folders),
+});
+
 // --- Full config schema ---
 
 export const configSchema = z.object({
@@ -133,6 +159,7 @@ export const configSchema = z.object({
   server: serverConfigSchema,
   rules: z.array(ruleSchema).default([]),
   review: reviewConfigSchema.default(reviewDefaults),
+  actionFolders: actionFolderConfigSchema.default(actionFolderDefaults),
 });
 
 // --- Inferred types ---
@@ -150,6 +177,7 @@ export type ImapAuth = z.infer<typeof imapAuthSchema>;
 export type ImapConfig = z.infer<typeof imapConfigSchema>;
 export type ServerConfig = z.infer<typeof serverConfigSchema>;
 export type Config = z.infer<typeof configSchema>;
+export type ActionFolderConfig = z.infer<typeof actionFolderConfigSchema>;
 export type MoveTrackingConfig = z.infer<typeof moveTrackingConfigSchema>;
 export type VisibilityMatch = z.infer<typeof visibilityMatchEnum>;
 export type ReadStatusMatch = z.infer<typeof readStatusMatchEnum>;

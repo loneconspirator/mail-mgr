@@ -1,7 +1,7 @@
 import crypto from 'node:crypto';
 import { loadConfig, saveConfig } from './loader.js';
-import { ruleSchema, imapConfigSchema, reviewConfigSchema } from './schema.js';
-import type { Config, Rule, ImapConfig, ReviewConfig } from './schema.js';
+import { ruleSchema, imapConfigSchema, reviewConfigSchema, actionFolderConfigSchema } from './schema.js';
+import type { Config, Rule, ImapConfig, ReviewConfig, ActionFolderConfig } from './schema.js';
 
 export class ConfigRepository {
   private config: Config;
@@ -9,6 +9,7 @@ export class ConfigRepository {
   private rulesListeners: Array<(rules: Rule[]) => void> = [];
   private imapListeners: Array<(config: Config) => Promise<void>> = [];
   private reviewListeners: Array<(config: ReviewConfig) => Promise<void>> = [];
+  private actionFolderListeners: Array<(config: ActionFolderConfig) => Promise<void>> = [];
 
   constructor(configPath: string) {
     this.configPath = configPath;
@@ -124,6 +125,29 @@ export class ConfigRepository {
 
   onReviewConfigChange(fn: (config: ReviewConfig) => Promise<void>): void {
     this.reviewListeners.push(fn);
+  }
+
+  getActionFolderConfig(): ActionFolderConfig {
+    return this.config.actionFolders;
+  }
+
+  async updateActionFolderConfig(input: Partial<ActionFolderConfig>): Promise<ActionFolderConfig> {
+    const merged = { ...this.config.actionFolders, ...input };
+    const result = actionFolderConfigSchema.safeParse(merged);
+    if (!result.success) {
+      const issues = result.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`);
+      throw new Error(`Validation failed: ${issues.join(', ')}`);
+    }
+    this.config.actionFolders = result.data;
+    this.persist();
+    for (const fn of this.actionFolderListeners) {
+      await fn(result.data);
+    }
+    return result.data;
+  }
+
+  onActionFolderConfigChange(fn: (config: ActionFolderConfig) => Promise<void>): void {
+    this.actionFolderListeners.push(fn);
   }
 
   private notifyRulesChange(): void {
