@@ -105,7 +105,10 @@ Plans:
   5. Messages with unparseable From address are moved to INBOX with an error logged
   6. If a conflicting sender-only rule exists, it is removed and replaced; both removal and creation are logged
   7. If a more specific rule exists for the same sender (multi-field match), it is preserved and the action folder rule is appended after it
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 19-01-PLAN.md — TDD: ActionFolderProcessor with sender extraction, rule CRUD, conflict resolution, message routing
 
 ### Phase 20: Monitoring & Startup Recovery
 **Goal**: Action folders are continuously monitored and any pending messages are processed on startup before normal operation
@@ -116,7 +119,10 @@ Plans:
   2. Action folder processing takes priority over regular arrival routing
   3. On startup, pending messages in action folders are processed before entering normal monitoring loop
   4. Action folders are always empty after processing completes (no messages left behind)
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 19-01-PLAN.md — TDD: ActionFolderProcessor with sender extraction, rule CRUD, conflict resolution, message routing
 
 ### Phase 21: Idempotency & Edge Cases
 **Goal**: Processing is resilient to duplicates, missing rules, and crash recovery scenarios
@@ -126,7 +132,10 @@ Plans:
   1. Processing the same message twice does not create duplicate rules (idempotent check-before-create)
   2. Undo operations with no matching rule still move the message to its destination without error
   3. Crash-recovery scenario (rule created but message not yet moved) is handled correctly on restart
-**Plans**: TBD
+**Plans**: 1 plan
+
+Plans:
+- [ ] 19-01-PLAN.md — TDD: ActionFolderProcessor with sender extraction, rule CRUD, conflict resolution, message routing
 
 ## Progress
 
@@ -150,7 +159,7 @@ Plans:
 | 16. Inline Sender Management | v0.5 | 1/1 | Complete | 2026-04-20 |
 | 17. Configuration & Folder Lifecycle | v0.6 | 2/2 | Complete    | 2026-04-20 |
 | 18. Safety Predicates & Activity Log | v0.6 | 2/2 | Complete    | 2026-04-20 |
-| 19. Action Processing Core | v0.6 | 0/? | Not started | - |
+| 19. Action Processing Core | v0.6 | 0/1 | Not started | - |
 | 20. Monitoring & Startup Recovery | v0.6 | 0/? | Not started | - |
 | 21. Idempotency & Edge Cases | v0.6 | 0/? | Not started | - |
 
