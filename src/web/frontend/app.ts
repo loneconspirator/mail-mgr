@@ -312,7 +312,7 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true, forceCreate = fals
         }
       }
       overlay.remove();
-      renderRules();
+      navigate(currentPage);
     } catch (e: unknown) { toast(e instanceof Error ? e.message : String(e), true); }
   });
 }
@@ -353,15 +353,43 @@ async function renderDispositionView(type: 'skip' | 'delete', heading: string) {
 
     const table = document.createElement('table');
     table.innerHTML = `<thead><tr>
-      <th>Sender</th><th>Rule Name</th>
+      <th>Sender</th><th>Rule Name</th><th>Actions</th>
     </tr></thead>`;
     const tbody = document.createElement('tbody');
 
     for (const rule of rules) {
       const tr = document.createElement('tr');
+
+      const editLink = h('button', { className: 'disposition-edit-link' }, 'Edit Rule');
+      editLink.setAttribute('aria-label', `Edit rule for ${rule.match.sender ?? ''}`);
+      editLink.addEventListener('click', () => {
+        api.config.getEnvelopeStatus().then(status => {
+          openRuleModal(rule, status.envelopeHeader !== null);
+        }).catch(() => openRuleModal(rule, false));
+      });
+
+      const removeBtn = h('button', { className: 'btn btn-sm btn-danger' }, 'Remove');
+      removeBtn.addEventListener('click', async () => {
+        if (!confirm(`Remove sender "${rule.match.sender}"? This will delete the underlying rule.`)) return;
+        removeBtn.textContent = '...';
+        (removeBtn as HTMLButtonElement).disabled = true;
+        try {
+          await api.rules.delete(rule.id);
+          toast('Sender removed');
+          renderDispositionView(type, heading);
+        } catch (e: unknown) {
+          toast(`Failed to remove sender: ${e instanceof Error ? e.message : String(e)}`, true);
+          removeBtn.textContent = 'Remove';
+          (removeBtn as HTMLButtonElement).disabled = false;
+        }
+      });
+
+      const actionsCell = h('td', { className: 'disposition-actions' }, editLink, removeBtn);
+
       tr.append(
         h('td', {}, rule.match.sender ?? ''),
         h('td', { className: 'disposition-rule-name' }, rule.name ?? ''),
+        actionsCell,
       );
       tbody.append(tr);
     }
@@ -389,7 +417,7 @@ async function renderReviewedView() {
     renderFolderGroupedView(rules, 'Reviewed Senders', {
       heading: 'No reviewed senders',
       body: 'Sender-only rules with "review" action will appear here. Create a rule with a single sender match and Review action to add one.',
-    }, defaultFolder);
+    }, defaultFolder, renderReviewedView, 'review');
   } catch (e: unknown) {
     app.innerHTML = '';
     app.append(h('div', { className: 'empty' }, `Failed to load reviewed senders: ${e instanceof Error ? e.message : String(e)}`));
@@ -405,14 +433,14 @@ async function renderArchivedView() {
     renderFolderGroupedView(rules, 'Archived Senders', {
       heading: 'No archived senders',
       body: 'Sender-only rules with "move" action will appear here. Create a rule with a single sender match and Move action to add one.',
-    });
+    }, undefined, renderArchivedView, 'move');
   } catch (e: unknown) {
     app.innerHTML = '';
     app.append(h('div', { className: 'empty' }, `Failed to load archived senders: ${e instanceof Error ? e.message : String(e)}`));
   }
 }
 
-function renderFolderGroupedView(rules: Rule[], heading: string, emptyConfig: { heading: string; body: string }, defaultFolder?: string): void {
+function renderFolderGroupedView(rules: Rule[], heading: string, emptyConfig: { heading: string; body: string }, defaultFolder?: string, reRender?: () => void, viewType?: 'review' | 'move'): void {
   const app = $('#app');
   app.innerHTML = '';
 
@@ -464,14 +492,42 @@ function renderFolderGroupedView(rules: Rule[], heading: string, emptyConfig: { 
     const sendersDiv = h('div', { className: 'folder-group-senders' });
 
     const table = document.createElement('table');
-    table.innerHTML = `<thead><tr><th>Sender</th><th>Rule Name</th></tr></thead>`;
+    table.innerHTML = `<thead><tr><th>Sender</th><th>Rule Name</th><th>Actions</th></tr></thead>`;
     const tbody = document.createElement('tbody');
 
     for (const rule of folderRules) {
       const tr = document.createElement('tr');
+
+      const editLink = h('button', { className: 'disposition-edit-link' }, 'Edit Rule');
+      editLink.setAttribute('aria-label', `Edit rule for ${rule.match.sender ?? ''}`);
+      editLink.addEventListener('click', () => {
+        api.config.getEnvelopeStatus().then(status => {
+          openRuleModal(rule, status.envelopeHeader !== null);
+        }).catch(() => openRuleModal(rule, false));
+      });
+
+      const removeBtn = h('button', { className: 'btn btn-sm btn-danger' }, 'Remove');
+      removeBtn.addEventListener('click', async () => {
+        if (!confirm(`Remove sender "${rule.match.sender}"? This will delete the underlying rule.`)) return;
+        removeBtn.textContent = '...';
+        (removeBtn as HTMLButtonElement).disabled = true;
+        try {
+          await api.rules.delete(rule.id);
+          toast('Sender removed');
+          if (reRender) { reRender(); } else { navigate(currentPage); }
+        } catch (e: unknown) {
+          toast(`Failed to remove sender: ${e instanceof Error ? e.message : String(e)}`, true);
+          removeBtn.textContent = 'Remove';
+          (removeBtn as HTMLButtonElement).disabled = false;
+        }
+      });
+
+      const actionsCell = h('td', { className: 'disposition-actions' }, editLink, removeBtn);
+
       tr.append(
         h('td', {}, rule.match.sender ?? ''),
         h('td', { className: 'disposition-rule-name' }, rule.name ?? ''),
+        actionsCell,
       );
       tbody.append(tr);
     }

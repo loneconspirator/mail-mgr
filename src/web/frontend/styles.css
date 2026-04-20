@@ -658,3 +658,25 @@ tr:last-child td { border-bottom: none; }
   margin-left: 4px;
   vertical-align: middle;
 }
+
+.disposition-edit-link {
+  color: #2563eb;
+  text-decoration: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+}
+.disposition-edit-link:hover {
+  text-decoration: underline;
+}
+.disposition-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+.empty .btn {
+  margin-top: 1rem;
+}
