@@ -70,6 +70,15 @@ td { font-size: 0.9rem; }
 
 tr:last-child td { border-bottom: none; }
 
+/* Disposition view: muted rule name */
+.disposition-rule-name {
+  color: #888;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Buttons */
 .btn {
   padding: 0.4rem 0.8rem;

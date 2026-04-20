@@ -58,6 +58,8 @@ function navigate(page: string) {
   if (page === 'rules') renderRules();
   else if (page === 'activity') renderActivity();
   else if (page === 'settings') renderSettings();
+  else if (page === 'priority') renderDispositionView('skip', 'Priority Senders');
+  else if (page === 'blocked') renderDispositionView('delete', 'Blocked Senders');
   else if (page === 'batch') renderBatch();
   else if (page === 'proposed') renderProposed();
   updateProposedBadge();
@@ -311,6 +313,64 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true, forceCreate = fals
       renderRules();
     } catch (e: unknown) { toast(e instanceof Error ? e.message : String(e), true); }
   });
+}
+
+// --- Disposition Views (Priority / Blocked) ---
+async function renderDispositionView(type: 'skip' | 'delete', heading: string) {
+  const app = $('#app');
+  app.innerHTML = '<p>Loading...</p>';
+
+  const emptyConfig: Record<string, { heading: string; body: string }> = {
+    skip: {
+      heading: 'No priority senders',
+      body: 'Sender-only rules with "skip" action will appear here. Create a rule with a single sender match and Skip action to add one.',
+    },
+    delete: {
+      heading: 'No blocked senders',
+      body: 'Sender-only rules with "delete" action will appear here. Create a rule with a single sender match and Delete action to add one.',
+    },
+  };
+
+  try {
+    const rules = await api.dispositions.list(type);
+    app.innerHTML = '';
+
+    const toolbar = h('div', { className: 'toolbar' },
+      h('h2', {}, heading),
+    );
+    app.append(toolbar);
+
+    if (rules.length === 0) {
+      const empty = emptyConfig[type];
+      app.append(h('div', { className: 'empty' },
+        h('h3', {}, empty.heading),
+        h('p', {}, empty.body),
+      ));
+      return;
+    }
+
+    const table = document.createElement('table');
+    table.innerHTML = `<thead><tr>
+      <th>Sender</th><th>Rule Name</th>
+    </tr></thead>`;
+    const tbody = document.createElement('tbody');
+
+    for (const rule of rules) {
+      const tr = document.createElement('tr');
+      tr.append(
+        h('td', {}, rule.match.sender ?? ''),
+        h('td', { className: 'disposition-rule-name' }, rule.name ?? ''),
+      );
+      tbody.append(tr);
+    }
+
+    table.append(tbody);
+    app.append(table);
+  } catch (e: unknown) {
+    app.innerHTML = '';
+    const viewName = type === 'skip' ? 'priority senders' : 'blocked senders';
+    app.append(h('div', { className: 'empty' }, `Failed to load ${viewName}: ${e instanceof Error ? e.message : String(e)}`));
+  }
 }
 
 // --- Activity Page ---
