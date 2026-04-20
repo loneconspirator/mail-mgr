@@ -1,0 +1,70 @@
+# Requirements: Mail Manager
+
+**Defined:** 2026-04-19
+**Core Value:** Dramatically reduce inbox volume without losing visibility
+
+## v0.5 Requirements
+
+Requirements for Sender Disposition Views milestone. Each maps to roadmap phases.
+
+### Disposition Views
+
+- [ ] **VIEW-01**: User can see a Priority Senders list showing all sender-only rules with "leave in inbox" action
+- [ ] **VIEW-02**: User can see a Blocked Senders list showing all sender-only rules with "delete" action
+- [ ] **VIEW-03**: User can see a Reviewed Senders list showing all sender-only rules with "route to Review" action
+- [ ] **VIEW-04**: User can see an Archived Senders list showing all sender-only rules with "move to folder" action, grouped by destination folder
+- [ ] **VIEW-05**: Rules with multiple match criteria do not appear in disposition views (sender-only filter)
+
+### Inline Management
+
+- [ ] **MGMT-01**: User can add a sender from any disposition view, creating a sender-only rule with the appropriate action
+- [ ] **MGMT-02**: User can remove a sender from any disposition view, deleting the underlying rule
+- [ ] **MGMT-03**: User can select a destination folder when adding a sender to the Archived Senders view
+- [ ] **MGMT-04**: User can navigate from a disposition view entry to its full rule in the rule editor
+
+### Navigation
+
+- [ ] **NAV-01**: Disposition views are accessible as tabs or sections alongside the main rule list
+- [ ] **NAV-02**: Main rule list continues to show all rules including sender-only ones
+
+## Future Requirements
+
+### Visual Enhancements
+
+- **VIS-01**: Retired folder indicator for rules targeting zz_old/ destinations in Archived Senders view
+
+## Out of Scope
+
+| Feature | Reason |
+|---------|--------|
+| New data structures for disposition storage | Views are query-based filters over existing rules — no separate storage |
+| New rule types | Disposition views surface existing sender-only rules, no new rule schemas |
+| Bulk operations on disposition views | Keep v0.5 simple — add/remove one sender at a time |
+| Disposition views for multi-criteria rules | By design — views only show simple sender-only patterns |
+
+## Traceability
+
+Which phases cover which requirements. Updated during roadmap creation.
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| VIEW-01 | — | Pending |
+| VIEW-02 | — | Pending |
+| VIEW-03 | — | Pending |
+| VIEW-04 | — | Pending |
+| VIEW-05 | — | Pending |
+| MGMT-01 | — | Pending |
+| MGMT-02 | — | Pending |
+| MGMT-03 | — | Pending |
+| MGMT-04 | — | Pending |
+| NAV-01 | — | Pending |
+| NAV-02 | — | Pending |
+
+**Coverage:**
+- v0.5 requirements: 11 total
+- Mapped to phases: 0
+- Unmapped: 11
+
+---
+*Requirements defined: 2026-04-19*
+*Last updated: 2026-04-19 after initial definition*
