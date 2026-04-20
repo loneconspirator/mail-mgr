@@ -29,6 +29,12 @@ function esc(s: string): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+/** Map internal action type names to user-facing display labels. */
+function actionLabel(type: string): string {
+  if (type === 'skip') return 'Leave in Place';
+  return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
 function toast(msg: string, isError = false) {
   const el = h('div', { className: `toast${isError ? ' error' : ''}` }, msg);
   document.body.append(el);
@@ -104,7 +110,7 @@ async function renderRules() {
       tr.dataset.id = rule.id;
 
       const matchStr = generateBehaviorDescription(rule.match);
-      const actionStr = 'folder' in rule.action ? `${rule.action.type} \u2192 ${rule.action.folder}` : rule.action.type;
+      const actionStr = 'folder' in rule.action ? `${actionLabel(rule.action.type)} \u2192 ${rule.action.folder}` : actionLabel(rule.action.type);
 
       const toggleLabel = document.createElement('label');
       toggleLabel.className = 'toggle';
@@ -194,7 +200,7 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true, forceCreate = fals
     <div class="form-group"><label>Action</label><select id="m-action-type">
       <option value="move" ${rule?.action?.type === 'move' ? 'selected' : ''}>Move</option>
       <option value="review" ${rule?.action?.type === 'review' ? 'selected' : ''}>Review</option>
-      <option value="skip" ${rule?.action?.type === 'skip' ? 'selected' : ''}>Skip</option>
+      <option value="skip" ${rule?.action?.type === 'skip' ? 'selected' : ''}>Leave in Place</option>
       <option value="delete" ${rule?.action?.type === 'delete' ? 'selected' : ''}>Delete</option>
     </select></div>
     <div class="form-group" id="m-folder-group"><label>Folder</label><div id="m-folder-picker"></div></div>
@@ -437,7 +443,7 @@ async function renderDispositionView(type: 'skip' | 'delete', heading: string) {
   const emptyConfig: Record<string, { heading: string; body: string }> = {
     skip: {
       heading: 'No priority senders',
-      body: 'Sender-only rules with "skip" action will appear here. Create a rule with a single sender match and Skip action to add one.',
+      body: 'Sender-only rules with "Leave in Place" action will appear here. Create a rule with a single sender match and Leave in Place action to add one.',
     },
     delete: {
       heading: 'No blocked senders',
@@ -1208,7 +1214,7 @@ function renderBatchExecuting(app: HTMLElement, state: BatchStatusResponse): voi
   const movedSpan = h('span', {});
   movedSpan.textContent = 'Moved: ' + state.moved;
   const skippedSpan = h('span', {});
-  skippedSpan.textContent = 'Skipped: ' + state.skipped;
+  skippedSpan.textContent = 'Left in Place: ' + state.skipped;
   const errorsSpan = h('span', { className: state.errors > 0 ? 'error-count' : '' });
   errorsSpan.textContent = 'Errors: ' + state.errors;
   counts.append(movedSpan, skippedSpan, errorsSpan);
@@ -1236,7 +1242,7 @@ function renderBatchExecuting(app: HTMLElement, state: BatchStatusResponse): voi
         const newPct = s.totalMessages > 0 ? (s.processed / s.totalMessages * 100) : 0;
         progressFill.style.width = newPct + '%';
         movedSpan.textContent = 'Moved: ' + s.moved;
-        skippedSpan.textContent = 'Skipped: ' + s.skipped;
+        skippedSpan.textContent = 'Left in Place: ' + s.skipped;
         errorsSpan.textContent = 'Errors: ' + s.errors;
         errorsSpan.className = s.errors > 0 ? 'error-count' : '';
       } else {
@@ -1278,7 +1284,7 @@ function renderBatchResults(app: HTMLElement, state: BatchStatusResponse): void 
   movedItem.append(h('div', { className: 'stat-value' }, String(state.moved)), h('div', { className: 'stat-label' }, 'MOVED'));
 
   const skippedItem = h('div', { className: 'stat-item' });
-  skippedItem.append(h('div', { className: 'stat-value' }, String(state.skipped)), h('div', { className: 'stat-label' }, 'SKIPPED'));
+  skippedItem.append(h('div', { className: 'stat-value' }, String(state.skipped)), h('div', { className: 'stat-label' }, 'LEFT IN PLACE'));
 
   const errorsItem = h('div', { className: 'stat-item' });
   const errorsValue = h('div', { className: 'stat-value' }, String(state.errors));
@@ -1426,7 +1432,7 @@ function renderProposalCard(p: ProposedRuleCard): HTMLElement {
 
       if (err instanceof ApiError && err.conflict) {
         const conflict = err.conflict;
-        const ruleName = conflict.rule.name || `Rule: ${conflict.rule.match.sender || '?'} → ${conflict.rule.action.folder || conflict.rule.action.type}`;
+        const ruleName = conflict.rule.name || `Rule: ${conflict.rule.match.sender || '?'} → ${conflict.rule.action.folder || actionLabel(conflict.rule.action.type)}`;
         const notice = h('div', { className: 'proposal-conflict-notice' });
 
         if (conflict.type === 'exact') {
@@ -1492,7 +1498,7 @@ function renderProposalCard(p: ProposedRuleCard): HTMLElement {
 
       if (err instanceof ApiError && err.conflict) {
         const conflict = err.conflict;
-        const ruleName = conflict.rule.name || `Rule: ${conflict.rule.match.sender || '?'} → ${conflict.rule.action.folder || conflict.rule.action.type}`;
+        const ruleName = conflict.rule.name || `Rule: ${conflict.rule.match.sender || '?'} → ${conflict.rule.action.folder || actionLabel(conflict.rule.action.type)}`;
         const notice = h('div', { className: 'proposal-conflict-notice' });
 
         if (conflict.type === 'exact') {
