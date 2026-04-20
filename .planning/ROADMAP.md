@@ -72,7 +72,11 @@ Full details: [milestones/v0.5-ROADMAP.md](milestones/v0.5-ROADMAP.md)
   2. Action folders feature can be enabled/disabled via config and poll interval is configurable
   3. System creates the full `Actions/` folder hierarchy on startup if folders do not already exist
   4. Folder creation uses array-form paths (separator-safe) and handles already-exists gracefully
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 17-01-PLAN.md — Zod config schema, ConfigRepository methods, default.yml
+- [ ] 17-02-PLAN.md — Folder creation logic, ImapClient update, startup wiring
 
 ### Phase 18: Safety Predicates & Activity Log
 **Goal**: MoveTracker correctly ignores action folder moves and the system has reusable building blocks for action processing
@@ -140,7 +144,7 @@ Full details: [milestones/v0.5-ROADMAP.md](milestones/v0.5-ROADMAP.md)
 | 14. Navigation Shell & Simple Views | v0.5 | 1/1 | Complete | 2026-04-20 |
 | 15. Folder-Grouped Views | v0.5 | 1/1 | Complete | 2026-04-20 |
 | 16. Inline Sender Management | v0.5 | 1/1 | Complete | 2026-04-20 |
-| 17. Configuration & Folder Lifecycle | v0.6 | 0/? | Not started | - |
+| 17. Configuration & Folder Lifecycle | v0.6 | 0/2 | Not started | - |
 | 18. Safety Predicates & Activity Log | v0.6 | 0/? | Not started | - |
 | 19. Action Processing Core | v0.6 | 0/? | Not started | - |
 | 20. Monitoring & Startup Recovery | v0.6 | 0/? | Not started | - |
