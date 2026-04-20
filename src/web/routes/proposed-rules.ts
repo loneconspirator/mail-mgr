@@ -49,7 +49,7 @@ export function registerProposedRuleRoutes(app: FastifyInstance, deps: ServerDep
   });
 
   // POST /api/proposed-rules/:id/approve - create real rule from proposal
-  app.post<{ Params: { id: string }; Querystring: { insertBefore?: string } }>('/api/proposed-rules/:id/approve', async (request, reply) => {
+  app.post<{ Params: { id: string }; Querystring: { insertBefore?: string; asReview?: string } }>('/api/proposed-rules/:id/approve', async (request, reply) => {
     const id = parseInt(request.params.id, 10);
     if (isNaN(id)) return reply.status(400).send({ error: 'Invalid proposal ID' });
 
@@ -65,6 +65,7 @@ export function registerProposedRuleRoutes(app: FastifyInstance, deps: ServerDep
     );
 
     const insertBefore = (request.query as { insertBefore?: string }).insertBefore;
+    const asReview = (request.query as { asReview?: string }).asReview === 'true';
 
     if (conflict) {
       // Exact matches cannot be overridden by reordering
@@ -104,7 +105,9 @@ export function registerProposedRuleRoutes(app: FastifyInstance, deps: ServerDep
         const newRule = deps.configRepo.addRule({
           name: `Auto: ${proposal.sender}`,
           match,
-          action: { type: 'move', folder: proposal.destinationFolder },
+          action: asReview
+            ? { type: 'review' as const, folder: proposal.destinationFolder }
+            : { type: 'move' as const, folder: proposal.destinationFolder },
           enabled: true,
           order: targetRule.order,
         });
@@ -121,7 +124,9 @@ export function registerProposedRuleRoutes(app: FastifyInstance, deps: ServerDep
     const newRule = deps.configRepo.addRule({
       name: `Auto: ${proposal.sender}`,
       match,
-      action: { type: 'move', folder: proposal.destinationFolder },
+      action: asReview
+        ? { type: 'review' as const, folder: proposal.destinationFolder }
+        : { type: 'move' as const, folder: proposal.destinationFolder },
       enabled: true,
       order: deps.configRepo.nextOrder(),
     });

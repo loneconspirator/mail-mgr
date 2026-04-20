@@ -86,6 +86,8 @@ export const api = {
     list: () => request<ProposedRuleCard[]>('/api/proposed-rules'),
     approve: (id: number) => request<Rule>(`/api/proposed-rules/${id}/approve`, { method: 'POST' }),
     approveInsertBefore: (id: number, beforeRuleId: string) => request<Rule>(`/api/proposed-rules/${id}/approve?insertBefore=${beforeRuleId}`, { method: 'POST' }),
+    approveAsReview: (id: number) => request<Rule>(`/api/proposed-rules/${id}/approve?asReview=true`, { method: 'POST' }),
+    approveAsReviewInsertBefore: (id: number, beforeRuleId: string) => request<Rule>(`/api/proposed-rules/${id}/approve?asReview=true&insertBefore=${beforeRuleId}`, { method: 'POST' }),
     dismiss: (id: number) => request<void>(`/api/proposed-rules/${id}/dismiss`, { method: 'POST' }),
     getModifyData: (id: number) => request<{ proposalId: number; sender: string; envelopeRecipient: string | null; destinationFolder: string; sourceFolder: string }>(`/api/proposed-rules/${id}/modify`, { method: 'POST' }),
     markApproved: (id: number, ruleId: string) => request<void>(`/api/proposed-rules/${id}/mark-approved`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ruleId }) }),
