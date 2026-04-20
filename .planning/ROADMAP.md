@@ -42,7 +42,7 @@ Full details: [milestones/v0.4-ROADMAP.md](milestones/v0.4-ROADMAP.md)
 
 **Milestone Goal:** Surface sender-centric filtered views of routing rules organized by disposition, with inline add/remove management.
 
-- [ ] **Phase 13: Disposition Query API** - Backend endpoint to filter sender-only rules by disposition type
+- [ ] **Phase 13: Disposition Query API** - Backend endpoint to filter sender-only rules by disposition type (gap closure in progress)
 - [ ] **Phase 14: Navigation Shell & Simple Views** - Tab navigation and Priority/Blocked sender views
 - [ ] **Phase 15: Folder-Grouped Views** - Reviewed and Archived senders, both grouped by destination folder
 - [ ] **Phase 16: Inline Sender Management** - Add/remove senders from views, folder picker for archived, link to rule editor
@@ -57,9 +57,10 @@ Full details: [milestones/v0.4-ROADMAP.md](milestones/v0.4-ROADMAP.md)
   1. API endpoint returns rules filtered to sender-only (single sender match criterion, no other matchers)
   2. API can filter by disposition type (skip, delete, review, move) and returns only matching rules
   3. Rules with multiple match criteria (recipient, visibility, subject, etc.) are excluded from results
-**Plans**: 1 plan
+**Plans**: 2 plans
 Plans:
-- [ ] 13-01-PLAN.md — TDD isSenderOnly predicate, GET /api/dispositions route, server registration
+- [x] 13-01-PLAN.md — TDD isSenderOnly predicate, GET /api/dispositions route, server registration
+- [ ] 13-02-PLAN.md — Gap closure: complete isSenderOnly for all 6 match fields, code review fixes
 
 ### Phase 14: Navigation Shell & Simple Views
 **Goal**: Users can navigate to disposition views and see their Priority and Blocked sender lists
@@ -117,7 +118,7 @@ Phases execute in numeric order: 13 → 14 → 15 → 16
 | 10. Move Tracking | v0.4 | 4/4 | Complete | 2026-04-13 |
 | 11. Pattern Detection & Proposed Rules | v0.4 | 3/3 | Complete | 2026-04-13 |
 | 12. Retroactive Verification | v0.4 | 1/1 | Complete | 2026-04-20 |
-| 13. Disposition Query API | v0.5 | 0/1 | Not started | - |
+| 13. Disposition Query API | v0.5 | 1/2 | Gap closure | - |
 | 14. Navigation Shell & Simple Views | v0.5 | 0/? | Not started | - |
 | 15. Archived Senders View | v0.5 | 0/? | Not started | - |
 | 16. Inline Sender Management | v0.5 | 0/? | Not started | - |
