@@ -23,6 +23,8 @@ Requirements for Action Folders milestone. Each maps to roadmap phases.
 - [ ] **PROC-06**: If no parseable From address, message is moved to INBOX and error is logged
 - [ ] **PROC-07**: Processing the same message twice does not create duplicate rules
 - [ ] **PROC-08**: Undo operations with no matching rule still move the message to its destination
+- [ ] **PROC-09**: If any existing sender-only rule for the same sender conflicts with the intended action, the conflicting rule is removed and the new rule is created. Both the removal and creation are logged to activity.
+- [ ] **PROC-10**: If a more specific rule exists for the same sender (matching on additional fields beyond sender), it is preserved and the action folder rule is appended after it in the rule list.
 
 ### Rule Integration
 
@@ -78,35 +80,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOLD-01 | — | Pending |
-| FOLD-02 | — | Pending |
-| FOLD-03 | — | Pending |
-| PROC-01 | — | Pending |
-| PROC-02 | — | Pending |
-| PROC-03 | — | Pending |
-| PROC-04 | — | Pending |
-| PROC-05 | — | Pending |
-| PROC-06 | — | Pending |
-| PROC-07 | — | Pending |
-| PROC-08 | — | Pending |
-| RULE-01 | — | Pending |
-| RULE-02 | — | Pending |
-| RULE-03 | — | Pending |
-| RULE-04 | — | Pending |
-| MON-01 | — | Pending |
-| MON-02 | — | Pending |
-| LOG-01 | — | Pending |
-| LOG-02 | — | Pending |
-| CONF-01 | — | Pending |
-| CONF-02 | — | Pending |
-| CONF-03 | — | Pending |
-| EXT-01 | — | Pending |
+| FOLD-01 | Phase 17 | Pending |
+| FOLD-02 | Phase 20 | Pending |
+| FOLD-03 | Phase 20 | Pending |
+| PROC-01 | Phase 19 | Pending |
+| PROC-02 | Phase 19 | Pending |
+| PROC-03 | Phase 19 | Pending |
+| PROC-04 | Phase 19 | Pending |
+| PROC-05 | Phase 19 | Pending |
+| PROC-06 | Phase 19 | Pending |
+| PROC-07 | Phase 21 | Pending |
+| PROC-08 | Phase 21 | Pending |
+| PROC-09 | Phase 19 | Pending |
+| PROC-10 | Phase 19 | Pending |
+| RULE-01 | Phase 19 | Pending |
+| RULE-02 | Phase 19 | Pending |
+| RULE-03 | Phase 19 | Pending |
+| RULE-04 | Phase 19 | Pending |
+| MON-01 | Phase 20 | Pending |
+| MON-02 | Phase 20 | Pending |
+| LOG-01 | Phase 18 | Pending |
+| LOG-02 | Phase 18 | Pending |
+| CONF-01 | Phase 17 | Pending |
+| CONF-02 | Phase 17 | Pending |
+| CONF-03 | Phase 17 | Pending |
+| EXT-01 | Phase 18 | Pending |
 
 **Coverage:**
-- v0.6 requirements: 23 total
-- Mapped to phases: 0
-- Unmapped: 23 ⚠️
+- v0.6 requirements: 25 total
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-20*
-*Last updated: 2026-04-20 after initial definition*
+*Last updated: 2026-04-20 after roadmap creation*

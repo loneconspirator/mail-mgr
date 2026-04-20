@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v0.6
 milestone_name: Action Folders
-status: planning
+status: ready_to_plan
 last_updated: "2026-04-20"
 last_activity: 2026-04-20
 progress:
-  total_phases: 0
+  total_phases: 5
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,30 +20,36 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** Dramatically reduce inbox volume without losing visibility
-**Current focus:** v0.6 Action Folders — defining requirements
+**Current focus:** Phase 17 — Configuration & Folder Lifecycle
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-04-20 — Milestone v0.6 started
+Phase: 17 (1 of 5 in v0.6)
+Plan: 0 of ? in current phase
+Status: Ready to plan
+Last activity: 2026-04-20 — Roadmap created for v0.6 Action Folders
+
+Progress: [░░░░░░░░░░] 0%
 
 ## Accumulated Context
 
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
+Recent decisions affecting current work:
+
+- [v0.6 init]: VIP/Undo VIP destination is INBOX (not archived)
+- [v0.6 init]: Block destination is Trash; Unblock destination is INBOX
+- [v0.6 init]: MoveTracker safety must ship before processor code (Phase 18 before 19)
 
 ### Pending Todos
 
 1. **Prevent redundant proposed rules and handle rule ordering conflicts** — Block approval of rules that duplicate existing criteria; warn when shadowed by higher-priority rules with reorder option
 2. **Populate delivered-to field in proposed rules and modify form** — Include delivered-to as matcher in proposals, prepopulate in Modify modal
-4. ~~**Rename skip rule display to leave in place**~~ — DONE (quick-260420-dsq)
 
 ### Blockers/Concerns
 
-None active.
+- Verify `status()` can be called while INBOX is IDLEing (Phase 20 live check against Fastmail)
 
 ### Quick Tasks Completed
 
@@ -55,5 +61,5 @@ None active.
 ## Session Continuity
 
 Last session: 2026-04-20
-Last activity: 2026-04-20 - Completed quick task 260420-dsq: Rename skip rule display to leave in place
+Stopped at: Roadmap created for v0.6
 Resume file: None
