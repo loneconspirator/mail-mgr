@@ -471,6 +471,17 @@ tr:last-child td { border-bottom: none; }
 .dry-run-group-messages table { font-size: 0.85rem; box-shadow: none; border-radius: 0; }
 .dry-run-group.no-match .dry-run-group-name { color: #888; font-weight: 400; }
 .dry-run-group.no-match { margin-top: 0.5rem; border-top: 1px dashed #ccc; border-bottom: none; }
+
+/* Folder group accordion (Phase 15 — Reviewed/Archived views) */
+.folder-group { border-bottom: 1px solid #eee; }
+.folder-group:last-child { border-bottom: none; }
+.folder-group-header { display: flex; align-items: center; padding: 0.5rem 1rem; cursor: pointer; font-size: 0.9rem; border-radius: 3px; }
+.folder-group-header:hover { background: #f0f4ff; }
+.folder-group-toggle { width: 16px; text-align: center; flex-shrink: 0; font-size: 0.75rem; color: #888; margin-right: 0.5rem; }
+.folder-group-name { font-weight: 600; flex: 1; }
+.folder-group-count { font-size: 0.8rem; color: #888; margin-left: 0.5rem; }
+.folder-group-senders { margin: 0 1rem 0.5rem; }
+.folder-group-senders table { font-size: 0.85rem; box-shadow: none; border-radius: 0; }
 .batch-counts { display: flex; gap: 1rem; font-size: 0.85rem; color: #444; margin: 0.5rem 0; }
 .batch-counts .error-count { color: #dc2626; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
