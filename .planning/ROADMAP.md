@@ -43,7 +43,7 @@ Full details: [milestones/v0.4-ROADMAP.md](milestones/v0.4-ROADMAP.md)
 **Milestone Goal:** Surface sender-centric filtered views of routing rules organized by disposition, with inline add/remove management.
 
 - [x] **Phase 13: Disposition Query API** - Backend endpoint to filter sender-only rules by disposition type (gap closure in progress) (completed 2026-04-20)
-- [ ] **Phase 14: Navigation Shell & Simple Views** - Tab navigation and Priority/Blocked sender views
+- [x] **Phase 14: Navigation Shell & Simple Views** - Tab navigation and Priority/Blocked sender views (completed 2026-04-20)
 - [ ] **Phase 15: Folder-Grouped Views** - Reviewed and Archived senders, both grouped by destination folder
 - [ ] **Phase 16: Inline Sender Management** - Add/remove senders from views, folder picker for archived, link to rule editor
 
@@ -73,7 +73,7 @@ Plans:
   4. Blocked Senders view shows all sender-only rules with "delete" action
 **Plans**: 1 plan
 Plans:
-- [ ] 14-01-PLAN.md — Dispositions API client, Priority/Blocked nav tabs, sender list views with empty/error states
+- [x] 14-01-PLAN.md — Dispositions API client, Priority/Blocked nav tabs, sender list views with empty/error states
 **UI hint**: yes
 
 ### Phase 15: Folder-Grouped Views
@@ -121,6 +121,6 @@ Phases execute in numeric order: 13 → 14 → 15 → 16
 | 11. Pattern Detection & Proposed Rules | v0.4 | 3/3 | Complete | 2026-04-13 |
 | 12. Retroactive Verification | v0.4 | 1/1 | Complete | 2026-04-20 |
 | 13. Disposition Query API | v0.5 | 2/2 | Complete    | 2026-04-20 |
-| 14. Navigation Shell & Simple Views | v0.5 | 0/1 | Planning | - |
+| 14. Navigation Shell & Simple Views | v0.5 | 1/1 | Complete    | 2026-04-20 |
 | 15. Archived Senders View | v0.5 | 0/? | Not started | - |
 | 16. Inline Sender Management | v0.5 | 0/? | Not started | - |

@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Sender Disposition Views
 status: planning
-last_updated: "2026-04-20T05:11:12.021Z"
+last_updated: "2026-04-20T05:55:27.162Z"
 last_activity: 2026-04-20
 progress:
   total_phases: 4
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
+  completed_phases: 2
+  total_plans: 3
+  completed_plans: 3
   percent: 100
 ---
 
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-19)
 
 ## Current Position
 
-Phase: 14 of 16 (navigation shell & simple views)
+Phase: 15 of 16 (folder grouped views)
 Plan: Not started
 Status: Ready to plan
 Last activity: 2026-04-20
@@ -35,7 +35,7 @@ Progress: [░░░░░░░░░░] 0%
 
 **Velocity:**
 
-- Total plans completed: 24 (v0.4)
+- Total plans completed: 25 (v0.4)
 - Average duration: —
 - Total execution time: —
 
@@ -44,6 +44,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
 | 13 | 2 | - | - |
+| 14 | 1 | - | - |
 
 *Updated after each plan completion*
 
