@@ -1,5 +1,22 @@
 # Milestones
 
+## v0.5 Sender Disposition Views (Shipped: 2026-04-20)
+
+**Phases completed:** 4 phases, 5 plans, 10 tasks
+**Timeline:** 1 day (2026-04-19 → 2026-04-20)
+**Commits:** 66 | **Files changed:** 10 | **LOC delta:** +802 / -13
+
+**Key accomplishments:**
+
+- Disposition query API with isSenderOnly predicate filtering all 6 EmailMatch fields
+- Priority & Blocked sender views via shared renderDispositionView function
+- Reviewed & Archived folder-grouped accordion views with shared renderFolderGroupedView
+- Inline sender add/remove from any disposition view without opening rule editor
+- Tab navigation integrating disposition views alongside existing rule list
+- Folder picker integration for adding senders to Archived view
+
+---
+
 ## v0.4 Extended Matchers & Behavioral Learning (Shipped: 2026-04-20)
 
 **Phases completed:** 7 phases (6-12), 23 plans

@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.5
 milestone_name: Sender Disposition Views
 status: planning
-last_updated: "2026-04-20T07:14:16.733Z"
+last_updated: "2026-04-20T17:45:02.955Z"
 last_activity: 2026-04-20
 progress:
   total_phases: 4
@@ -17,19 +17,18 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-19)
+See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** Dramatically reduce inbox volume without losing visibility
-**Current focus:** v0.5 Sender Disposition Views — Phase 13 (Disposition Query API)
+**Current focus:** v0.5 shipped — planning next milestone
 
 ## Current Position
 
-Phase: 16 of 16 (inline sender management)
-Plan: Not started
-Status: Ready to plan
+Milestone: v0.5 shipped (2026-04-20)
+Status: Between milestones
 Last activity: 2026-04-20
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -55,9 +54,6 @@ Progress: [░░░░░░░░░░] 0%
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
-
-- v0.5 views are query-based filters over existing rules — no new storage needed
-- Existing rules API, rule CRUD, folder taxonomy API, and tree picker component are reused
 
 ### Pending Todos
 

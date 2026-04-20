@@ -2,7 +2,7 @@
 
 ## What This Is
 
-An automated email organization system that monitors IMAP mailboxes, routes messages using pattern-matching rules, and manages a two-stream intake model (Inbox for action items, Review for batch processing). Includes retroactive batch filing to reorganize existing messages with dry-run preview. Designed for individual use — one instance per mailbox, any IMAP provider. Web UI provides rule management with visual folder pickers, editable sweep settings, batch filing, activity logging, and system status.
+An automated email organization system that monitors IMAP mailboxes, routes messages using pattern-matching rules, and manages a two-stream intake model (Inbox for action items, Review for batch processing). Includes retroactive batch filing to reorganize existing messages with dry-run preview. Sender disposition views surface filtered sender lists by routing action (Priority, Blocked, Reviewed, Archived) with inline add/remove management. Designed for individual use — one instance per mailbox, any IMAP provider. Web UI provides rule management with visual folder pickers, editable sweep settings, batch filing, activity logging, sender disposition views, and system status.
 
 ## Core Value
 
@@ -45,22 +45,11 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Priority and Blocked sender views (flat list by disposition) — v0.5
 - ✓ Reviewed and Archived sender views (folder-grouped accordion layout) — v0.5
 - ✓ Inline sender add/remove from disposition views without rule editor — v0.5
-
-## Current Milestone: v0.5 Sender Disposition Views
-
-**Goal:** Surface sender-centric filtered views of routing rules organized by disposition, with inline add/remove management.
-
-**Target features:**
-- Priority Senders view (sender-only rules with "leave in inbox" action)
-- Blocked Senders view (sender-only rules with "delete" action)
-- Reviewed Senders view (sender-only rules with "route to Review" action)
-- Archived Senders view (sender-only rules with "move to folder" action, grouped by destination folder)
-- Navigation tabs/sections alongside main rule list with links to full rule editor
-- Inline sender add/remove without navigating to rule editor
+- ✓ Folder picker for adding senders to Archived view — v0.5
 
 ### Active
 
-(Defined in REQUIREMENTS.md for v0.5)
+(No active milestone — run `/gsd-new-milestone` to define next)
 
 ### Out of Scope
 
@@ -81,7 +70,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - **Database:** SQLite via better-sqlite3
 - **Web UI:** Vanilla HTML/CSS/JS SPA served by Fastify
 - **Testing:** Vitest with 478+ tests (unit + integration)
-- **Codebase:** ~6,200 LOC TypeScript across 50+ source files
+- **Codebase:** ~7,000 LOC TypeScript across 50+ source files
 - **Architecture:** Monitor loop polls IMAP, evaluates rules, executes actions, logs activity. Sweep runs periodically on Review folder. BatchEngine applies rules retroactively with chunked execution. Web server exposes REST API for UI.
 - **Key insight:** Folder structure is owned by the mail client/IMAP server, not this application. The system discovers what folders exist and uses them — it does not create or manage them.
 - **Design assumption:** Users may have years of accumulated mail with inconsistent organization. The folder taxonomy works with what exists, not imposing a new structure.
@@ -115,6 +104,8 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 | Read-modify-write transaction for proposal upsert | COALESCE in expression index proved unreliable | ✓ Good |
 | Retroactive verification for orphaned phases | Phase 12 formally verified code that existed but lacked audit trail | ✓ Good |
 | "Skip" displayed as "Leave in Place" in UI | "Skip" was ambiguous — "Leave in Place" clearly communicates the email stays untouched. Backend/API/storage retains `skip` as the canonical value; only UI display text changed. | ✓ Good |
+| Disposition views are query-based filters, not separate storage | Views filter existing sender-only rules by action type — no new data model, no sync issues, zero storage overhead | ✓ Good |
+| Shared render functions for disposition view types | renderDispositionView (flat) and renderFolderGroupedView (accordion) handle all 4 views via parameters, eliminating duplication | ✓ Good |
 
 ## Evolution
 
@@ -134,4 +125,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-20 after Phase 16 complete — Inline Sender Management (add/remove senders directly from disposition views)*
+*Last updated: 2026-04-20 after v0.5 milestone — Sender Disposition Views shipped*
