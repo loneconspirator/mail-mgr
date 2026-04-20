@@ -38,34 +38,23 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Read status matching (read/unread at evaluation time) — v0.4
 - ✓ UI updates for new match fields (envelope recipient glob, header visibility select, read status toggle) — v0.4
 - ✓ Move tracking on Inbox + Review (periodic folder scan, signal logging to SQLite) — v0.4
+- ✓ Pattern detection (statistical analysis on logged moves, threshold-based candidate identification) — v0.4
+- ✓ Proposed rules (UI for approving, modifying, or dismissing learned patterns) — v0.4
 
 ### Active
 
-- [ ] Pattern detection (statistical analysis on logged moves, threshold-based candidate identification)
-- [ ] Proposed rules (UI for approving, modifying, or dismissing learned patterns)
-
-## Current Milestone: v0.4 Extended Matchers and Behavioral Learning
-
-**Goal:** Expand the deterministic rule engine with new match fields (envelope recipient, header visibility, read status), then add behavioral learning that tracks user-initiated moves and proposes rules based on statistical patterns.
-
-**Target features:**
-- Envelope recipient matching (Delivered-To/X-Original-To extraction, glob syntax, +tag support)
-- Header visibility matching (direct/cc/bcc/list classification from To/CC/List-Id headers)
-- Read status matching (read/unread at evaluation time)
-- UI updates for new match fields (envelope recipient glob, header visibility multi-select, read status toggle)
-- Move tracking on Inbox + Review (periodic folder scan, signal logging)
-- Pattern detection (statistical analysis on logged moves, threshold-based candidate rules)
-- Proposed rules (UI for approving/modifying/dismissing learned patterns)
+(None yet — next milestone will define active requirements)
 
 ### Out of Scope
 
 - Folder creation/deletion from this app's UI — user manages folder structure in mail client
 - Folder retirement (moving to zz_old/) — handled manually in mail client
-- LLM classification — Tier 4, future milestone
-- Learning from user behavior — Tier 5, future milestone
-- Review digest notifications — Tier 6, future milestone
-- Multi-account support — Tier 6, future milestone
-- Mobile-responsive UI — Tier 6, future milestone
+- LLM classification — future milestone
+- Review digest notifications — future milestone
+- Multi-account support — future milestone
+- Mobile-responsive UI — future milestone
+- Auto-apply learned rules without user approval — anti-feature, system must never change routing without explicit confirmation
+- CONDSTORE/QRESYNC for move detection — research confirmed these track flag changes only, not cross-folder moves
 
 ## Context
 
@@ -74,8 +63,8 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - **Mail client:** Any folder-based mail client (Mac Mail, Thunderbird, etc.)
 - **Database:** SQLite via better-sqlite3
 - **Web UI:** Vanilla HTML/CSS/JS SPA served by Fastify
-- **Testing:** Vitest with 453 tests (unit + integration)
-- **Codebase:** ~5,500 LOC TypeScript across 44+ source files
+- **Testing:** Vitest with 453+ tests (unit + integration)
+- **Codebase:** ~6,200 LOC TypeScript across 50+ source files
 - **Architecture:** Monitor loop polls IMAP, evaluates rules, executes actions, logs activity. Sweep runs periodically on Review folder. BatchEngine applies rules retroactively with chunked execution. Web server exposes REST API for UI.
 - **Key insight:** Folder structure is owned by the mail client/IMAP server, not this application. The system discovers what folders exist and uses them — it does not create or manage them.
 - **Design assumption:** Users may have years of accumulated mail with inconsistent organization. The folder taxonomy works with what exists, not imposing a new structure.
@@ -101,6 +90,13 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 | SQLite for all persistence | Single-user system, no need for a database server | ✓ Good |
 | Vanilla JS frontend | No build tooling needed, fast iteration, simple deployment | ✓ Good |
 | Batch Progress UI phase dropped | SSE streaming, per-destination summaries, folder stats are gold plating — polling-based progress is sufficient | ✓ Good |
+| Envelope header auto-discovery over user config | Probing common headers (Delivered-To, X-Original-To, etc.) eliminates manual setup | ✓ Good |
+| Header visibility as single-select not multi-select | Simpler UX, one message can only be one visibility type | ✓ Good |
+| Versioned migrations replacing try/catch ALTER TABLE | Reliable schema evolution, transactional safety | ✓ Good |
+| UID snapshot diffing for move detection | Cross-references activity log to exclude system moves; no IMAP extension needed | ✓ Good |
+| Separate mark-approved endpoint from approve | Prevents duplicate rule creation in Modify flow | ✓ Good |
+| Read-modify-write transaction for proposal upsert | COALESCE in expression index proved unreliable | ✓ Good |
+| Retroactive verification for orphaned phases | Phase 12 formally verified code that existed but lacked audit trail | ✓ Good |
 
 ## Evolution
 
@@ -120,4 +116,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-20 after Phase 12 (Retroactive Verification) complete — formal verification of MATCH-01 through MATCH-06 requirements from phases 6-9, all 6 verified with line-level evidence*
+*Last updated: 2026-04-20 after v0.4 milestone — Extended Matchers & Behavioral Learning shipped*
