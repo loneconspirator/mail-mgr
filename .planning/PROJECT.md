@@ -49,7 +49,10 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 
 ### Active
 
-(No active milestone — run `/gsd-new-milestone` to define next)
+- Action folder prefix and folder names configurable with sensible defaults — CONF-01 (v0.6 Phase 17)
+- Action folders can be enabled/disabled via config — CONF-02 (v0.6 Phase 17)
+- Poll interval is configurable — CONF-03 (v0.6 Phase 17)
+- System creates Actions/ folder hierarchy on startup if folders don't exist — FOLD-01 (v0.6 Phase 17)
 
 ### Out of Scope
 
@@ -72,7 +75,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - **Testing:** Vitest with 478+ tests (unit + integration)
 - **Codebase:** ~7,000 LOC TypeScript across 50+ source files
 - **Architecture:** Monitor loop polls IMAP, evaluates rules, executes actions, logs activity. Sweep runs periodically on Review folder. BatchEngine applies rules retroactively with chunked execution. Web server exposes REST API for UI.
-- **Key insight:** Folder structure is owned by the mail client/IMAP server, not this application. The system discovers what folders exist and uses them — it does not create or manage them.
+- **Key insight:** Folder structure is primarily owned by the mail client/IMAP server. The system discovers what folders exist and uses them. Exception: Action Folders (v0.6) creates a dedicated `Actions/` hierarchy for drag-to-act functionality.
 - **Design assumption:** Users may have years of accumulated mail with inconsistent organization. The folder taxonomy works with what exists, not imposing a new structure.
 
 ## Constraints
@@ -125,4 +128,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-20 after v0.5 milestone — Sender Disposition Views shipped*
+*Last updated: 2026-04-20 after v0.6 Phase 17 — Configuration & Folder Lifecycle complete*
