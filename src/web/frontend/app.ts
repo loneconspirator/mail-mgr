@@ -334,7 +334,7 @@ function openAddSenderModal(viewType: 'skip' | 'delete' | 'review' | 'move', vie
   modal.innerHTML = `
     <h2>${esc(titles[viewType])}</h2>
     <div class="form-group"><label>Sender Pattern</label><input id="as-sender" placeholder="*@example.com" /></div>
-    ${viewType === 'move' ? '<div class="form-group"><label>Destination Folder</label><div id="as-folder-picker"></div></div>' : ''}
+    ${(viewType === 'move' || viewType === 'review') ? `<div class="form-group"><label>${viewType === 'move' ? 'Destination Folder' : 'Folder (optional)'}</label><div id="as-folder-picker"></div></div>` : ''}
     <div class="form-actions">
       <button class="btn" id="as-cancel">Discard</button>
       <button class="btn btn-primary" id="as-submit">Add Sender</button>
@@ -344,8 +344,8 @@ function openAddSenderModal(viewType: 'skip' | 'delete' | 'review' | 'move', vie
   overlay.append(modal);
   document.body.append(overlay);
 
-  // Wire folder picker for Archived (move) view
-  if (viewType === 'move') {
+  // Wire folder picker for Archived (move) and Reviewed (review) views
+  if (viewType === 'move' || viewType === 'review') {
     renderFolderPicker({
       container: document.getElementById('as-folder-picker')!,
       currentValue: '',
@@ -398,7 +398,7 @@ function openAddSenderModal(viewType: 'skip' | 'delete' | 'review' | 'move', vie
     let action: Action;
     if (viewType === 'skip') action = { type: 'skip' };
     else if (viewType === 'delete') action = { type: 'delete' };
-    else if (viewType === 'review') action = { type: 'review' };
+    else if (viewType === 'review') action = selectedFolder ? { type: 'review', folder: selectedFolder } : { type: 'review' };
     else action = { type: 'move', folder: selectedFolder };
 
     // Compute order for new rule (append to end)
