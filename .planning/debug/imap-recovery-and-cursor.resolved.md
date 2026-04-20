@@ -1,16 +1,16 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "MoveTracker fails to recover after IMAP socket timeouts, missing new mail. Non-cursor mode may not scan full inbox on startup."
 created: 2026-04-19T00:00:00Z
-updated: 2026-04-19T00:00:00Z
+updated: 2026-04-20T00:00:00Z
 ---
 
 ## Current Focus
 
-hypothesis: CONFIRMED — Multiple root causes found (see Resolution)
-test: Code analysis complete
-expecting: N/A
-next_action: Return diagnosis
+hypothesis: CONFIRMED — All three fixes already applied in commit 8e3a91e
+test: Dev environment restart verified "IMAP already connected, running initial scan" fires on boot, all 9 messages processed
+expecting: N/A — verified
+next_action: None — resolved
 
 ## Symptoms
 
@@ -52,6 +52,11 @@ started: Ongoing issue.
   found: Between imapClient.connect() (line 201) and monitor.start() (line 218) in main(), there is NO error listener on the ImapClient EventEmitter. If an IMAP error fires during envelope header probing (lines 203-208), the unhandled 'error' event on EventEmitter would throw and crash the process.
   implication: Secondary issue — potential crash on startup if IMAP error fires before Monitor registers its error handler.
 
+- timestamp: 2026-04-19
+  checked: Whether all three fixes from diagnosis are present in current codebase
+  found: Commit 8e3a91e ("fix: resolve IMAP recovery failures — startup scan race, transient errors, listener gap") already applied all three fixes. It is an ancestor of HEAD on main. (1) Monitor.start() lines 96-99 detect already-connected state and trigger processNewMessages(). (2) MoveTracker.runScan() lines 145-156 catch NoConnection/ETIMEOUT at debug level. (3) src/index.ts lines 201-204 register error listener before connect().
+  implication: No new code changes needed — the fixes were already implemented and committed before this session resumed.
+
 ## Resolution
 
 root_cause: |
@@ -60,6 +65,6 @@ root_cause: |
   SECONDARY (transient NoConnection errors during IMAP recovery): When ImapFlow detects a socket timeout during IDLE, it attempts internal recovery (NOOP + re-idle) without emitting any events to our code. During this recovery window, our client state remains 'connected' but ImapFlow operations can throw NoConnection errors. MoveTracker scans during this window fail with "MoveTracker scan failed" NoConnection. These are transient and self-recovering once ImapFlow either recovers or fully disconnects (triggering our reconnect logic), but they are noisy and confuse the user into thinking MoveTracker is permanently broken.
 
   TERTIARY (missing error listener window): Between imapClient.connect() and monitor.start() in main(), no error listener is registered on ImapClient. An IMAP error during this window would crash the process via unhandled EventEmitter error.
-fix:
-verification:
-files_changed: []
+fix: All three fixes applied in commit 8e3a91e. (1) Monitor.start() now checks client.state === 'connected' after registering listeners — if connect() already ran, triggers processNewMessages() explicitly. (2) MoveTracker.runScan() catches NoConnection/ETIMEOUT errors and logs at debug level instead of throwing. (3) Error listener registered on imapClient before connect() call in main().
+verification: Verified all three fixes present in current HEAD (main branch). Commit 8e3a91e is an ancestor of HEAD (4ae085b).
+files_changed: [src/index.ts, src/monitor/index.ts, src/tracking/index.ts]
