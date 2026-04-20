@@ -100,7 +100,9 @@ Plans:
   2. User can remove a sender from any disposition view, which deletes the underlying rule
   3. When adding to Archived Senders, user can select a destination folder via the existing tree picker
   4. Each entry in a disposition view has a link/button to open its full rule in the rule editor
-**Plans**: TBD
+**Plans**: 1 plan
+Plans:
+- [ ] 16-01-PLAN.md — Add/remove sender inline, Edit Rule link, Add Sender modal with folder picker for Archived
 **UI hint**: yes
 
 ## Progress
@@ -125,4 +127,4 @@ Phases execute in numeric order: 13 → 14 → 15 → 16
 | 13. Disposition Query API | v0.5 | 2/2 | Complete    | 2026-04-20 |
 | 14. Navigation Shell & Simple Views | v0.5 | 1/1 | Complete    | 2026-04-20 |
 | 15. Folder-Grouped Views | v0.5 | 1/1 | Complete    | 2026-04-20 |
-| 16. Inline Sender Management | v0.5 | 0/? | Not started | - |
+| 16. Inline Sender Management | v0.5 | 0/1 | Not started | - |
