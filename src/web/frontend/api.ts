@@ -49,6 +49,9 @@ export const api = {
     delete: (id: string) => request<void>(`/api/rules/${id}`, { method: 'DELETE' }),
     reorder: (items: { id: string; order: number }[]) => request<Rule[]>('/api/rules/reorder', { method: 'PUT', body: JSON.stringify(items) }),
   },
+  dispositions: {
+    list: (type: 'skip' | 'delete' | 'review' | 'move') => request<Rule[]>(`/api/dispositions?type=${type}`),
+  },
   activity: {
     list: (limit = 25, offset = 0) => request<ActivityEntry[]>(`/api/activity?limit=${limit}&offset=${offset}`),
     recentFolders: (limit = 5) => request<string[]>(`/api/activity/recent-folders?limit=${limit}`),
