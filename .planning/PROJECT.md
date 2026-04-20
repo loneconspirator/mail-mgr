@@ -46,13 +46,17 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Reviewed and Archived sender views (folder-grouped accordion layout) — v0.5
 - ✓ Inline sender add/remove from disposition views without rule editor — v0.5
 - ✓ Folder picker for adding senders to Archived view — v0.5
+- ✓ Action folder prefix and folder names configurable with sensible defaults — v0.6 Phase 17
+- ✓ Action folders can be enabled/disabled via config — v0.6 Phase 17
+- ✓ Poll interval is configurable — v0.6 Phase 17
+- ✓ System creates Actions/ folder hierarchy on startup if folders don't exist — v0.6 Phase 17
+- ✓ Action folder operations logged with source = 'action-folder' and isSystemMove recognition — v0.6 Phase 18
+- ✓ Activity log includes rule_id/rule_name for action-folder entries — v0.6 Phase 18
+- ✓ Action types defined in declarative registry pattern with reusable sender-rule utilities — v0.6 Phase 18
 
 ### Active
 
-- Action folder prefix and folder names configurable with sensible defaults — CONF-01 (v0.6 Phase 17)
-- Action folders can be enabled/disabled via config — CONF-02 (v0.6 Phase 17)
-- Poll interval is configurable — CONF-03 (v0.6 Phase 17)
-- System creates Actions/ folder hierarchy on startup if folders don't exist — FOLD-01 (v0.6 Phase 17)
+- Action folder processor polls and processes drag-to-act messages — PROC-* (v0.6 Phase 19+)
 
 ### Out of Scope
 
@@ -72,7 +76,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - **Mail client:** Any folder-based mail client (Mac Mail, Thunderbird, etc.)
 - **Database:** SQLite via better-sqlite3
 - **Web UI:** Vanilla HTML/CSS/JS SPA served by Fastify
-- **Testing:** Vitest with 478+ tests (unit + integration)
+- **Testing:** Vitest with 521+ tests (unit + integration)
 - **Codebase:** ~7,000 LOC TypeScript across 50+ source files
 - **Architecture:** Monitor loop polls IMAP, evaluates rules, executes actions, logs activity. Sweep runs periodically on Review folder. BatchEngine applies rules retroactively with chunked execution. Web server exposes REST API for UI.
 - **Key insight:** Folder structure is primarily owned by the mail client/IMAP server. The system discovers what folders exist and uses them. Exception: Action Folders (v0.6) creates a dedicated `Actions/` hierarchy for drag-to-act functionality.
@@ -128,4 +132,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-20 after v0.6 Phase 17 — Configuration & Folder Lifecycle complete*
+*Last updated: 2026-04-20 after v0.6 Phase 18 — Safety Predicates & Activity Log complete*
