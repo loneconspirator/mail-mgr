@@ -128,4 +128,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-20 after Phase 13 complete — Disposition Query API (sender-only filter checking all 6 EmailMatch fields)*
+*Last updated: 2026-04-19 after Phase 14 complete — Navigation Shell & Simple Views (Priority/Blocked sender tabs with disposition list views)*
