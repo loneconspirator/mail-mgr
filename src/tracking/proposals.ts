@@ -79,7 +79,7 @@ export class ProposalStore {
           signalsSinceDismiss += 1;
           if (signalsSinceDismiss >= 5) {
             newStatus = 'active';
-            signalsSinceDismiss = 0;
+            // Keep signalsSinceDismiss so resurfacedNotice can display the count
             dismissedAt = null;
           }
         }

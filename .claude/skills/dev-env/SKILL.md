@@ -2,8 +2,8 @@
 name: dev-env
 description: Start/stop/reset/check a local dev environment with GreenMail test IMAP server and seeded data
 allowed-tools:
-  - Bash(.claude/skills/dev-env/start.sh)
-  - Bash(.claude/skills/dev-env/stop.sh)
+  - Bash(.claude/skills/dev-env/start.sh *)
+  - Bash(.claude/skills/dev-env/stop.sh *)
   - Bash(.claude/skills/dev-env/wait-for-port.sh *)
   - Bash(DATA_PATH=/tmp/mail-mgr-dev npx tsx .claude/skills/dev-env/check.ts)
   - Bash(docker ps --filter name=greenmail *)

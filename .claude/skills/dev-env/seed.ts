@@ -23,6 +23,7 @@ const DB_PATH = path.join(DATA_PATH, 'db.sqlite3');
 const SEED_PATH = path.join(__dirname, 'seed-data.yml');
 
 interface SeedData {
+  folders?: string[];
   rules: Array<{
     id: string;
     name?: string;
@@ -219,6 +220,27 @@ function seedActivity(db: Database.Database, entries: SeedData['activity']): num
   return entries.length;
 }
 
+async function createImapFolders(folders: string[]): Promise<number> {
+  const { ImapFlow } = await import('imapflow');
+  const client = new ImapFlow({
+    host: 'localhost', port: 3143,
+    auth: { user: 'user', pass: 'pass' },
+    secure: false, logger: false,
+  });
+  await client.connect();
+  let created = 0;
+  for (const folder of folders) {
+    try {
+      await client.mailboxCreate(folder);
+      created++;
+    } catch {
+      // Folder already exists
+    }
+  }
+  await client.logout();
+  return created;
+}
+
 async function seedEmails(emails: SeedData['emails']): Promise<number> {
   for (const email of emails) {
     await sendTestEmail({
@@ -258,6 +280,13 @@ async function main(): Promise<void> {
   console.log(`  Inserted ${activityCount} activity entries`);
 
   db.close();
+
+  // Create IMAP folders in GreenMail
+  if (seed.folders?.length) {
+    console.log('Creating IMAP folders...');
+    const folderCount = await createImapFolders(seed.folders);
+    console.log(`  Created ${folderCount} folders`);
+  }
 
   // Send emails via SMTP to GreenMail
   console.log('Sending emails to GreenMail...');

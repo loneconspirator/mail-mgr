@@ -2,6 +2,15 @@
 # Edit this file to change what gets populated in the test environment.
 # Used by seed.ts to populate GreenMail (via SMTP) and SQLite (direct inserts).
 
+# IMAP folders to create in GreenMail before seeding emails.
+# These must exist for MoveTracker to scan without errors.
+folders:
+  - Receipts
+  - Review
+  - Newsletters
+  - Finance
+  - Trash
+
 # Rules baked into the generated config.yml
 rules:
   - id: amazon-receipts

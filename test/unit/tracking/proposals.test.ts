@@ -190,7 +190,7 @@ describe('ProposalStore', () => {
       store.upsertProposal(key, 'Archive', 6);
       byId = store.getById(proposals[0].id);
       expect(byId!.status).toBe('active');
-      expect(byId!.signalsSinceDismiss).toBe(0);
+      expect(byId!.signalsSinceDismiss).toBe(5);
     });
 
     it('normalizes empty string envelope_recipient to null', () => {
