@@ -60,6 +60,8 @@ function navigate(page: string) {
   else if (page === 'settings') renderSettings();
   else if (page === 'priority') renderDispositionView('skip', 'Priority Senders');
   else if (page === 'blocked') renderDispositionView('delete', 'Blocked Senders');
+  else if (page === 'reviewed') renderReviewedView();
+  else if (page === 'archived') renderArchivedView();
   else if (page === 'batch') renderBatch();
   else if (page === 'proposed') renderProposed();
   updateProposedBadge();
@@ -370,6 +372,128 @@ async function renderDispositionView(type: 'skip' | 'delete', heading: string) {
     app.innerHTML = '';
     const viewName = type === 'skip' ? 'priority senders' : 'blocked senders';
     app.append(h('div', { className: 'empty' }, `Failed to load ${viewName}: ${e instanceof Error ? e.message : String(e)}`));
+  }
+}
+
+// --- Folder-Grouped Disposition Views (Reviewed / Archived) ---
+async function renderReviewedView() {
+  const app = $('#app');
+  app.innerHTML = '<p>Loading...</p>';
+
+  try {
+    const [rules, reviewConfig] = await Promise.all([
+      api.dispositions.list('review'),
+      api.config.getReview(),
+    ]);
+    const defaultFolder = reviewConfig.folder; // e.g. "Review"
+    renderFolderGroupedView(rules, 'Reviewed Senders', {
+      heading: 'No reviewed senders',
+      body: 'Sender-only rules with "review" action will appear here. Create a rule with a single sender match and Review action to add one.',
+    }, defaultFolder);
+  } catch (e: unknown) {
+    app.innerHTML = '';
+    app.append(h('div', { className: 'empty' }, `Failed to load reviewed senders: ${e instanceof Error ? e.message : String(e)}`));
+  }
+}
+
+async function renderArchivedView() {
+  const app = $('#app');
+  app.innerHTML = '<p>Loading...</p>';
+
+  try {
+    const rules = await api.dispositions.list('move');
+    renderFolderGroupedView(rules, 'Archived Senders', {
+      heading: 'No archived senders',
+      body: 'Sender-only rules with "move" action will appear here. Create a rule with a single sender match and Move action to add one.',
+    });
+  } catch (e: unknown) {
+    app.innerHTML = '';
+    app.append(h('div', { className: 'empty' }, `Failed to load archived senders: ${e instanceof Error ? e.message : String(e)}`));
+  }
+}
+
+function renderFolderGroupedView(rules: Rule[], heading: string, emptyConfig: { heading: string; body: string }, defaultFolder?: string): void {
+  const app = $('#app');
+  app.innerHTML = '';
+
+  const toolbar = h('div', { className: 'toolbar' },
+    h('h2', {}, heading),
+  );
+  app.append(toolbar);
+
+  if (rules.length === 0) {
+    app.append(h('div', { className: 'empty' },
+      h('h3', {}, emptyConfig.heading),
+      h('p', {}, emptyConfig.body),
+    ));
+    return;
+  }
+
+  // Group rules by destination folder
+  const groups = new Map<string, Rule[]>();
+  for (const rule of rules) {
+    const folder = ('folder' in rule.action && rule.action.folder) ? rule.action.folder : (defaultFolder ?? 'Unknown');
+    if (!groups.has(folder)) groups.set(folder, []);
+    groups.get(folder)!.push(rule);
+  }
+
+  // Sort groups alphabetically by folder name
+  const sortedFolders = [...groups.keys()].sort((a, b) => a.localeCompare(b));
+
+  for (const folderName of sortedFolders) {
+    const folderRules = groups.get(folderName)!;
+    // Sort senders within group alphabetically
+    folderRules.sort((a, b) => (a.match.sender ?? '').localeCompare(b.match.sender ?? ''));
+
+    const countText = folderRules.length === 1 ? '(1 sender)' : `(${folderRules.length} senders)`;
+
+    const wrapper = h('div', { className: 'folder-group' });
+
+    const toggle = h('span', { className: 'folder-group-toggle' }, '\u25BC');
+    const header = h('div', { className: 'folder-group-header' },
+      toggle,
+      h('span', { className: 'folder-group-name' }, folderName),
+      h('span', { className: 'folder-group-count' }, countText),
+    );
+
+    // Set aria-expanded for accessibility
+    header.setAttribute('role', 'button');
+    header.setAttribute('tabindex', '0');
+    header.setAttribute('aria-expanded', 'true');
+
+    const sendersDiv = h('div', { className: 'folder-group-senders' });
+
+    const table = document.createElement('table');
+    table.innerHTML = `<thead><tr><th>Sender</th><th>Rule Name</th></tr></thead>`;
+    const tbody = document.createElement('tbody');
+
+    for (const rule of folderRules) {
+      const tr = document.createElement('tr');
+      tr.append(
+        h('td', {}, rule.match.sender ?? ''),
+        h('td', { className: 'disposition-rule-name' }, rule.name ?? ''),
+      );
+      tbody.append(tr);
+    }
+
+    table.append(tbody);
+    sendersDiv.append(table);
+
+    // Collapse/expand toggle — starts expanded
+    let expanded = true;
+    const toggleCollapse = () => {
+      expanded = !expanded;
+      toggle.textContent = expanded ? '\u25BC' : '\u25B6';
+      sendersDiv.style.display = expanded ? '' : 'none';
+      header.setAttribute('aria-expanded', String(expanded));
+    };
+    header.addEventListener('click', toggleCollapse);
+    header.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCollapse(); }
+    });
+
+    wrapper.append(header, sendersDiv);
+    app.append(wrapper);
   }
 }
 
