@@ -40,6 +40,10 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Move tracking on Inbox + Review (periodic folder scan, signal logging to SQLite) — v0.4
 - ✓ Pattern detection (statistical analysis on logged moves, threshold-based candidate identification) — v0.4
 - ✓ Proposed rules (UI for approving, modifying, or dismissing learned patterns) — v0.4
+- ✓ Disposition query API filtering sender-only rules by type — v0.5
+- ✓ Navigation tabs for disposition views alongside main rule list — v0.5
+- ✓ Priority and Blocked sender views (flat list by disposition) — v0.5
+- ✓ Reviewed and Archived sender views (folder-grouped accordion layout) — v0.5
 
 ## Current Milestone: v0.5 Sender Disposition Views
 
@@ -128,4 +132,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-19 after Phase 14 complete — Navigation Shell & Simple Views (Priority/Blocked sender tabs with disposition list views)*
+*Last updated: 2026-04-20 after Phase 15 complete — Folder-Grouped Views (Reviewed/Archived sender views with folder-grouped accordion layout)*
