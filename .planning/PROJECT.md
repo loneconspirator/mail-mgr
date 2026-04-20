@@ -53,10 +53,14 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Action folder operations logged with source = 'action-folder' and isSystemMove recognition — v0.6 Phase 18
 - ✓ Activity log includes rule_id/rule_name for action-folder entries — v0.6 Phase 18
 - ✓ Action types defined in declarative registry pattern with reusable sender-rule utilities — v0.6 Phase 18
+- ✓ Action folder processor creates/removes sender rules and moves messages to destinations — v0.6 Phase 19
+- ✓ Sender extraction from From header with lowercase bare email normalization — v0.6 Phase 19
+- ✓ Conflicting sender-only rules detected and replaced with activity logging — v0.6 Phase 19
+- ✓ More specific multi-field rules preserved during action folder processing — v0.6 Phase 19
 
 ### Active
 
-- Action folder processor polls and processes drag-to-act messages — PROC-* (v0.6 Phase 19+)
+- Action folder monitoring polls and processes messages on startup — MON-*, FOLD-02, FOLD-03 (v0.6 Phase 20+)
 
 ### Out of Scope
 
@@ -76,7 +80,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - **Mail client:** Any folder-based mail client (Mac Mail, Thunderbird, etc.)
 - **Database:** SQLite via better-sqlite3
 - **Web UI:** Vanilla HTML/CSS/JS SPA served by Fastify
-- **Testing:** Vitest with 521+ tests (unit + integration)
+- **Testing:** Vitest with 541+ tests (unit + integration)
 - **Codebase:** ~7,000 LOC TypeScript across 50+ source files
 - **Architecture:** Monitor loop polls IMAP, evaluates rules, executes actions, logs activity. Sweep runs periodically on Review folder. BatchEngine applies rules retroactively with chunked execution. Web server exposes REST API for UI.
 - **Key insight:** Folder structure is primarily owned by the mail client/IMAP server. The system discovers what folders exist and uses them. Exception: Action Folders (v0.6) creates a dedicated `Actions/` hierarchy for drag-to-act functionality.
@@ -132,4 +136,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-20 after v0.6 Phase 18 — Safety Predicates & Activity Log complete*
+*Last updated: 2026-04-20 after v0.6 Phase 19 — Action Processing Core complete*
