@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 17: Configuration & Folder Lifecycle — Discussion Questions</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f8fafc; color: #1e293b; padding: 24px; max-width: 1400px; margin: 0 auto; }
+h1 { font-size: 1.5rem; margin-bottom: 4px; }
+.subtitle { color: #64748b; margin-bottom: 16px; font-size: 0.9rem; }
+
+/* Stats bar */
+.stats-bar { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 24px; margin-bottom: 24px; display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+.stats-bar .stat { font-size: 0.95rem; }
+.stats-bar .stat strong { font-size: 1.2rem; }
+.progress-bar { flex: 1; min-width: 200px; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+.progress-fill { height: 100%; background: #22c55e; border-radius: 4px; transition: width 0.3s; }
+
+/* Save button */
+.save-btn { background: #3b82f6; color: white; border: none; padding: 10px 24px; border-radius: 6px; font-size: 0.95rem; cursor: pointer; font-weight: 600; }
+.save-btn:hover { background: #2563eb; }
+
+/* Sections */
+.section { margin-bottom: 24px; }
+.section-header { background: white; border: 1px solid #e2e8f0; border-radius: 8px 8px 0 0; padding: 12px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; }
+.section-header:hover { background: #f1f5f9; }
+.section-header h2 { font-size: 1.1rem; }
+.section-header .badge { background: #e2e8f0; color: #64748b; padding: 2px 10px; border-radius: 12px; font-size: 0.8rem; }
+.section-header .badge.complete { background: #dcfce7; color: #166534; }
+.section-header .arrow { transition: transform 0.2s; font-size: 0.8rem; }
+.section-header .arrow.collapsed { transform: rotate(-90deg); }
+.section-body { border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px; padding: 16px; display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 16px; }
+.section-body.hidden { display: none; }
+
+/* Question cards */
+.card { background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; transition: all 0.2s; }
+.card.answered { border: 2px solid #22c55e; background: #f0fdf4; }
+.card-header { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+.card-id { background: #e2e8f0; color: #475569; font-size: 0.75rem; font-weight: 700; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+.card.answered .card-id { background: #bbf7d0; color: #166534; }
+.card-title { font-weight: 600; font-size: 0.95rem; }
+.card-context { color: #64748b; font-size: 0.82rem; font-style: italic; margin-bottom: 12px; line-height: 1.4; }
+
+/* Options */
+.option { display: flex; gap: 8px; margin-bottom: 8px; padding: 8px; border-radius: 6px; cursor: pointer; }
+.option:hover { background: #f1f5f9; }
+.option input[type="radio"] { margin-top: 3px; flex-shrink: 0; }
+.option-content { flex: 1; }
+.option-label { font-weight: 600; font-size: 0.88rem; }
+.option-desc { color: #64748b; font-size: 0.82rem; line-height: 1.3; }
+
+/* Chat more textarea */
+.chat-more { width: 100%; min-height: 60px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; font-family: inherit; font-size: 0.85rem; resize: vertical; margin-top: 8px; }
+.chat-more.has-content { border: 2px solid #f97316; }
+.chat-more::placeholder { color: #94a3b8; }
+
+/* Instructions */
+.instructions { background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin-top: 24px; font-size: 0.9rem; line-height: 1.5; }
+.instructions code { background: #fef3c7; padding: 2px 6px; border-radius: 3px; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<h1>Phase 17: Configuration & Folder Lifecycle — Discussion Questions</h1>
+<p class="subtitle">Answer questions below, then save and return to Claude.</p>
+
+<div class="stats-bar">
+  <div class="stat"><strong id="stat-total">12</strong> total</div>
+  <div class="stat"><strong id="stat-answered">0</strong> answered</div>
+  <div class="stat"><strong id="stat-remaining">12</strong> remaining</div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width: 0%"></div></div>
+  <button class="save-btn" onclick="saveAnswers()">Save answers</button>
+</div>
+
+<div id="sections-container"></div>
+
+<div class="stats-bar" style="margin-top: 24px;">
+  <div class="stat"><strong id="stat-total2">12</strong> total</div>
+  <div class="stat"><strong id="stat-answered2">0</strong> answered</div>
+  <div class="stat"><strong id="stat-remaining2">12</strong> remaining</div>
+  <div class="progress-bar"><div class="progress-fill" id="progress-fill2" style="width: 0%"></div></div>
+  <button class="save-btn" onclick="saveAnswers()">Save answers</button>
+</div>
+
+<div class="instructions">
+  <strong>How to use:</strong><br>
+  1. Select an option for each question (or type a custom answer in the text area).<br>
+  2. Click <strong>Save answers</strong> — this will download the updated JSON file.<br>
+  3. Replace the original file: <code>.planning/phases/17-configuration-folder-lifecycle/17-QUESTIONS.json</code><br>
+  4. Return to Claude and say <code>refresh</code> to process your answers, or <code>finalize</code> to generate CONTEXT.md.
+</div>
+
+<script>
+const DATA = {"phase":"17-configuration-folder-lifecycle","generated_at":"2026-04-20T18:00:00Z","stats":{"total":12,"answered":0,"chat_more":0,"remaining":12},"sections":[{"id":"config-schema","title":"Configuration Schema","questions":[{"id":"Q-01","title":"Config location in YAML","context":"Current config has top-level sections: imap, server, rules, review. The review section nests moveTracking under it. Action folders are a new top-level feature \u2014 do they nest under an existing section or get their own?","options":[{"id":"a","label":"Top-level `actionFolders` section","description":"Parallel to imap/server/rules/review. Clean separation, easy to find. Research summary recommends this."},{"id":"b","label":"Nested under `review` section","description":"Action folders are related to review workflow. Groups monitoring-related config together. But action folders aren\u2019t really about Review."},{"id":"c","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-02","title":"Default folder prefix","context":"The PRD specifies an `Actions/` prefix with 4 sub-folders (VIP Sender, Block Sender, Undo VIP, Unblock Sender). The prefix is configurable per CONF-01. What should the default prefix be?","options":[{"id":"a","label":"`Actions`","description":"Clean, generic, matches PRD examples. Creates Actions/VIP Sender, Actions/Block Sender, etc."},{"id":"b","label":"`Mail Manager`","description":"Makes it clear these folders belong to this application. Creates Mail Manager/VIP Sender, etc."},{"id":"c","label":"`_Actions` (underscore prefix)","description":"Sorts to top of folder list in most mail clients. Visually distinct from user folders."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-03","title":"Default sub-folder names","context":"PRD uses: VIP Sender, Block Sender, Undo VIP, Unblock Sender. These are user-facing names visible in the mail client. Are these the right defaults or should they be different?","options":[{"id":"a","label":"Keep PRD names as-is","description":"VIP Sender, Block Sender, Undo VIP, Unblock Sender \u2014 action-oriented, clear what happens"},{"id":"b","label":"Shorter names","description":"VIP, Block, Undo VIP, Unblock \u2014 terser, less cluttered in sidebar"},{"id":"c","label":"Emoji-prefixed for visibility","description":"\u2b50 VIP Sender, \ud83d\udeab Block Sender, etc. \u2014 stands out visually in mail client but may not render everywhere"},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-04","title":"Individual folder name configurability","context":"CONF-01 says prefix AND individual folder names are configurable. Should users be able to rename individual action folders (e.g. change 'VIP Sender' to 'Priority'), or is prefix-only enough?","options":[{"id":"a","label":"Both prefix and individual names configurable","description":"Full flexibility. Schema has `prefix` + per-folder `name` overrides. More config surface but matches CONF-01 exactly."},{"id":"b","label":"Prefix only \u2014 sub-folder names are fixed","description":"Simpler config. Users can still change the parent folder name. Sub-folder names are well-known constants."},{"id":"c","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"}]},{"id":"enable-disable","title":"Feature Toggle & Poll Config","questions":[{"id":"Q-05","title":"Enable/disable behavior","context":"CONF-02 requires action folders can be enabled/disabled. MoveTracker uses a simple `enabled: boolean` that skips `start()`. The question is what 'disabled' means for folders that already exist on the IMAP server.","options":[{"id":"a","label":"Disabled = don\u2019t create, don\u2019t monitor, ignore existing","description":"If folders already exist on server, they\u2019re left alone but not watched. Simplest behavior. Re-enabling just starts monitoring."},{"id":"b","label":"Disabled = don\u2019t create, don\u2019t monitor, warn if messages found","description":"Same as (a) but on startup, log a warning if disabled action folders contain messages. Prevents silent message loss."},{"id":"c","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-06","title":"Default poll interval","context":"CONF-03 requires configurable poll interval. Research recommends 15 seconds. Existing intervals: IMAP poll=60s, MoveTracker=30s, Sweep=6h. Action folders should be responsive since the user just dragged a message.","options":[{"id":"a","label":"15 seconds (research recommendation)","description":"Good balance \u2014 user waits ~7.5s average after drag. STATUS is lightweight (no mailbox switch). Same as MoveTracker order of magnitude."},{"id":"b","label":"10 seconds","description":"More responsive (~5s average wait). Still lightweight. More chatty on the IMAP connection."},{"id":"c","label":"30 seconds (match MoveTracker)","description":"Conservative. ~15s average wait. Less server load but user might wonder if it\u2019s working."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"}]},{"id":"folder-creation","title":"Folder Creation & Lifecycle","questions":[{"id":"Q-07","title":"When to create folders","context":"FOLD-01 says create on startup. Current codebase creates folders lazily (on move failure, retry-once pattern in actions/index.ts). The question is whether action folders should be eagerly created at startup or lazily on first use.","options":[{"id":"a","label":"Eager creation at startup","description":"Folders exist immediately after first run. User sees them in mail client right away. Matches FOLD-01 exactly. Fails fast if IMAP permissions are wrong."},{"id":"b","label":"Lazy creation on first poll","description":"Folders created when monitoring starts, not during startup. Slight delay but doesn\u2019t block startup on folder creation errors."},{"id":"c","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-08","title":"Handling already-exists on creation","context":"If folders already exist (e.g., second startup, or user pre-created them), `mailboxCreate` will throw. Need to handle gracefully. imapflow\u2019s error for already-exists is a standard IMAP NO response.","options":[{"id":"a","label":"Try create, catch already-exists, log debug, continue","description":"Simple try/catch. Log at debug level since this is the normal case after first run. No overhead of checking first."},{"id":"b","label":"Check existence first via status(), only create if missing","description":"Cleaner \u2014 no error thrown in normal case. But adds an extra IMAP call per folder on every startup."},{"id":"c","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-09","title":"Folder creation failure handling","context":"If folder creation fails (permissions, server error), what should happen? Action folders can\u2019t function without the IMAP folders existing.","options":[{"id":"a","label":"Log error, disable action folder monitoring, continue startup","description":"Graceful degradation. Rest of the app works fine. User sees error in logs. Can fix IMAP permissions and restart."},{"id":"b","label":"Log error, retry on next poll cycle","description":"Self-healing \u2014 if it\u2019s a transient IMAP error, the next poll will try again. But could spam logs with repeated failures."},{"id":"c","label":"Fatal error, abort startup","description":"If action folders are enabled but can\u2019t be created, it\u2019s a config/permission problem that won\u2019t fix itself. Forces the user to address it."},{"id":"d","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"}]},{"id":"startup-integration","title":"Startup & Integration","questions":[{"id":"Q-10","title":"Where in startup sequence","context":"Current startup: config \u2192 IMAP connect \u2192 envelope discovery \u2192 sweeper/batch start \u2192 MoveTracker start. Action folder creation and monitoring need to fit somewhere in this sequence.","options":[{"id":"a","label":"After IMAP connect, before sweeper/MoveTracker","description":"Create folders right after IMAP is up. Ensures folders exist before anything else runs. Natural position since it\u2019s a one-time setup."},{"id":"b","label":"After all existing components start","description":"Don\u2019t change the existing startup order. Action folders are the last thing to initialize. Safest for existing behavior."},{"id":"c","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-11","title":"Config hot-reload behavior","context":"ConfigRepository supports hot-reload via onChange callbacks (onRulesChange, onImapConfigChange, onReviewConfigChange). If the user changes action folder config, what should happen?","options":[{"id":"a","label":"Add onActionFolderConfigChange callback","description":"Follows established pattern. On change: stop polling, re-read config, create any new folders, restart polling. Full consistency."},{"id":"b","label":"Require restart for action folder config changes","description":"Simpler. Action folder config is a startup concern. Changing folder names mid-run is weird anyway. Just document \u2018restart required\u2019."},{"id":"c","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"},{"id":"Q-12","title":"Scope of Phase 17 deliverable","context":"Phase 17 covers CONF-01, CONF-02, CONF-03, FOLD-01. The question is whether this phase just adds config + folder creation, or also sets up the polling timer skeleton (without actual processing, which is Phase 19).","options":[{"id":"a","label":"Config + folder creation only","description":"Strictly what the requirements say. Schema validation, defaults, IMAP folder creation on startup. No timer, no processor skeleton. Clean boundary."},{"id":"b","label":"Config + folder creation + empty processor skeleton","description":"Add the ActionFolderProcessor class with poll timer that does nothing yet. Phase 18/19 fill in the behavior. Gives something to wire tests against."},{"id":"c","label":"Custom","description":""}],"answer":null,"chat_more":"","status":"unanswered"}]}]};
+
+const container = document.getElementById('sections-container');
+
+function render() {
+  container.innerHTML = '';
+  DATA.sections.forEach(section => {
+    const sectionEl = document.createElement('div');
+    sectionEl.className = 'section';
+
+    const answeredInSection = section.questions.filter(q => q.answer).length;
+    const totalInSection = section.questions.length;
+    const badgeClass = answeredInSection === totalInSection ? 'badge complete' : 'badge';
+
+    sectionEl.innerHTML = `
+      <div class="section-header" onclick="toggleSection('${section.id}')">
+        <h2><span class="arrow" id="arrow-${section.id}">▼</span> ${section.title} (${totalInSection} questions)</h2>
+        <span class="${badgeClass}">${answeredInSection}/${totalInSection} answered</span>
+      </div>
+      <div class="section-body" id="body-${section.id}">
+        ${section.questions.map(q => renderCard(q, section.id)).join('')}
+      </div>
+    `;
+    container.appendChild(sectionEl);
+  });
+  updateStats();
+}
+
+function renderCard(q, sectionId) {
+  const answeredClass = q.answer ? 'card answered' : 'card';
+  const chatClass = q.chat_more ? 'chat-more has-content' : 'chat-more';
+
+  return `
+    <div class="${answeredClass}" id="card-${q.id}">
+      <div class="card-header">
+        <span class="card-id">${q.id}</span>
+        <span class="card-title">${q.title}</span>
+      </div>
+      <div class="card-context">${q.context}</div>
+      ${q.options.map(opt => `
+        <label class="option">
+          <input type="radio" name="${q.id}" value="${opt.id}" ${q.answer === opt.id ? 'checked' : ''} onchange="setAnswer('${q.id}', '${opt.id}')">
+          <div class="option-content">
+            <div class="option-label">${opt.label}</div>
+            ${opt.description ? `<div class="option-desc">${opt.description}</div>` : ''}
+          </div>
+        </label>
+      `).join('')}
+      <textarea class="${chatClass}" id="chat-${q.id}" placeholder="Add context, nuance, or clarification for this question..." oninput="setChatMore('${q.id}', this.value)">${q.chat_more || ''}</textarea>
+    </div>
+  `;
+}
+
+function toggleSection(id) {
+  const body = document.getElementById('body-' + id);
+  const arrow = document.getElementById('arrow-' + id);
+  body.classList.toggle('hidden');
+  arrow.classList.toggle('collapsed');
+}
+
+function findQuestion(id) {
+  for (const s of DATA.sections) {
+    for (const q of s.questions) {
+      if (q.id === id) return q;
+    }
+  }
+  return null;
+}
+
+function setAnswer(qId, optId) {
+  const q = findQuestion(qId);
+  if (q) {
+    q.answer = optId;
+    q.status = 'answered';
+    const card = document.getElementById('card-' + qId);
+    card.className = 'card answered';
+    card.querySelector('.card-id').style.background = '#bbf7d0';
+    card.querySelector('.card-id').style.color = '#166534';
+    updateStats();
+  }
+}
+
+function setChatMore(qId, value) {
+  const q = findQuestion(qId);
+  if (q) {
+    q.chat_more = value;
+    if (!q.answer && value) q.status = 'chat-more';
+    const ta = document.getElementById('chat-' + qId);
+    ta.className = value ? 'chat-more has-content' : 'chat-more';
+  }
+}
+
+function updateStats() {
+  let answered = 0, chatMore = 0, total = 0;
+  DATA.sections.forEach(s => {
+    s.questions.forEach(q => {
+      total++;
+      if (q.answer) answered++;
+      if (q.chat_more && !q.answer) chatMore++;
+    });
+  });
+  DATA.stats = { total, answered, chat_more: chatMore, remaining: total - answered };
+
+  const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-answered').textContent = answered;
+  document.getElementById('stat-remaining').textContent = total - answered;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('stat-total2').textContent = total;
+  document.getElementById('stat-answered2').textContent = answered;
+  document.getElementById('stat-remaining2').textContent = total - answered;
+  document.getElementById('progress-fill2').style.width = pct + '%';
+
+  // Update section badges
+  DATA.sections.forEach(s => {
+    const a = s.questions.filter(q => q.answer).length;
+    const t = s.questions.length;
+    const header = document.querySelector(`#body-${s.id}`).previousElementSibling;
+    const badge = header.querySelector('.badge');
+    badge.textContent = `${a}/${t} answered`;
+    badge.className = a === t ? 'badge complete' : 'badge';
+  });
+}
+
+async function saveAnswers() {
+  const json = JSON.stringify(DATA, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+
+  // Try File System Access API first
+  if ('showSaveFilePicker' in window) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: '17-QUESTIONS.json',
+        types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      alert('Saved! Return to Claude and say "refresh" or "finalize".');
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return;
+    }
+  }
+
+  // Fallback: download
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '17-QUESTIONS.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  alert('Downloaded! Replace the original file at:\n.planning/phases/17-configuration-folder-lifecycle/17-QUESTIONS.json\n\nThen return to Claude and say "refresh" or "finalize".');
+}
+
+render();
+</script>
+</body>
+</html>

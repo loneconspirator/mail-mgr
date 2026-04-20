@@ -1,0 +1,392 @@
+{
+  "phase": "18-safety-predicates-activity-log",
+  "generated_at": "2026-04-20T21:00:00.000Z",
+  "stats": {
+    "total": 14,
+    "answered": 0,
+    "chat_more": 0,
+    "remaining": 14
+  },
+  "sections": [
+    {
+      "id": "movetracker-safety",
+      "title": "MoveTracker Safety",
+      "questions": [
+        {
+          "id": "Q-01",
+          "title": "isSystemMove extension strategy",
+          "context": "Currently `isSystemMove()` in `src/log/index.ts:170` checks `source IN ('arrival', 'sweep', 'batch')`. Action folder moves need to be excluded too. Two approaches: extend the IN clause, or add a separate `isActionFolderMove()` check.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Extend isSystemMove to include 'action-folder'",
+              "description": "Single check covers all system-initiated moves. Simple, minimal change. MoveTracker doesn't need to know about action folders specifically."
+            },
+            {
+              "id": "b",
+              "label": "Separate isActionFolderMove predicate",
+              "description": "Keep arrival/sweep/batch separate from action-folder. More explicit but adds a second check in MoveTracker's handleDisappearedMessage."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-02",
+          "title": "Action folder path awareness in MoveTracker",
+          "context": "MoveTracker currently scans INBOX + Review folders only (`deps.inboxFolder` and `deps.reviewFolder`). Action folders live under `Actions/` prefix. If a user drags a message FROM inbox TO an action folder, MoveTracker sees it disappear from inbox — but that's an intentional action, not a user-move signal.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Activity log cross-reference only (no path awareness)",
+              "description": "Action folder processor logs to activity before MoveTracker scans. isSystemMove catches it. No new path logic needed — relies purely on timing."
+            },
+            {
+              "id": "b",
+              "label": "Add action folder paths to MoveTracker exclusion list",
+              "description": "MoveTracker gets a list of action folder paths and ignores moves TO those destinations during destination resolution. Belt-and-suspenders with activity log."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-03",
+          "title": "Timing race between action processor and MoveTracker",
+          "context": "MoveTracker uses two-scan confirmation (message must be missing in 2 consecutive scans). Action folder processor runs on a 15s poll. MoveTracker also polls. If MoveTracker detects the disappearance before the action processor logs the activity entry, isSystemMove would miss it.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Rely on two-scan confirmation window",
+              "description": "Two consecutive MoveTracker scans must both show the message missing. By the second scan, the action processor will have run and logged activity. Natural timing safety."
+            },
+            {
+              "id": "b",
+              "label": "Add explicit coordination (action processor notifies MoveTracker)",
+              "description": "Action processor tells MoveTracker to suppress specific message IDs. More complex but eliminates any timing dependency."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        }
+      ]
+    },
+    {
+      "id": "activity-logging",
+      "title": "Activity Logging Extension",
+      "questions": [
+        {
+          "id": "Q-04",
+          "title": "logActivity signature for action-folder source",
+          "context": "Current `logActivity()` in `src/log/index.ts:87` takes `(result: ActionResult, message: EmailMessage, rule: Rule | null, source: 'arrival' | 'sweep' | 'batch')`. Action folder needs source='action-folder' and sometimes logs rule removal (no ActionResult in current shape).",
+          "options": [
+            {
+              "id": "a",
+              "label": "Extend source union type, add 'action-folder'",
+              "description": "Just widen the source literal union to include 'action-folder'. Action folder builds an ActionResult-shaped object for logging. Minimal API change."
+            },
+            {
+              "id": "b",
+              "label": "New logActionFolderActivity method",
+              "description": "Separate method with a cleaner signature for action folder ops (sender, action, ruleId, ruleName, messageFields). Avoids forcing action folder data into ActionResult/EmailMessage shapes."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-05",
+          "title": "What action value for undo operations",
+          "context": "For VIP/Block, the `action` column naturally maps to 'skip'/'delete'. But for Undo VIP / Unblock, the rule is being REMOVED, not applied. The action column needs a value that distinguishes 'created skip rule' from 'removed skip rule'.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Use descriptive strings: 'vip', 'block', 'undo-vip', 'unblock'",
+              "description": "Action column describes the user intent, not the rule type. Clear in activity log UI. Four distinct values."
+            },
+            {
+              "id": "b",
+              "label": "Use rule type + operation: 'skip-create', 'skip-remove', 'delete-create', 'delete-remove'",
+              "description": "Encodes both what rule type and what operation. More structured, easier to query programmatically."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-06",
+          "title": "Conflicting rule removal logging",
+          "context": "PROC-09 says: if a conflicting sender-only rule exists, remove it and create the new one. Both removal AND creation must be logged. This means one user gesture (moving a message) produces two activity log entries.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Two separate log entries (remove + create)",
+              "description": "Each operation gets its own activity row. The conflict is visible in the log as two consecutive entries with the same message_id. Simple, auditable."
+            },
+            {
+              "id": "b",
+              "label": "Single entry with conflict details in error/notes column",
+              "description": "One row captures both the removal and creation. Fewer entries but more complex to parse. Would need a new column or overload the error field."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        }
+      ]
+    },
+    {
+      "id": "action-registry",
+      "title": "Action Type Registry",
+      "questions": [
+        {
+          "id": "Q-07",
+          "title": "Registry data structure",
+          "context": "EXT-01 requires a registry pattern where each entry specifies folder name, processing function, and message destination. The PRD envisions future extensions like 'Route to Review' and 'File to [Folder]'.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Static Map<actionType, ActionDefinition> with typed entries",
+              "description": "Simple Map or Record keyed by action type string ('vip', 'block', etc). Each value has folderName, processor fn, destination. Registered at module load time. Easy to add entries."
+            },
+            {
+              "id": "b",
+              "label": "Class-based registry with register/lookup methods",
+              "description": "ActionRegistry class with register(type, definition) and lookup(folderPath). More ceremony but supports runtime registration if ever needed."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-08",
+          "title": "Action type identifiers",
+          "context": "The four action types need string keys used as registry keys and in log entries. These keys connect config folder names to processing logic.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Camel case: 'vip', 'block', 'undoVip', 'unblock'",
+              "description": "Matches config schema keys from Phase 17 (config.actionFolders.folders.vip, .block, .undoVip, .unblock). Natural JS naming."
+            },
+            {
+              "id": "b",
+              "label": "Kebab case: 'vip', 'block', 'undo-vip', 'unblock'",
+              "description": "More readable in log entries and activity display. Slightly mismatches config schema keys but easier to parse visually."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-09",
+          "title": "Processing function shape",
+          "context": "Each registry entry needs a 'processing function' that defines what rule operation to perform. The four current types split into two categories: create-rule (VIP, Block) and remove-rule (Undo VIP, Unblock).",
+          "options": [
+            {
+              "id": "a",
+              "label": "Declarative config: { operation: 'create'|'remove', ruleAction: 'skip'|'delete' }",
+              "description": "No actual function — just data that the processor interprets. Simpler, all four types are fully described by two fields. Processor has a single code path for create vs remove."
+            },
+            {
+              "id": "b",
+              "label": "Callback function: (sender, deps) => Promise<RuleResult>",
+              "description": "Each action type has its own function. More flexible for future extensions that might not fit create/remove pattern. More code per action type."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-10",
+          "title": "Message destination resolution",
+          "context": "VIP/Undo VIP/Unblock all return message to INBOX. Block moves to Trash. But these destinations come from config (inbox folder name, trash folder). Should destinations be hardcoded per action or resolved at runtime?",
+          "options": [
+            {
+              "id": "a",
+              "label": "Registry stores destination references: 'inbox' | 'trash'",
+              "description": "Abstract destination names resolved from config at runtime. Registry entry says 'inbox', processor resolves to actual folder path. Clean separation."
+            },
+            {
+              "id": "b",
+              "label": "Registry stores actual folder paths from config",
+              "description": "At registration time, resolve 'inbox' to the configured inbox folder name. Less indirection, but needs re-registration on config change."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        }
+      ]
+    },
+    {
+      "id": "find-sender-rule",
+      "title": "Shared findSenderRule Predicate",
+      "questions": [
+        {
+          "id": "Q-11",
+          "title": "findSenderRule location",
+          "context": "The `isSenderOnly()` predicate already exists in `src/web/routes/dispositions.ts`. The new `findSenderRule(sender, actionType)` needs to be available to both the action folder processor and potentially the disposition routes. Research ARCHITECTURE.md recommends extracting to a shared util.",
+          "options": [
+            {
+              "id": "a",
+              "label": "New file: src/rules/sender-utils.ts",
+              "description": "Extract isSenderOnly there too (re-export from dispositions.ts for backward compat). Clean rules-domain home for sender rule lookups."
+            },
+            {
+              "id": "b",
+              "label": "Add to existing src/rules/conflict-checker.ts",
+              "description": "conflict-checker already has senderMatches() and similar logic. findSenderRule is conceptually related to conflict checking."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-12",
+          "title": "findSenderRule return shape",
+          "context": "This function finds an existing sender-only rule matching a given sender and action type. It's used for: idempotency check (rule exists? skip), undo (rule exists? delete it), conflict detection (rule exists with different type? remove it).",
+          "options": [
+            {
+              "id": "a",
+              "label": "Return Rule | undefined",
+              "description": "Simple — returns the matching rule or undefined. Caller checks action type for conflict detection. Matches how conflict-checker works."
+            },
+            {
+              "id": "b",
+              "label": "Return { rule: Rule, isConflict: boolean } | undefined",
+              "description": "Bundles conflict detection into the result. Caller gets both the rule and whether it's the same or different action type. More convenient but couples concerns."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        }
+      ]
+    },
+    {
+      "id": "file-organization",
+      "title": "File Organization",
+      "questions": [
+        {
+          "id": "Q-13",
+          "title": "Where does the action registry live",
+          "context": "This is a new component. The codebase has src/config/ (schema, loader, repository), src/rules/ (evaluator, conflict-checker), src/tracking/ (MoveTracker), src/log/ (ActivityLog). The registry defines action types and their behaviors.",
+          "options": [
+            {
+              "id": "a",
+              "label": "New directory: src/actions/registry.ts",
+              "description": "src/actions/ already exists (has action execution logic). Registry fits naturally there. Action types ARE actions."
+            },
+            {
+              "id": "b",
+              "label": "New directory: src/action-folders/registry.ts",
+              "description": "Dedicated action-folders directory for all new Phase 18+ code. Keeps action folder code isolated from existing action execution code."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        },
+        {
+          "id": "Q-14",
+          "title": "Phase 18 scope boundary",
+          "context": "Phase 18 delivers 'building blocks' — MoveTracker safety, activity log extension, registry, findSenderRule. Phase 19 builds the actual processor. How much skeleton should Phase 18 include?",
+          "options": [
+            {
+              "id": "a",
+              "label": "Pure building blocks — no processor skeleton",
+              "description": "Phase 18 delivers: isSystemMove extension, logActivity extension, ActionRegistry data structure, findSenderRule function. No processor class at all. Phase 19 creates the processor from scratch using these blocks."
+            },
+            {
+              "id": "b",
+              "label": "Include processor skeleton with stub methods",
+              "description": "Phase 18 also creates ActionFolderProcessor class with constructor and empty processMessage() method. Phase 19 fills in the implementation. Gives Phase 19 a head start."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": null,
+          "chat_more": "",
+          "status": "unanswered"
+        }
+      ]
+    }
+  ]
+}

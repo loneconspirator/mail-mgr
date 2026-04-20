@@ -1,0 +1,356 @@
+{
+  "phase": "17-configuration-folder-lifecycle",
+  "generated_at": "2026-04-20T18:00:00Z",
+  "stats": {
+    "total": 12,
+    "answered": 12,
+    "chat_more": 0,
+    "remaining": 0
+  },
+  "sections": [
+    {
+      "id": "config-schema",
+      "title": "Configuration Schema",
+      "questions": [
+        {
+          "id": "Q-01",
+          "title": "Config location in YAML",
+          "context": "Current config has top-level sections: imap, server, rules, review. The review section nests moveTracking under it. Action folders are a new top-level feature — do they nest under an existing section or get their own?",
+          "options": [
+            {
+              "id": "a",
+              "label": "Top-level `actionFolders` section",
+              "description": "Parallel to imap/server/rules/review. Clean separation, easy to find. Research summary recommends this."
+            },
+            {
+              "id": "b",
+              "label": "Nested under `review` section",
+              "description": "Action folders are related to review workflow. Groups monitoring-related config together. But action folders aren’t really about Review."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": "a",
+          "chat_more": "",
+          "status": "answered"
+        },
+        {
+          "id": "Q-02",
+          "title": "Default folder prefix",
+          "context": "The PRD specifies an `Actions/` prefix with 4 sub-folders (VIP Sender, Block Sender, Undo VIP, Unblock Sender). The prefix is configurable per CONF-01. What should the default prefix be?",
+          "options": [
+            {
+              "id": "a",
+              "label": "`Actions`",
+              "description": "Clean, generic, matches PRD examples. Creates Actions/VIP Sender, Actions/Block Sender, etc."
+            },
+            {
+              "id": "b",
+              "label": "`Mail Manager`",
+              "description": "Makes it clear these folders belong to this application. Creates Mail Manager/VIP Sender, etc."
+            },
+            {
+              "id": "c",
+              "label": "`_Actions` (underscore prefix)",
+              "description": "Sorts to top of folder list in most mail clients. Visually distinct from user folders."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": "a",
+          "chat_more": "",
+          "status": "answered"
+        },
+        {
+          "id": "Q-03",
+          "title": "Default sub-folder names",
+          "context": "PRD uses: VIP Sender, Block Sender, Undo VIP, Unblock Sender. These are user-facing names visible in the mail client. Are these the right defaults or should they be different?",
+          "options": [
+            {
+              "id": "a",
+              "label": "Keep PRD names as-is",
+              "description": "VIP Sender, Block Sender, Undo VIP, Unblock Sender — action-oriented, clear what happens"
+            },
+            {
+              "id": "b",
+              "label": "Shorter names",
+              "description": "VIP, Block, Undo VIP, Unblock — terser, less cluttered in sidebar"
+            },
+            {
+              "id": "c",
+              "label": "Emoji-prefixed for visibility",
+              "description": "⭐ VIP Sender, 🚫 Block Sender, etc. — stands out visually in mail client but may not render everywhere"
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": "c",
+          "chat_more": "",
+          "status": "answered"
+        },
+        {
+          "id": "Q-04",
+          "title": "Individual folder name configurability",
+          "context": "CONF-01 says prefix AND individual folder names are configurable. Should users be able to rename individual action folders (e.g. change 'VIP Sender' to 'Priority'), or is prefix-only enough?",
+          "options": [
+            {
+              "id": "a",
+              "label": "Both prefix and individual names configurable",
+              "description": "Full flexibility. Schema has `prefix` + per-folder `name` overrides. More config surface but matches CONF-01 exactly."
+            },
+            {
+              "id": "b",
+              "label": "Prefix only — sub-folder names are fixed",
+              "description": "Simpler config. Users can still change the parent folder name. Sub-folder names are well-known constants."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": "a",
+          "chat_more": "",
+          "status": "answered"
+        }
+      ]
+    },
+    {
+      "id": "enable-disable",
+      "title": "Feature Toggle & Poll Config",
+      "questions": [
+        {
+          "id": "Q-05",
+          "title": "Enable/disable behavior",
+          "context": "CONF-02 requires action folders can be enabled/disabled. MoveTracker uses a simple `enabled: boolean` that skips `start()`. The question is what 'disabled' means for folders that already exist on the IMAP server.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Disabled = don’t create, don’t monitor, ignore existing",
+              "description": "If folders already exist on server, they’re left alone but not watched. Simplest behavior. Re-enabling just starts monitoring."
+            },
+            {
+              "id": "b",
+              "label": "Disabled = don’t create, don’t monitor, warn if messages found",
+              "description": "Same as (a) but on startup, log a warning if disabled action folders contain messages. Prevents silent message loss."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": "a",
+          "chat_more": "",
+          "status": "answered"
+        },
+        {
+          "id": "Q-06",
+          "title": "Default poll interval",
+          "context": "CONF-03 requires configurable poll interval. Research recommends 15 seconds. Existing intervals: IMAP poll=60s, MoveTracker=30s, Sweep=6h. Action folders should be responsive since the user just dragged a message.",
+          "options": [
+            {
+              "id": "a",
+              "label": "15 seconds (research recommendation)",
+              "description": "Good balance — user waits ~7.5s average after drag. STATUS is lightweight (no mailbox switch). Same as MoveTracker order of magnitude."
+            },
+            {
+              "id": "b",
+              "label": "10 seconds",
+              "description": "More responsive (~5s average wait). Still lightweight. More chatty on the IMAP connection."
+            },
+            {
+              "id": "c",
+              "label": "30 seconds (match MoveTracker)",
+              "description": "Conservative. ~15s average wait. Less server load but user might wonder if it’s working."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": "a",
+          "chat_more": "",
+          "status": "answered"
+        }
+      ]
+    },
+    {
+      "id": "folder-creation",
+      "title": "Folder Creation & Lifecycle",
+      "questions": [
+        {
+          "id": "Q-07",
+          "title": "When to create folders",
+          "context": "FOLD-01 says create on startup. Current codebase creates folders lazily (on move failure, retry-once pattern in actions/index.ts). The question is whether action folders should be eagerly created at startup or lazily on first use.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Eager creation at startup",
+              "description": "Folders exist immediately after first run. User sees them in mail client right away. Matches FOLD-01 exactly. Fails fast if IMAP permissions are wrong."
+            },
+            {
+              "id": "b",
+              "label": "Lazy creation on first poll",
+              "description": "Folders created when monitoring starts, not during startup. Slight delay but doesn’t block startup on folder creation errors."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": "b",
+          "chat_more": "",
+          "status": "answered"
+        },
+        {
+          "id": "Q-08",
+          "title": "Handling already-exists on creation",
+          "context": "If folders already exist (e.g., second startup, or user pre-created them), `mailboxCreate` will throw. Need to handle gracefully. imapflow’s error for already-exists is a standard IMAP NO response.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Try create, catch already-exists, log debug, continue",
+              "description": "Simple try/catch. Log at debug level since this is the normal case after first run. No overhead of checking first."
+            },
+            {
+              "id": "b",
+              "label": "Check existence first via status(), only create if missing",
+              "description": "Cleaner — no error thrown in normal case. But adds an extra IMAP call per folder on every startup."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": "b",
+          "chat_more": "",
+          "status": "answered"
+        },
+        {
+          "id": "Q-09",
+          "title": "Folder creation failure handling",
+          "context": "If folder creation fails (permissions, server error), what should happen? Action folders can’t function without the IMAP folders existing.",
+          "options": [
+            {
+              "id": "a",
+              "label": "Log error, disable action folder monitoring, continue startup",
+              "description": "Graceful degradation. Rest of the app works fine. User sees error in logs. Can fix IMAP permissions and restart."
+            },
+            {
+              "id": "b",
+              "label": "Log error, retry on next poll cycle",
+              "description": "Self-healing — if it’s a transient IMAP error, the next poll will try again. But could spam logs with repeated failures."
+            },
+            {
+              "id": "c",
+              "label": "Fatal error, abort startup",
+              "description": "If action folders are enabled but can’t be created, it’s a config/permission problem that won’t fix itself. Forces the user to address it."
+            },
+            {
+              "id": "d",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": "a",
+          "chat_more": "",
+          "status": "answered"
+        }
+      ]
+    },
+    {
+      "id": "startup-integration",
+      "title": "Startup & Integration",
+      "questions": [
+        {
+          "id": "Q-10",
+          "title": "Where in startup sequence",
+          "context": "Current startup: config → IMAP connect → envelope discovery → sweeper/batch start → MoveTracker start. Action folder creation and monitoring need to fit somewhere in this sequence.",
+          "options": [
+            {
+              "id": "a",
+              "label": "After IMAP connect, before sweeper/MoveTracker",
+              "description": "Create folders right after IMAP is up. Ensures folders exist before anything else runs. Natural position since it’s a one-time setup."
+            },
+            {
+              "id": "b",
+              "label": "After all existing components start",
+              "description": "Don’t change the existing startup order. Action folders are the last thing to initialize. Safest for existing behavior."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": "a",
+          "chat_more": "",
+          "status": "answered"
+        },
+        {
+          "id": "Q-11",
+          "title": "Config hot-reload behavior",
+          "context": "ConfigRepository supports hot-reload via onChange callbacks (onRulesChange, onImapConfigChange, onReviewConfigChange). If the user changes action folder config, what should happen?",
+          "options": [
+            {
+              "id": "a",
+              "label": "Add onActionFolderConfigChange callback",
+              "description": "Follows established pattern. On change: stop polling, re-read config, create any new folders, restart polling. Full consistency."
+            },
+            {
+              "id": "b",
+              "label": "Require restart for action folder config changes",
+              "description": "Simpler. Action folder config is a startup concern. Changing folder names mid-run is weird anyway. Just document ‘restart required’."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": "a",
+          "chat_more": "",
+          "status": "answered"
+        },
+        {
+          "id": "Q-12",
+          "title": "Scope of Phase 17 deliverable",
+          "context": "Phase 17 covers CONF-01, CONF-02, CONF-03, FOLD-01. The question is whether this phase just adds config + folder creation, or also sets up the polling timer skeleton (without actual processing, which is Phase 19).",
+          "options": [
+            {
+              "id": "a",
+              "label": "Config + folder creation only",
+              "description": "Strictly what the requirements say. Schema validation, defaults, IMAP folder creation on startup. No timer, no processor skeleton. Clean boundary."
+            },
+            {
+              "id": "b",
+              "label": "Config + folder creation + empty processor skeleton",
+              "description": "Add the ActionFolderProcessor class with poll timer that does nothing yet. Phase 18/19 fill in the behavior. Gives something to wire tests against."
+            },
+            {
+              "id": "c",
+              "label": "Custom",
+              "description": ""
+            }
+          ],
+          "answer": "a",
+          "chat_more": "",
+          "status": "answered"
+        }
+      ]
+    }
+  ]
+}
