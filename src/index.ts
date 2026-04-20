@@ -239,6 +239,7 @@ async function main(): Promise<void> {
     config.imap.envelopeHeader = initialHeader ?? undefined;
     saveConfig(configPath, config);
     // Rebuild monitor with updated config that includes envelopeHeader
+    await monitor.stop();
     monitor = new Monitor(config, { imapClient, activityLog, logger });
   }
 
