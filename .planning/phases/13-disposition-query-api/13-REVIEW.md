@@ -1,122 +1,91 @@
 ---
 phase: 13-disposition-query-api
-reviewed: 2026-04-19T00:00:00Z
+reviewed: 2026-04-20T05:08:13Z
 depth: standard
 files_reviewed: 3
 files_reviewed_list:
   - src/web/routes/dispositions.ts
-  - test/unit/web/dispositions.test.ts
   - src/web/server.ts
+  - test/unit/web/dispositions.test.ts
 findings:
   critical: 0
-  warning: 2
+  warning: 1
   info: 2
-  total: 4
+  total: 3
 status: issues_found
 ---
 
 # Phase 13: Code Review Report
 
-**Reviewed:** 2026-04-19T00:00:00Z
+**Reviewed:** 2026-04-20T05:08:13Z
 **Depth:** standard
 **Files Reviewed:** 3
 **Status:** issues_found
 
 ## Summary
 
-This phase adds `GET /api/dispositions` — a filtered view of sender-only rules. The route implementation and test suite are clean and well-structured overall. Two correctness issues need attention: `isSenderOnly` has an incomplete field check that will silently include non-sender-only rules if `deliveredTo`, `visibility`, or `readStatus` are set, and the test mock is missing two required `ServerDeps` fields which will fail TypeScript compilation. Two lower-priority quality notes round out the findings.
+Reviewed the disposition query API implementation: the route handler in `src/web/routes/dispositions.ts`, its registration in `src/web/server.ts`, and unit tests in `test/unit/web/dispositions.test.ts`.
+
+The core logic is solid. `isSenderOnly` correctly checks all six `EmailMatch` fields (including the `readStatus: 'any'` equivalence). `isValidDispositionType` is tight. The route handles both the unfiltered and `?type=` filtered cases correctly, with a clean 400 for invalid type values. Registration follows the established project pattern. The test suite has good coverage including edge cases (disabled rules, `readStatus: 'any'`, multi-criteria exclusions).
+
+One warning-level issue: the test uses an invalid enum value for `visibility` that TypeScript should reject at compile time. Two info-level items round out the findings.
 
 ## Warnings
 
-### WR-01: `isSenderOnly` ignores three valid `EmailMatch` fields
+### WR-01: Invalid enum value in test — TypeScript type error
 
-**File:** `src/web/routes/dispositions.ts:9-14`
+**File:** `test/unit/web/dispositions.test.ts:121`
+**Issue:** The `isSenderOnly` describe block constructs a rule with `visibility: 'personal'`, but the schema defines `VisibilityMatch` as `z.enum(['direct', 'cc', 'bcc', 'list'])`. The string `'personal'` is not assignable to that union. TypeScript should flag this as a compile error. The test passes at runtime (JS doesn't enforce types), but `tsc --noEmit` or `vitest --typecheck` will reject it. The test intent is valid — any real visibility value makes `isSenderOnly` return false — but the value used is not a valid production input.
 
-**Issue:** `isSenderOnly` only checks that `recipient` and `subject` are undefined, but `EmailMatch` has three additional match fields: `deliveredTo`, `visibility`, and `readStatus`. A rule with `match: { sender: 'x@y.com', deliveredTo: 'list@z.com' }` has two criteria and should NOT be considered sender-only, but the current predicate returns `true` for it. This will cause those rules to appear in the dispositions API response incorrectly.
-
-**Fix:**
+**Fix:** Replace `'personal'` with any valid `VisibilityMatch` value:
 ```typescript
-export function isSenderOnly(rule: Rule): boolean {
-  const m = rule.match;
-  return (
-    m.sender !== undefined &&
-    m.recipient === undefined &&
-    m.subject === undefined &&
-    m.deliveredTo === undefined &&
-    m.visibility === undefined &&
-    m.readStatus === undefined
-  );
-}
+// Before (line 121)
+const rule = makeRule({ match: { sender: '*@test.com', visibility: 'personal' } });
+
+// After
+const rule = makeRule({ match: { sender: '*@test.com', visibility: 'direct' } });
 ```
-
----
-
-### WR-02: Test mock `makeDeps` is missing required `ServerDeps` fields
-
-**File:** `test/unit/web/dispositions.test.ts:51-76`
-
-**Issue:** `ServerDeps` (defined in `src/web/server.ts:33-34`) requires `getMoveTracker: () => MoveTracker | undefined` and `getProposalStore: () => ProposalStore`. The `makeDeps` helper in the test omits both. TypeScript will reject this at compile time (`tsc` / `vitest --typecheck`), and depending on any route that accesses those deps at runtime, it could also panic.
-
-**Fix:**
-```typescript
-function makeDeps(config: Config): ServerDeps {
-  writeConfig(config);
-  const configRepo = new ConfigRepository(configPath);
-
-  return {
-    configRepo,
-    activityLog,
-    getMonitor: () => ({ ... } as any),
-    getSweeper: () => undefined,
-    getFolderCache: () => ({ ... } as any),
-    getBatchEngine: () => ({ ... } as any),
-    getMoveTracker: () => undefined,          // add this
-    getProposalStore: () => ({ ... } as any), // add this (stub as needed)
-  };
-}
-```
-
----
 
 ## Info
 
-### IN-01: Unsafe query param cast without Fastify schema validation
+### IN-01: No Fastify querystring schema declared on the route
 
-**File:** `src/web/routes/dispositions.ts:26-27`
+**File:** `src/web/routes/dispositions.ts:25-43`
+**Issue:** The route manually extracts and type-guards the `type` query param via `as Record<string, unknown>` + `typeof` check. This is functionally correct — the `typeof raw === 'string'` guard on line 30 properly handles cases where Fastify parses `?type=a&type=b` as an array. However, the route declares no Fastify `querystring` schema, so Fastify's built-in validation, coercion, and OpenAPI documentation are bypassed. This is consistent with other routes in the project, so it is not an anomaly, but it is worth noting.
 
-**Issue:** `request.query as Record<string, string>` is an unchecked cast. Fastify parses `?type[]=foo` or `?type=a&type=b` as an array, not a string, at runtime. Without a declared Fastify query schema, TypeScript sees `string` but the runtime value could be `string[]`. `isValidDispositionType` would then receive an array and return `false`, yielding a 400 with a misleading error message rather than being handled gracefully.
-
-**Fix:** Declare a Fastify route schema for the query string, or explicitly guard the runtime type:
+**Fix (optional):** Declare a querystring schema to get free validation and type-safe access:
 ```typescript
-const raw = (request.query as Record<string, unknown>).type;
-const type = typeof raw === 'string' ? raw : undefined;
-```
-
----
-
-### IN-02: Test suite leaks a new `buildServer` instance per test case without closing it
-
-**File:** `test/unit/web/dispositions.test.ts:163-252`
-
-**Issue:** Each `it` block calls `buildServer(...)` but never calls `app.close()`. Fastify tracks open handles (timers, sockets). In `vitest`, this can produce "open handle" warnings and slow teardown. The `afterEach` only closes `activityLog` and the tmpdir, not the Fastify instances.
-
-**Fix:** Store the app reference and close it after each test:
-```typescript
-let app: FastifyInstance;
-
-// inside each it:
-app = buildServer(makeDeps(makeTestConfig()));
-
-// or in afterEach:
-afterEach(async () => {
-  await app?.close();
-  activityLog.close();
-  fs.rmSync(tmpDir, { recursive: true, force: true });
+app.get('/api/dispositions', {
+  schema: {
+    querystring: {
+      type: 'object',
+      properties: { type: { type: 'string' } },
+      additionalProperties: false,
+    },
+  },
+}, async (request, reply) => {
+  const { type } = request.query as { type?: string };
+  // ...
 });
 ```
 
+### IN-02: `isSenderOnly` exported without a doc comment explaining business intent
+
+**File:** `src/web/routes/dispositions.ts:8`
+**Issue:** The function implements a non-obvious rule: sender must be set, all other fields must be absent, and `readStatus: 'any'` is treated as equivalent to absent. A brief JSDoc would make the intent clear without requiring readers to cross-reference the schema.
+
+**Fix:**
+```typescript
+/**
+ * Returns true if the rule matches on sender address only —
+ * no recipient, subject, deliveredTo, visibility, or specific readStatus.
+ * readStatus='any' is treated as equivalent to absent (matches all messages).
+ */
+export function isSenderOnly(rule: Rule): boolean {
+```
+
 ---
 
-_Reviewed: 2026-04-19T00:00:00Z_
+_Reviewed: 2026-04-20T05:08:13Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
