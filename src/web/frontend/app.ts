@@ -317,6 +317,118 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true, forceCreate = fals
   });
 }
 
+// --- Add Sender Modal ---
+function openAddSenderModal(viewType: 'skip' | 'delete' | 'review' | 'move', viewName: string, reRender: () => void): void {
+  const titles: Record<string, string> = {
+    skip: 'Add Priority Sender',
+    delete: 'Add Blocked Sender',
+    review: 'Add Reviewed Sender',
+    move: 'Add Archived Sender',
+  };
+
+  const overlay = h('div', { className: 'modal-overlay' });
+  const modal = h('div', { className: 'modal' });
+
+  let selectedFolder = '';
+
+  modal.innerHTML = `
+    <h2>${esc(titles[viewType])}</h2>
+    <div class="form-group"><label>Sender Pattern</label><input id="as-sender" placeholder="*@example.com" /></div>
+    ${viewType === 'move' ? '<div class="form-group"><label>Destination Folder</label><div id="as-folder-picker"></div></div>' : ''}
+    <div class="form-actions">
+      <button class="btn" id="as-cancel">Discard</button>
+      <button class="btn btn-primary" id="as-submit">Add Sender</button>
+    </div>
+  `;
+
+  overlay.append(modal);
+  document.body.append(overlay);
+
+  // Wire folder picker for Archived (move) view
+  if (viewType === 'move') {
+    renderFolderPicker({
+      container: document.getElementById('as-folder-picker')!,
+      currentValue: '',
+      onSelect: (path) => {
+        selectedFolder = path;
+        updateSubmitState();
+      },
+    });
+  }
+
+  const submitBtn = document.getElementById('as-submit') as HTMLButtonElement;
+  const senderInput = document.getElementById('as-sender') as HTMLInputElement;
+
+  // For move type, disable submit until both sender and folder are filled
+  const updateSubmitState = () => {
+    if (viewType === 'move') {
+      submitBtn.disabled = !senderInput.value.trim() || !selectedFolder;
+    } else {
+      submitBtn.disabled = !senderInput.value.trim();
+    }
+  };
+
+  // Start with submit disabled
+  submitBtn.disabled = true;
+  senderInput.addEventListener('input', updateSubmitState);
+
+  // Focus the sender input
+  senderInput.focus();
+
+  // Close handlers
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
+  document.getElementById('as-cancel')!.addEventListener('click', () => overlay.remove());
+
+  // Escape key closes modal
+  const escHandler = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') { overlay.remove(); document.removeEventListener('keydown', escHandler); }
+  };
+  document.addEventListener('keydown', escHandler);
+
+  // Submit handler
+  submitBtn.addEventListener('click', async () => {
+    const sender = senderInput.value.trim();
+    if (!sender) return;
+    if (viewType === 'move' && !selectedFolder) return;
+
+    submitBtn.textContent = 'Adding...';
+    submitBtn.disabled = true;
+
+    // Build action based on view type
+    let action: Action;
+    if (viewType === 'skip') action = { type: 'skip' };
+    else if (viewType === 'delete') action = { type: 'delete' };
+    else if (viewType === 'review') action = { type: 'review' };
+    else action = { type: 'move', folder: selectedFolder };
+
+    // Compute order for new rule (append to end)
+    let orderValue = 0;
+    try {
+      const existingRules = await api.rules.list();
+      if (existingRules.length > 0) {
+        orderValue = Math.max(...existingRules.map((r: Rule) => r.order)) + 1;
+      }
+    } catch { /* fallback to 0 */ }
+
+    try {
+      await api.rules.create({
+        match: { sender },
+        action,
+        enabled: true,
+        order: orderValue,
+      });
+      toast('Sender added');
+      overlay.remove();
+      document.removeEventListener('keydown', escHandler);
+      reRender();
+    } catch (e: unknown) {
+      toast(`Failed to add sender: ${e instanceof Error ? e.message : String(e)}`, true);
+      submitBtn.textContent = 'Add Sender';
+      submitBtn.disabled = false;
+    }
+  });
+}
+
 // --- Disposition Views (Priority / Blocked) ---
 async function renderDispositionView(type: 'skip' | 'delete', heading: string) {
   const app = $('#app');
@@ -337,16 +449,23 @@ async function renderDispositionView(type: 'skip' | 'delete', heading: string) {
     const rules = await api.dispositions.list(type);
     app.innerHTML = '';
 
+    const addBtn = h('button', { className: 'btn btn-primary' }, '+ Add Sender');
+    addBtn.addEventListener('click', () => openAddSenderModal(type, heading, () => renderDispositionView(type, heading)));
     const toolbar = h('div', { className: 'toolbar' },
       h('h2', {}, heading),
+      addBtn,
     );
     app.append(toolbar);
 
     if (rules.length === 0) {
       const empty = emptyConfig[type];
+      const emptyLabel = type === 'skip' ? '+ Add Priority Sender' : '+ Add Blocked Sender';
+      const emptyAddBtn = h('button', { className: 'btn btn-primary' }, emptyLabel);
+      emptyAddBtn.addEventListener('click', () => openAddSenderModal(type, heading, () => renderDispositionView(type, heading)));
       app.append(h('div', { className: 'empty' },
         h('h3', {}, empty.heading),
         h('p', {}, empty.body),
+        emptyAddBtn,
       ));
       return;
     }
@@ -444,15 +563,22 @@ function renderFolderGroupedView(rules: Rule[], heading: string, emptyConfig: { 
   const app = $('#app');
   app.innerHTML = '';
 
-  const toolbar = h('div', { className: 'toolbar' },
-    h('h2', {}, heading),
-  );
+  const toolbar = h('div', { className: 'toolbar' }, h('h2', {}, heading));
+  if (viewType && reRender) {
+    const addBtn = h('button', { className: 'btn btn-primary' }, '+ Add Sender');
+    addBtn.addEventListener('click', () => openAddSenderModal(viewType, heading, reRender));
+    toolbar.append(addBtn);
+  }
   app.append(toolbar);
 
   if (rules.length === 0) {
+    const emptyLabel = viewType === 'review' ? '+ Add Reviewed Sender' : '+ Add Archived Sender';
+    const emptyAddBtn = h('button', { className: 'btn btn-primary' }, emptyLabel);
+    emptyAddBtn.addEventListener('click', () => { if (viewType && reRender) openAddSenderModal(viewType, heading, reRender); });
     app.append(h('div', { className: 'empty' },
       h('h3', {}, emptyConfig.heading),
       h('p', {}, emptyConfig.body),
+      emptyAddBtn,
     ));
     return;
   }
