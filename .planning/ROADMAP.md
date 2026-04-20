@@ -56,7 +56,7 @@ Full details: [milestones/v0.5-ROADMAP.md](milestones/v0.5-ROADMAP.md)
 **Milestone Goal:** Let users manage sender dispositions directly from their mail client by moving messages to special IMAP folders.
 
 - [x] **Phase 17: Configuration & Folder Lifecycle** - Schema, config validation, and IMAP folder auto-creation (completed 2026-04-20)
-- [ ] **Phase 18: Safety Predicates & Activity Log** - MoveTracker exclusions, shared predicates, action registry, logging extension
+- [x] **Phase 18: Safety Predicates & Activity Log** - MoveTracker exclusions, shared predicates, action registry, logging extension (completed 2026-04-20)
 - [ ] **Phase 19: Action Processing Core** - Sender extraction, rule CRUD, message routing for all four action types
 - [ ] **Phase 20: Monitoring & Startup Recovery** - Poll integration, priority processing, startup pre-scan, always-empty invariant
 - [ ] **Phase 21: Idempotency & Edge Cases** - Duplicate prevention, undo-with-no-match, crash recovery resilience
@@ -90,8 +90,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 18-01-PLAN.md — Extend isSystemMove and logActivity source union for action-folder
-- [ ] 18-02-PLAN.md — Action type registry and sender-utils extraction
+- [x] 18-01-PLAN.md — Extend isSystemMove and logActivity source union for action-folder
+- [x] 18-02-PLAN.md — Action type registry and sender-utils extraction
 
 ### Phase 19: Action Processing Core
 **Goal**: Users can VIP, block, undo-VIP, and unblock senders by moving messages to action folders
@@ -149,7 +149,7 @@ Plans:
 | 15. Folder-Grouped Views | v0.5 | 1/1 | Complete | 2026-04-20 |
 | 16. Inline Sender Management | v0.5 | 1/1 | Complete | 2026-04-20 |
 | 17. Configuration & Folder Lifecycle | v0.6 | 2/2 | Complete    | 2026-04-20 |
-| 18. Safety Predicates & Activity Log | v0.6 | 0/2 | Not started | - |
+| 18. Safety Predicates & Activity Log | v0.6 | 2/2 | Complete   | 2026-04-20 |
 | 19. Action Processing Core | v0.6 | 0/? | Not started | - |
 | 20. Monitoring & Startup Recovery | v0.6 | 0/? | Not started | - |
 | 21. Idempotency & Edge Cases | v0.6 | 0/? | Not started | - |
