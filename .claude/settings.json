@@ -13,7 +13,7 @@
       {
         "hooks": [{
           "type": "command",
-          "command": "if [ -f /tmp/claude_gsd_ran ] && git -C \"$CLAUDE_PROJECT_DIR\" status --porcelain | grep -q .; then echo '{\"hookSpecificOutput\":{\"hookEventName\":\"Stop\",\"additionalContext\":\"REMINDER: You ran a GSD command and there are uncommitted .planning/ changes. Did you forget to commit planning artifacts?\"}}'; fi; rm -f /tmp/claude_gsd_ran"
+          "command": "if [ -f /tmp/claude_gsd_ran ] && git -C \"$CLAUDE_PROJECT_DIR\" status --porcelain | grep -q .; then echo '{\"systemMessage\":\"REMINDER: You ran a GSD command and there are uncommitted .planning/ changes. Did you forget to commit planning artifacts?\"}'; fi; rm -f /tmp/claude_gsd_ran"
         }]
       }
     ]
