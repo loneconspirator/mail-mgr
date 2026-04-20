@@ -30,21 +30,25 @@ if lsof -ti:$APP_PORT >/dev/null 2>&1; then
   exit 1
 fi
 
-# ── 4. Seed data ─────────────────────────────────────────────────
+# ── 4. Build frontend ───────────────────────────────────────────
+echo "Building frontend..."
+(cd "$REPO_DIR" && npm run build:frontend)
+
+# ── 5. Seed data ─────────────────────────────────────────────────
 mkdir -p "$DATA_DIR"
 echo "Seeding dev data..."
 DATA_PATH="$DATA_DIR" npx tsx "$SCRIPT_DIR/seed.ts"
 
-# ── 5. Start the app in the background ───────────────────────────
+# ── 6. Start the app in the background ───────────────────────────
 echo "Starting app..."
 DATA_PATH="$DATA_DIR" npx tsx "$REPO_DIR/src/index.ts" &
 APP_PID=$!
 echo "$APP_PID" > "$PID_FILE"
 
-# ── 6. Wait for app to be ready ──────────────────────────────────
+# ── 7. Wait for app to be ready ──────────────────────────────────
 "$SCRIPT_DIR/wait-for-port.sh" "$APP_PORT" "Mail Manager app" 15
 
-# ── 7. Report ────────────────────────────────────────────────────
+# ── 8. Report ────────────────────────────────────────────────────
 cat <<EOF
 
 Dev environment is running!
