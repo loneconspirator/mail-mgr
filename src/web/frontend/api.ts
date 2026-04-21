@@ -1,12 +1,12 @@
 // API wrapper — all fetch calls to the backend
 
-import type { Rule, ImapConfig, ImapConfigResponse, ReviewConfig } from '../../shared/types.js';
+import type { Rule, ImapConfig, ImapConfigResponse, ReviewConfig, ActionFolderConfig } from '../../shared/types.js';
 import type { ActivityEntry, StatusResponse, ReviewStatusResponse, FolderTreeResponse, MoveTrackerStatusResponse, DeepScanResponse } from '../../shared/types.js';
 import type { BatchStatusResponse, DryRunResponse, DryRunGroup } from '../../shared/types.js';
 import type { ProposedRuleCard } from '../../shared/types.js';
 
 // Re-export for frontend consumers
-export type { Rule, ImapConfig, ImapConfigResponse, ReviewConfig, ActivityEntry, StatusResponse, ReviewStatusResponse, FolderTreeResponse, MoveTrackerStatusResponse, DeepScanResponse };
+export type { Rule, ImapConfig, ImapConfigResponse, ReviewConfig, ActionFolderConfig, ActivityEntry, StatusResponse, ReviewStatusResponse, FolderTreeResponse, MoveTrackerStatusResponse, DeepScanResponse };
 export type { BatchStatusResponse, DryRunResponse, DryRunGroup };
 export type { ProposedRuleCard };
 export { ApiError };
@@ -71,6 +71,11 @@ export const api = {
     updateReview: (cfg: Partial<ReviewConfig>) => request<ReviewConfig>('/api/config/review', { method: 'PUT', body: JSON.stringify(cfg) }),
     getCursor: () => request<{ enabled: boolean }>('/api/settings/cursor'),
     setCursor: (enabled: boolean) => request<void>('/api/settings/cursor', { method: 'PUT', body: JSON.stringify({ enabled }) }),
+    getActionFolders: () => request<ActionFolderConfig>('/api/config/action-folders'),
+    updateActionFolders: (cfg: Partial<ActionFolderConfig>) =>
+      request<ActionFolderConfig>('/api/config/action-folders', {
+        method: 'PUT', body: JSON.stringify(cfg),
+      }),
   },
   folders: {
     list: () => request<FolderTreeResponse>('/api/folders'),
