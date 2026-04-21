@@ -146,4 +146,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-21 after v0.6 Phase 23 — Duplicate Path Audit Logging complete*
+*Last updated: 2026-04-21 after v0.6 Phase 24 — Nyquist Validation Backfill complete (all phases 17-22 now nyquist_compliant: true)*
