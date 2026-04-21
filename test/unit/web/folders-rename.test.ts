@@ -230,6 +230,33 @@ describe('POST /api/folders/rename', () => {
     expect(res.json().error).toMatch(/IMAP server error/);
   });
 
+  it('returns 403 for dot-delimited action folder when tree node is not found (stale cache)', async () => {
+    // Tree does NOT contain "Actions.⭐ VIP Sender" — simulates stale cache
+    // so findNode returns null and delimiter fallback must detect dot from oldPath
+    const deps = createMockDeps();
+    registerFolderRoutes(app, deps);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/folders/rename',
+      payload: { oldPath: 'Actions.⭐ VIP Sender', newPath: 'VIPStuff' },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error).toMatch(/system/i);
+  });
+
+  it('returns 403 for dot-delimited action prefix folder itself', async () => {
+    const deps = createMockDeps();
+    registerFolderRoutes(app, deps);
+
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/folders/rename',
+      payload: { oldPath: 'Actions', newPath: 'MyActions' },
+    });
+    expect(res.statusCode).toBe(403);
+  });
+
   it('refreshes cache after rename failure per D-07', async () => {
     const getTree = vi.fn(async () => SAMPLE_TREE);
     const renameFolder = vi.fn(async () => { throw new Error('fail'); });
