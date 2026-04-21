@@ -62,6 +62,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Action folders always empty after processing (always-empty invariant) — v0.6 Phase 20
 - ✓ Idempotent action folder processing (duplicate rule prevention via check-before-create) — v0.6 Phase 21
 - ✓ Undo operations with no matching rule still move message to destination without error — v0.6 Phase 21
+- ✓ Duplicate-rule detection path emits activity log entry for audit trail completeness — v0.6 Phase 23
 
 ### Active
 
@@ -89,7 +90,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - **Mail client:** Any folder-based mail client (Mac Mail, Thunderbird, etc.)
 - **Database:** SQLite via better-sqlite3
 - **Web UI:** Vanilla HTML/CSS/JS SPA served by Fastify
-- **Testing:** Vitest with 541+ tests (unit + integration)
+- **Testing:** Vitest with 585+ tests (unit + integration)
 - **Codebase:** ~7,000 LOC TypeScript across 50+ source files
 - **Architecture:** Monitor loop polls IMAP, evaluates rules, executes actions, logs activity. Sweep runs periodically on Review folder. BatchEngine applies rules retroactively with chunked execution. Web server exposes REST API for UI.
 - **Key insight:** Folder structure is primarily owned by the mail client/IMAP server. The system discovers what folders exist and uses them. Exception: Action Folders (v0.6) creates a dedicated `Actions/` hierarchy for drag-to-act functionality.
@@ -145,4 +146,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-21 after v0.6 Phase 21 — Idempotency & Edge Cases complete*
+*Last updated: 2026-04-21 after v0.6 Phase 23 — Duplicate Path Audit Logging complete*
