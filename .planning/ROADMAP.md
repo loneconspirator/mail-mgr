@@ -58,7 +58,7 @@ Full details: [milestones/v0.5-ROADMAP.md](milestones/v0.5-ROADMAP.md)
 - [x] **Phase 17: Configuration & Folder Lifecycle** - Schema, config validation, and IMAP folder auto-creation (completed 2026-04-20)
 - [x] **Phase 18: Safety Predicates & Activity Log** - MoveTracker exclusions, shared predicates, action registry, logging extension (completed 2026-04-20)
 - [x] **Phase 19: Action Processing Core** - Sender extraction, rule CRUD, message routing for all four action types (completed 2026-04-20)
-- [ ] **Phase 20: Monitoring & Startup Recovery** - Poll integration, priority processing, startup pre-scan, always-empty invariant
+- [x] **Phase 20: Monitoring & Startup Recovery** - Poll integration, priority processing, startup pre-scan, always-empty invariant (completed 2026-04-21)
 - [ ] **Phase 21: Idempotency & Edge Cases** - Duplicate prevention, undo-with-no-match, crash recovery resilience
 
 ## Phase Details
@@ -122,8 +122,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 20-01-PLAN.md — TDD: ActionFolderPoller class with poll/scan/always-empty logic
-- [ ] 20-02-PLAN.md — Wire poller into index.ts lifecycle (startup, config, shutdown)
+- [x] 20-01-PLAN.md — TDD: ActionFolderPoller class with poll/scan/always-empty logic
+- [x] 20-02-PLAN.md — Wire poller into index.ts lifecycle (startup, config, shutdown)
 
 
 
@@ -163,7 +163,7 @@ Plans:
 | 17. Configuration & Folder Lifecycle | v0.6 | 2/2 | Complete    | 2026-04-20 |
 | 18. Safety Predicates & Activity Log | v0.6 | 2/2 | Complete    | 2026-04-20 |
 | 19. Action Processing Core | v0.6 | 1/1 | Complete    | 2026-04-20 |
-| 20. Monitoring & Startup Recovery | v0.6 | 0/? | Not started | - |
+| 20. Monitoring & Startup Recovery | v0.6 | 2/2 | Complete    | 2026-04-21 |
 | 21. Idempotency & Edge Cases | v0.6 | 0/? | Not started | - |
 
 ### Phase 22: Add folder rename UI to settings page with IMAP folder rename
@@ -171,7 +171,7 @@ Plans:
 **Goal:** [To be planned]
 **Requirements**: TBD
 **Depends on:** Phase 21
-**Plans:** 1/1 plans complete
+**Plans:** 2/2 plans complete
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 22 to break down)
