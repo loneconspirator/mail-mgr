@@ -178,12 +178,14 @@ describe('ActionFolderPoller', () => {
 
     it('processes messages from multiple non-empty folders', async () => {
       const deps = createDeps();
+      // Call order: vip initial -> vip re-check -> block initial -> block re-check -> undoVip -> unblock
       (deps.client.status as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip
-        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // block
+        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip initial
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // vip re-check
+        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // block initial
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // block re-check
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // undoVip
-        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // unblock
-        .mockResolvedValue({ messages: 0, unseen: 0 }); // re-checks
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }); // unblock
       (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce([makeReviewMessage(1)])
         .mockResolvedValueOnce([makeReviewMessage(2)]);
@@ -241,13 +243,14 @@ describe('ActionFolderPoller', () => {
 
     it('logs a warning if messages still remain after retry', async () => {
       const deps = createDeps();
+      // Call order: vip initial -> vip re-check -> vip final -> block -> undoVip -> unblock
       (deps.client.status as ReturnType<typeof vi.fn>)
         .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip initial
+        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip re-check: still has messages
+        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip final check: STILL has messages
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // block
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // undoVip
-        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // unblock
-        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip re-check
-        .mockResolvedValueOnce({ messages: 1, unseen: 0 }); // vip final check: STILL has messages
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }); // unblock
       (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>)
         .mockResolvedValue([makeReviewMessage(1)]);
       const poller = new ActionFolderPoller(deps);
@@ -283,16 +286,21 @@ describe('ActionFolderPoller', () => {
 
   describe('scanAll - overlap guard', () => {
     it('returns immediately if already processing (no-op)', async () => {
+      // Use real timers for this test — fake timers interfere with hanging promises
+      vi.useRealTimers();
       const deps = createDeps();
-      // Make status hang to simulate long processing
-      let resolveStatus: (val: { messages: number; unseen: number }) => void;
+      // Collect all resolve callbacks so we can resolve them all at cleanup
+      const resolvers: Array<(val: { messages: number; unseen: number }) => void> = [];
       (deps.client.status as ReturnType<typeof vi.fn>).mockImplementation(
-        () => new Promise((resolve) => { resolveStatus = resolve; }),
+        () => new Promise((resolve) => { resolvers.push(resolve); }),
       );
       const poller = new ActionFolderPoller(deps);
 
-      // Start first scanAll (will hang on status)
+      // Start first scanAll (will hang on first status call)
       const first = poller.scanAll();
+
+      // Give microtask queue a tick so the first call enters processing
+      await Promise.resolve();
 
       // Second scanAll should return immediately
       await poller.scanAll();
@@ -300,28 +308,36 @@ describe('ActionFolderPoller', () => {
       // Only 1 status call (from the first scan that's still in progress)
       expect(deps.client.status as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(1);
 
-      // Clean up: resolve the hanging promise
-      resolveStatus!({ messages: 0, unseen: 0 });
+      // Clean up: resolve all hanging promises so scanAll can complete
+      for (const resolve of resolvers) resolve({ messages: 0, unseen: 0 });
+      // Replace with simple mock so remaining calls resolve immediately
+      (deps.client.status as ReturnType<typeof vi.fn>).mockResolvedValue({ messages: 0, unseen: 0 });
       await first;
+      vi.useFakeTimers();
     });
 
     it('logs debug message when skipping due to overlap', async () => {
+      vi.useRealTimers();
       const deps = createDeps();
-      let resolveStatus: (val: { messages: number; unseen: number }) => void;
+      const resolvers: Array<(val: { messages: number; unseen: number }) => void> = [];
       (deps.client.status as ReturnType<typeof vi.fn>).mockImplementation(
-        () => new Promise((resolve) => { resolveStatus = resolve; }),
+        () => new Promise((resolve) => { resolvers.push(resolve); }),
       );
       const poller = new ActionFolderPoller(deps);
 
       const first = poller.scanAll();
+      await Promise.resolve();
       await poller.scanAll();
 
       expect(deps.logger.debug as ReturnType<typeof vi.fn>).toHaveBeenCalledWith(
         expect.stringContaining('skipped'),
       );
 
-      resolveStatus!({ messages: 0, unseen: 0 });
+      // Clean up
+      for (const resolve of resolvers) resolve({ messages: 0, unseen: 0 });
+      (deps.client.status as ReturnType<typeof vi.fn>).mockResolvedValue({ messages: 0, unseen: 0 });
       await first;
+      vi.useFakeTimers();
     });
 
     it('resets processing flag after scanAll completes (allows next call)', async () => {
@@ -378,10 +394,8 @@ describe('ActionFolderPoller', () => {
       });
       const poller = new ActionFolderPoller(deps);
 
-      // Should not throw (error is inside try/finally)
-      // Actually the config error is inside the try block before the folder loop
-      // The processing flag should be reset in finally
-      await expect(poller.scanAll()).resolves.toBeUndefined();
+      // The config error propagates, but finally block resets processing flag
+      await expect(poller.scanAll()).rejects.toThrow('Config error');
 
       // After error, processing flag should be reset so next call works
       (deps.configRepo.getActionFolderConfig as ReturnType<typeof vi.fn>).mockReturnValue(DEFAULT_CONFIG);
