@@ -1665,7 +1665,9 @@ async function renderFolderRenameCard(container: HTMLElement): Promise<void> {
     // Determine if folder is renamable
     const isInbox = folderPath.toLowerCase() === 'inbox';
     const actionPrefix = actionFolderPrefix;
-    const isActionFolder = folderPath === actionPrefix || folderPath.startsWith(actionPrefix + '/');
+    const isActionFolder = folderPath === actionPrefix
+      || folderPath.startsWith(actionPrefix + '/')
+      || folderPath.startsWith(actionPrefix + '.');
 
     if (isInbox) {
       renameSection.style.display = '';

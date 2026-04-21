@@ -48,7 +48,7 @@ export function registerFolderRoutes(app: FastifyInstance, deps: ServerDeps): vo
     const cache = deps.getFolderCache();
     const tree = await cache.getTree();
     const selectedNode = findNode(tree, oldPath);
-    const delimiter = selectedNode?.delimiter || '/';
+    const delimiter = selectedNode?.delimiter || (oldPath.includes('.') ? '.' : '/');
 
     // Validate newPath is a leaf name only (no delimiters, no path traversal)
     if (newPath.includes(delimiter) || newPath.includes('..')) {
