@@ -24,6 +24,7 @@ export interface ImapFlowLike {
   getMailboxLock(path: string | string[]): Promise<MailboxLock>;
   messageMove(range: number[] | string, destination: string, options?: { uid?: boolean }): Promise<unknown>;
   mailboxCreate(path: string | string[]): Promise<unknown>;
+  mailboxRename(path: string | string[], newPath: string | string[]): Promise<unknown>;
   fetch(range: string, query: Record<string, unknown>, options?: { uid?: boolean }): AsyncIterable<unknown>;
   list(options?: Record<string, unknown>): Promise<unknown[]>;
   status(path: string, query: Record<string, boolean>): Promise<Record<string, number>>;
@@ -180,6 +181,12 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   async createMailbox(path: string | string[]): Promise<void> {
     await this.withMailboxLock('INBOX', async (flow) => {
       await flow.mailboxCreate(path);
+    });
+  }
+
+  async renameFolder(oldPath: string, newPath: string): Promise<void> {
+    await this.withMailboxLock('INBOX', async (flow) => {
+      await flow.mailboxRename(oldPath, newPath);
     });
   }
 

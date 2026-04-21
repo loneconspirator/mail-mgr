@@ -38,6 +38,12 @@ export class FolderCache {
     }
   }
 
+  /** Rename a folder via IMAP and refresh the cache. */
+  async renameFolder(oldPath: string, newPath: string): Promise<void> {
+    await this.deps.imapClient.renameFolder(oldPath, newPath);
+    await this.refresh();
+  }
+
   /** Check whether a folder path exists in the cached tree. */
   hasFolder(path: string): boolean {
     if (!this.tree) return false;
