@@ -55,18 +55,24 @@ export class ActionFolderProcessor {
         this.activityLog.logActivity(removalResult, message, conflict, 'action-folder');
       }
 
-      // Create the new rule
-      const label = actionType === 'vip' ? 'VIP' : 'Block';
-      createdRule = this.configRepo.addRule({
-        name: `${label}: ${sender}`,
-        match: { sender },
-        action: { type: actionDef.ruleAction },
-        enabled: true,
-        order: this.configRepo.nextOrder(),
-      });
+      // Check for existing same-type rule (idempotency per D-01, D-03)
+      const duplicate = findSenderRule(sender, actionDef.ruleAction, rules);
+      if (duplicate) {
+        this.logger.debug({ sender, actionType }, 'Rule already exists for sender, skipping creation');
+      } else {
+        // Create the new rule
+        const label = actionType === 'vip' ? 'VIP' : 'Block';
+        createdRule = this.configRepo.addRule({
+          name: `${label}: ${sender}`,
+          match: { sender },
+          action: { type: actionDef.ruleAction },
+          enabled: true,
+          order: this.configRepo.nextOrder(),
+        });
 
-      const createResult = this.buildActionResult(message, actionDef.ruleAction, createdRule.id, destination);
-      this.activityLog.logActivity(createResult, message, createdRule, 'action-folder');
+        const createResult = this.buildActionResult(message, actionDef.ruleAction, createdRule.id, destination);
+        this.activityLog.logActivity(createResult, message, createdRule, 'action-folder');
+      }
     } else {
       // Remove operation
       const existing = findSenderRule(sender, actionDef.ruleAction, rules);
@@ -74,6 +80,8 @@ export class ActionFolderProcessor {
         this.configRepo.deleteRule(existing.id);
         const removeResult = this.buildActionResult(message, `remove-${existing.action.type}`, existing.id, destination);
         this.activityLog.logActivity(removeResult, message, existing, 'action-folder');
+      } else {
+        this.logger.info({ sender, actionType }, 'No matching rule found for undo, moving message to destination');
       }
     }
 
