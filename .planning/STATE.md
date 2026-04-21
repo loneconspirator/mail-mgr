@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v0.6
 milestone_name: Action Folders
 status: executing
-last_updated: "2026-04-21T19:03:04.386Z"
+last_updated: "2026-04-21T21:46:55.023Z"
 last_activity: 2026-04-21
 progress:
-  total_phases: 8
+  total_phases: 9
   completed_phases: 8
   total_plans: 13
   completed_plans: 13
@@ -84,6 +84,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-04-21T18:32:48.974Z
+Last session: 2026-04-21T21:46:55.019Z
 Last activity: 2026-04-20 - Completed quick task 260420-dsq: Rename skip rule display to leave in place
-Resume file: .planning/phases/24-nyquist-validation-backfill/24-CONTEXT.md
+Resume file: .planning/phases/25-action-folder-config-api-frontend-fix/25-CONTEXT.md
