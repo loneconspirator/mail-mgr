@@ -167,7 +167,7 @@ Plans:
 | 21. Idempotency & Edge Cases | v0.6 | 1/1 | Complete    | 2026-04-21 |
 | 22. Folder Rename UI | v0.6 | 2/2 | Complete | 2026-04-20 |
 | 23. Duplicate Path Audit Logging | v0.6 | 1/1 | Complete    | 2026-04-21 |
-| 24. Nyquist Validation Backfill | v0.6 | 0/2 | Planned | — |
+| 24. Nyquist Validation Backfill | v0.6 | 2/2 | Complete    | 2026-04-21 |
 
 ### Phase 22: Add folder rename UI to settings page with IMAP folder rename
 
@@ -205,8 +205,8 @@ Plans:
   2. Phase 19 has nyquist_compliant: true in VALIDATION.md
   3. Phase 20 has nyquist_compliant: true in VALIDATION.md
   4. Phase 21 has nyquist_compliant: true in VALIDATION.md
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 24-01-PLAN.md — Audit phases 18-19 VALIDATION.md to Nyquist compliance
-- [ ] 24-02-PLAN.md — Audit phases 20-21 VALIDATION.md, full suite run, milestone audit update
+- [x] 24-01-PLAN.md — Audit phases 18-19 VALIDATION.md to Nyquist compliance
+- [x] 24-02-PLAN.md — Audit phases 20-21 VALIDATION.md, full suite run, milestone audit update
