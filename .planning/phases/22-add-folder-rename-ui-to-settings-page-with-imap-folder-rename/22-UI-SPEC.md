@@ -51,8 +51,10 @@ Exceptions: none
 | Label | 14px (0.85rem) | 600 | 1.5 |
 | Heading | 18px (1.1rem) | 600 | 1.2 |
 | Subheading | 14px (0.9rem) | 600 | 1.2 |
+| Helper/Error | 13px (0.8rem) | 400 | 1.5 |
+| Hint | 14px (0.85rem) | 400 | 1.5 |
 
-Note: Follows existing styles.css conventions exactly. Sizes expressed in rem in code.
+Note: Follows existing styles.css conventions exactly. Sizes expressed in rem in code. Helper/Error is used for `.field-error` inline validation messages. Hint is used for `.rename-disabled-hint` non-renamable folder messaging.
 
 ---
 
@@ -141,7 +143,7 @@ Accent reserved for: Save/Rename primary CTA button, selected folder item backgr
 |  │  [  Active__________________ ]    │   |
 |  │  [collision error if any]         │   |
 |  │                                   │   |
-|  │  [ Cancel ]  [ Rename Folder ]    │   |
+|  │  [ Keep Current Name ]  [ Rename Folder ]  |
 |  └───────────────────────────────────┘   |
 |                                          |
 +------------------------------------------+
@@ -165,7 +167,7 @@ Card position: After the existing "Sweep Settings" card, before any future cards
 | Success toast | Folder renamed to "{newName}" |
 | Error toast | Rename failed: {server error message} |
 | Loading state button | Renaming... |
-| Cancel button | Cancel |
+| Cancel button | Keep Current Name |
 
 ---
 
