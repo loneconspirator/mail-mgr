@@ -40,8 +40,8 @@ Requirements for Action Folders milestone. Each maps to roadmap phases.
 
 ### Activity Logging
 
-- [ ] **LOG-01**: Action folder operations are logged with `source = 'action-folder'` and standard message fields
-- [ ] **LOG-02**: Activity log entries include rule_id/rule_name for created or removed rules
+- [x] **LOG-01**: Action folder operations are logged with `source = 'action-folder'` and standard message fields
+- [x] **LOG-02**: Activity log entries include rule_id/rule_name for created or removed rules
 
 ### Configuration
 
@@ -99,8 +99,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RULE-04 | Phase 19 | Pending |
 | MON-01 | Phase 20 | Pending |
 | MON-02 | Phase 20 | Pending |
-| LOG-01 | Phase 18, 23 | Pending |
-| LOG-02 | Phase 18, 23 | Pending |
+| LOG-01 | Phase 18, 23 | Complete |
+| LOG-02 | Phase 18, 23 | Complete |
 | CONF-01 | Phase 17 | Pending |
 | CONF-02 | Phase 17 | Pending |
 | CONF-03 | Phase 17 | Pending |

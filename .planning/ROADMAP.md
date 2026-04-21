@@ -166,7 +166,7 @@ Plans:
 | 20. Monitoring & Startup Recovery | v0.6 | 2/2 | Complete    | 2026-04-21 |
 | 21. Idempotency & Edge Cases | v0.6 | 1/1 | Complete    | 2026-04-21 |
 | 22. Folder Rename UI | v0.6 | 2/2 | Complete | 2026-04-20 |
-| 23. Duplicate Path Audit Logging | v0.6 | 0/1 | Planned | — |
+| 23. Duplicate Path Audit Logging | v0.6 | 1/1 | Complete    | 2026-04-21 |
 | 24. Nyquist Validation Backfill | v0.6 | 0/0 | Planned | — |
 
 ### Phase 22: Add folder rename UI to settings page with IMAP folder rename
@@ -189,10 +189,10 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. When a duplicate rule is detected during action folder processing, a logActivity call is made with source 'action-folder' and appropriate rule_id/rule_name
   2. Test coverage confirms the duplicate path produces an activity log entry
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 
 Plans:
-- [ ] 23-01-PLAN.md — Add logActivity to duplicate branch and update idempotency tests
+- [x] 23-01-PLAN.md — Add logActivity to duplicate branch and update idempotency tests
 
 ### Phase 24: Nyquist Validation Backfill
 
@@ -208,4 +208,4 @@ Plans:
 **Plans:** 1 plan
 
 Plans:
-- [ ] 23-01-PLAN.md — Add logActivity to duplicate branch and update idempotency tests
+- [x] 23-01-PLAN.md — Add logActivity to duplicate branch and update idempotency tests
