@@ -1643,9 +1643,10 @@ async function renderFolderRenameCard(container: HTMLElement): Promise<void> {
   let selectedDelimiter = '/';
 
   let actionFolderPrefix = 'Actions';
-  api.config.getActionFolders().then(cfg => {
-    actionFolderPrefix = cfg.prefix;
-  }).catch(() => { /* keep default */ });
+  try {
+    const afCfg = await api.config.getActionFolders();
+    actionFolderPrefix = afCfg.prefix;
+  } catch { /* keep default */ }
 
   // Render the folder picker
   await renderFolderPicker({
