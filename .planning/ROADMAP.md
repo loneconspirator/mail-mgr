@@ -171,8 +171,8 @@ Plans:
 **Goal:** Users can rename IMAP folders from the settings page with full validation and feedback
 **Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08
 **Depends on:** Phase 21
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 22-01-PLAN.md — Backend: ImapClient renameFolder, FolderCache delegation, POST /api/folders/rename with validation
-- [ ] 22-02-PLAN.md — Frontend: Folder Management settings card with tree picker and inline rename
+- [x] 22-01-PLAN.md — Backend: ImapClient renameFolder, FolderCache delegation, POST /api/folders/rename with validation
+- [x] 22-02-PLAN.md — Frontend: Folder Management settings card with tree picker and inline rename

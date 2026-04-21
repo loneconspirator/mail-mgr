@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.6
 milestone_name: Action Folders
 status: executing
-last_updated: "2026-04-21T02:05:33.713Z"
-last_activity: 2026-04-21 -- Phase 22 planning complete
+last_updated: "2026-04-21T02:22:01.189Z"
+last_activity: 2026-04-21
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 10
-  completed_plans: 8
-  percent: 80
+  completed_plans: 10
+  percent: 100
 ---
 
 # Project State
@@ -20,13 +20,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-20)
 
 **Core value:** Dramatically reduce inbox volume without losing visibility
-**Current focus:** v0.5 shipped — planning next milestone
+**Current focus:** Phase 22 — Add folder rename UI to settings page with IMAP folder rename
 
 ## Current Position
 
+Phase: 22
+Plan: Not started
 Milestone: v0.5 shipped (2026-04-20)
-Status: Ready to execute
-Last activity: 2026-04-21 -- Phase 22 planning complete
+Status: Executing Phase 22
+Last activity: 2026-04-21
 
 Progress: [██████████] 100%
 
@@ -34,7 +36,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 35 (v0.4)
+- Total plans completed: 37 (v0.4)
 - Average duration: —
 - Total execution time: —
 
@@ -51,6 +53,7 @@ Progress: [██████████] 100%
 | 19 | 1 | - | - |
 | 20 | 2 | - | - |
 | 21 | 1 | - | - |
+| 22 | 2 | - | - |
 
 *Updated after each plan completion*
 
