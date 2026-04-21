@@ -101,9 +101,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MON-02 | Phase 20 | Pending |
 | LOG-01 | Phase 18, 23 | Complete |
 | LOG-02 | Phase 18, 23 | Complete |
-| CONF-01 | Phase 17 | Pending |
-| CONF-02 | Phase 17 | Pending |
-| CONF-03 | Phase 17 | Pending |
+| CONF-01 | Phase 17, 25 | Pending |
+| CONF-02 | Phase 17, 25 | Pending |
+| CONF-03 | Phase 17, 25 | Pending |
 | EXT-01 | Phase 18 | Pending |
 
 **Coverage:**
