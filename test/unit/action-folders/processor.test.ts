@@ -5,6 +5,7 @@ import type { ConfigRepository } from '../../../src/config/repository.js';
 import type { ImapClient } from '../../../src/imap/client.js';
 import type { ActivityLog } from '../../../src/log/index.js';
 import type { EmailMessage } from '../../../src/imap/messages.js';
+import { ruleSchema } from '../../../src/config/schema.js';
 import type { ActionFolderConfig, Rule } from '../../../src/config/schema.js';
 import type { ActionResult } from '../../../src/actions/index.js';
 import type { Logger } from 'pino';
@@ -575,6 +576,50 @@ describe('ActionFolderProcessor', () => {
       expect((mockClient.moveMessage as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
         1, 'INBOX', 'Actions/VIP Sender',
       );
+    });
+  });
+
+  describe('processMessage - Zod schema validation (RULE-01)', () => {
+    it('created rule input passes Zod ruleSchema when combined with a UUID id', async () => {
+      // Capture the rule input passed to addRule
+      const addRuleSpy = mockConfigRepo.addRule as ReturnType<typeof vi.fn>;
+      addRuleSpy.mockImplementation((input: Omit<Rule, 'id'>) => ({
+        ...input,
+        id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+      }));
+
+      const msg = createMessage();
+      await processor.processMessage(msg, 'vip');
+
+      expect(addRuleSpy).toHaveBeenCalledTimes(1);
+      const ruleInput = addRuleSpy.mock.calls[0][0];
+      // Simulate what the real ConfigRepository does: add a UUID id, then parse
+      const fullRule = { ...ruleInput, id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890' };
+      const result = ruleSchema.safeParse(fullRule);
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe('processMessage - rule shape matches web UI (RULE-04)', () => {
+    it('created rule has all fields expected by web UI: name, match, action, enabled, order', async () => {
+      const addRuleSpy = mockConfigRepo.addRule as ReturnType<typeof vi.fn>;
+
+      const msg = createMessage();
+      await processor.processMessage(msg, 'vip');
+
+      expect(addRuleSpy).toHaveBeenCalledTimes(1);
+      const ruleInput = addRuleSpy.mock.calls[0][0];
+
+      // Web UI rules have: name (string), match (object with sender), action (object with type),
+      // enabled (boolean), order (number). Verify all fields present and typed correctly.
+      expect(typeof ruleInput.name).toBe('string');
+      expect(ruleInput.name.length).toBeGreaterThan(0);
+      expect(ruleInput.match).toHaveProperty('sender');
+      expect(typeof ruleInput.match.sender).toBe('string');
+      expect(ruleInput.action).toHaveProperty('type');
+      expect(typeof ruleInput.enabled).toBe('boolean');
+      expect(typeof ruleInput.order).toBe('number');
+      expect(Number.isInteger(ruleInput.order)).toBe(true);
     });
   });
 });
