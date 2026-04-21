@@ -185,3 +185,5 @@ Each tier is independently deployable and useful. You could stop after Tier 3 an
 
 - "Explain" Action folder - move a message here and the system will email you an explanation of why it was moved
 - "Propose" Action folder - move a message here and the system will suggest a rule to handle it, including an analysis of existing messages matching elements of the moved message and where they are archived, also surfacing related rules
+- "Snooze" Action Folders (1day, 1week, 1month, and smart) Sets messages to the side to be stuck back in to the inbox at a later date. Smart snooze uses LLM to determine when to resurface the message
+- Proposed rules messages. Have a "Rules" folder. The system will put messages in there describing proposed rules that have met a certain threshold of strength. It will have subfolders for "New Move Rule", "New Review Rule", and "Reject" where the user can move the rule messages
