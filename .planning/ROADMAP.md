@@ -138,7 +138,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 19-01-PLAN.md — TDD: ActionFolderProcessor with sender extraction, rule CRUD, conflict resolution, message routing
+- [ ] 21-01-PLAN.md — TDD: Idempotency check-before-create and undo-no-match logging
 
 ## Progress
 
