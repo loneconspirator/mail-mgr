@@ -13,6 +13,7 @@ export type {
   ImapConfig,
   ReviewConfig,
   SweepConfig,
+  ActionFolderConfig,
 } from '../config/schema.js';
 
 // The IMAP config as returned by GET /api/config/imap (password masked)
