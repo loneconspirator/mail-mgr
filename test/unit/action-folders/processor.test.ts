@@ -437,7 +437,7 @@ describe('ActionFolderProcessor', () => {
       );
     });
 
-    it('does not log activity when duplicate detected', async () => {
+    it('logs activity with duplicate-skip action when VIP duplicate detected', async () => {
       const existingVip = makeRule({
         id: 'existing-vip',
         match: { sender: 'sender@example.com' } as Rule['match'],
@@ -449,7 +449,32 @@ describe('ActionFolderProcessor', () => {
       const msg = createMessage();
       await processor.processMessage(msg, 'vip');
 
-      expect((mockActivityLog.logActivity as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+      expect((mockActivityLog.logActivity as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true, messageUid: 1, action: 'duplicate-skip', rule: 'existing-vip' }),
+        msg,
+        expect.objectContaining({ id: 'existing-vip' }),
+        'action-folder',
+      );
+    });
+
+    it('logs activity with duplicate-delete action when Block duplicate detected', async () => {
+      const existingBlock = makeRule({
+        id: 'existing-block',
+        match: { sender: 'sender@example.com' } as Rule['match'],
+        action: { type: 'delete' } as Rule['action'],
+      });
+      mockConfigRepo = createMockConfigRepo([existingBlock]);
+      processor = new ActionFolderProcessor(mockConfigRepo, mockClient, mockActivityLog, mockLogger, 'INBOX', 'Trash');
+
+      const msg = createMessage();
+      await processor.processMessage(msg, 'block');
+
+      expect((mockActivityLog.logActivity as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
+        expect.objectContaining({ success: true, messageUid: 1, action: 'duplicate-delete', rule: 'existing-block' }),
+        msg,
+        expect.objectContaining({ id: 'existing-block' }),
+        'action-folder',
+      );
     });
 
     it('removes conflict rule then detects duplicate, no new rule created (D-03)', async () => {
@@ -474,8 +499,15 @@ describe('ActionFolderProcessor', () => {
       expect((mockConfigRepo.deleteRule as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith('block-1');
       // No new rule created (existing VIP detected as duplicate)
       expect((mockConfigRepo.addRule as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
-      // Only one activity log call (for conflict removal, not creation)
-      expect((mockActivityLog.logActivity as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1);
+      // Two activity log calls: conflict removal + duplicate detection
+      expect((mockActivityLog.logActivity as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(2);
+      expect((mockActivityLog.logActivity as ReturnType<typeof vi.fn>)).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ action: 'duplicate-skip', rule: 'existing-vip' }),
+        msg,
+        expect.objectContaining({ id: 'existing-vip' }),
+        'action-folder',
+      );
     });
   });
 

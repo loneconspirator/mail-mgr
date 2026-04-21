@@ -59,6 +59,8 @@ export class ActionFolderProcessor {
       const duplicate = findSenderRule(sender, actionDef.ruleAction, rules);
       if (duplicate) {
         this.logger.debug({ sender, actionType }, 'Rule already exists for sender, skipping creation');
+        const dupResult = this.buildActionResult(message, `duplicate-${actionDef.ruleAction}`, duplicate.id, destination);
+        this.activityLog.logActivity(dupResult, message, duplicate, 'action-folder');
       } else {
         // Create the new rule
         const label = actionType === 'vip' ? 'VIP' : 'Block';
