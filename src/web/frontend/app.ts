@@ -1642,6 +1642,11 @@ async function renderFolderRenameCard(container: HTMLElement): Promise<void> {
   let selectedPath = '';
   let selectedDelimiter = '/';
 
+  let actionFolderPrefix = 'Actions';
+  api.config.getActionFolders().then(cfg => {
+    actionFolderPrefix = cfg.prefix;
+  }).catch(() => { /* keep default */ });
+
   // Render the folder picker
   await renderFolderPicker({
     container: pickerContainer,
@@ -1658,7 +1663,7 @@ async function renderFolderRenameCard(container: HTMLElement): Promise<void> {
 
     // Determine if folder is renamable
     const isInbox = folderPath.toLowerCase() === 'inbox';
-    const actionPrefix = 'Actions';
+    const actionPrefix = actionFolderPrefix;
     const isActionFolder = folderPath === actionPrefix || folderPath.startsWith(actionPrefix + '/');
 
     if (isInbox) {
