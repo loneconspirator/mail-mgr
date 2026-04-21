@@ -223,8 +223,9 @@ Plans:
   2. Web API route exists for reading and updating action folder configuration
   3. `onActionFolderConfigChange` handler is reachable via the new API route
   4. Config changes via API trigger poller rebuild with updated folder paths
-**Plans**: 2 plans
+**Plans**: 3 plans
 
 Plans:
 - [x] 25-01-PLAN.md — Backend config API route (GET/PUT /api/config/action-folders) with tests
 - [x] 25-02-PLAN.md — Frontend api.ts methods and app.ts hardcoded prefix fix
+- [ ] 25-03-PLAN.md — Gap closure: delimiter-aware action folder guard + cold start crash fix
