@@ -7,7 +7,7 @@
 - ✅ **v0.3 Folder Taxonomy & Batch Filing** — Phases 1-5 (shipped 2026-04-11)
 - ✅ **v0.4 Extended Matchers & Behavioral Learning** — Phases 6-12 (shipped 2026-04-20)
 - ✅ **v0.5 Sender Disposition Views** — Phases 13-16 (shipped 2026-04-20)
-- 🚧 **v0.6 Action Folders** — Phases 17-21 (in progress)
+- 🚧 **v0.6 Action Folders** — Phases 17-24 (in progress)
 
 ## Phases
 
@@ -165,6 +165,9 @@ Plans:
 | 19. Action Processing Core | v0.6 | 1/1 | Complete    | 2026-04-20 |
 | 20. Monitoring & Startup Recovery | v0.6 | 2/2 | Complete    | 2026-04-21 |
 | 21. Idempotency & Edge Cases | v0.6 | 1/1 | Complete    | 2026-04-21 |
+| 22. Folder Rename UI | v0.6 | 2/2 | Complete | 2026-04-20 |
+| 23. Duplicate Path Audit Logging | v0.6 | 0/0 | Planned | — |
+| 24. Nyquist Validation Backfill | v0.6 | 0/0 | Planned | — |
 
 ### Phase 22: Add folder rename UI to settings page with IMAP folder rename
 
@@ -176,3 +179,27 @@ Plans:
 Plans:
 - [x] 22-01-PLAN.md — Backend: ImapClient renameFolder, FolderCache delegation, POST /api/folders/rename with validation
 - [x] 22-02-PLAN.md — Frontend: Folder Management settings card with tree picker and inline rename
+
+### Phase 23: Duplicate Path Audit Logging
+
+**Goal:** PROC-07 duplicate-rule path emits activity log entry for audit trail completeness
+**Depends on:** Phase 21
+**Requirements:** LOG-01, LOG-02
+**Gap Closure:** Closes integration gap from audit (duplicate-rule path silent operation)
+**Success Criteria** (what must be TRUE):
+  1. When a duplicate rule is detected during action folder processing, a logActivity call is made with source 'action-folder' and appropriate rule_id/rule_name
+  2. Test coverage confirms the duplicate path produces an activity log entry
+**Plans:** 0 plans
+
+### Phase 24: Nyquist Validation Backfill
+
+**Goal:** Bring phases 18-21 to Nyquist compliance with proper VALIDATION.md coverage
+**Depends on:** Phase 23
+**Requirements:** None (process compliance)
+**Gap Closure:** Closes Nyquist tech debt from audit
+**Success Criteria** (what must be TRUE):
+  1. Phase 18 has nyquist_compliant: true in VALIDATION.md
+  2. Phase 19 has nyquist_compliant: true in VALIDATION.md
+  3. Phase 20 has nyquist_compliant: true in VALIDATION.md
+  4. Phase 21 has nyquist_compliant: true in VALIDATION.md
+**Plans:** 0 plans

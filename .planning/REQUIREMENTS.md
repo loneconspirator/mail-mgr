@@ -99,8 +99,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | RULE-04 | Phase 19 | Pending |
 | MON-01 | Phase 20 | Pending |
 | MON-02 | Phase 20 | Pending |
-| LOG-01 | Phase 18 | Pending |
-| LOG-02 | Phase 18 | Pending |
+| LOG-01 | Phase 18, 23 | Pending |
+| LOG-02 | Phase 18, 23 | Pending |
 | CONF-01 | Phase 17 | Pending |
 | CONF-02 | Phase 17 | Pending |
 | CONF-03 | Phase 17 | Pending |
