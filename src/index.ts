@@ -9,7 +9,7 @@ import type { ImapFlowLike } from './imap/index.js';
 import { FolderCache } from './folders/index.js';
 import { BatchEngine } from './batch/index.js';
 import { MoveTracker } from './tracking/index.js';
-import { ensureActionFolders } from './action-folders/index.js';
+import { ensureActionFolders, ActionFolderPoller, ActionFolderProcessor } from './action-folders/index.js';
 import { SignalStore } from './tracking/signals.js';
 import { DestinationResolver } from './tracking/destinations.js';
 import { ProposalStore } from './tracking/proposals.js';
@@ -52,6 +52,7 @@ async function main(): Promise<void> {
   let folderCache = new FolderCache({ imapClient, ttlMs: 300_000 });
   let monitor = new Monitor(config, { imapClient, activityLog, logger });
   let moveTracker: MoveTracker | undefined;
+  let actionFolderPoller: ActionFolderPoller | undefined;
 
   // H1: Create ReviewSweeper (trash folder resolved after IMAP connect)
   let sweeper: ReviewSweeper | undefined = new ReviewSweeper({
@@ -107,16 +108,36 @@ async function main(): Promise<void> {
     });
   });
 
-  // H-AF1: Re-create action folders when config changes (D-11)
+  // H-AF1: Re-create action folders and rebuild poller when config changes (D-11, D-14)
   configRepo.onActionFolderConfigChange(async (afConfig) => {
+    // D-14: Stop existing poller
+    if (actionFolderPoller) {
+      actionFolderPoller.stop();
+      actionFolderPoller = undefined;
+    }
+
     if (!afConfig.enabled) {
       logger.info('Action folders disabled via config change');
       return;
     }
+
     const ok = await ensureActionFolders(imapClient, afConfig, logger);
     if (!ok) {
       logger.warn('Action folder creation failed after config change — monitoring will not start');
+      return;
     }
+
+    // Rebuild poller with new config
+    const resolvedTrashAf = await imapClient.getSpecialUseFolder('\\Trash') ?? config.review.trashFolder;
+    const processor = new ActionFolderProcessor(configRepo, imapClient, activityLog, logger, 'INBOX', resolvedTrashAf);
+    actionFolderPoller = new ActionFolderPoller({
+      client: imapClient,
+      configRepo,
+      processor,
+      logger,
+      pollIntervalMs: afConfig.pollInterval * 1000,
+    });
+    actionFolderPoller.start();
   });
 
   // H3: Stop/rebuild sweeper, monitor, and moveTracker on IMAP config change
@@ -125,6 +146,10 @@ async function main(): Promise<void> {
     sweeper = undefined;
     if (moveTracker) moveTracker.stop();
     moveTracker = undefined;
+    if (actionFolderPoller) {
+      actionFolderPoller.stop();
+      actionFolderPoller = undefined;
+    }
     await monitor.stop();
 
     await imapClient.disconnect();
@@ -173,11 +198,22 @@ async function main(): Promise<void> {
     });
     sweeper.start();
 
-    // Re-ensure action folders on new IMAP connection
+    // Rebuild action folder poller with new IMAP client
     const reconnectAfConfig = configRepo.getActionFolderConfig();
     if (reconnectAfConfig.enabled) {
       const reconnectFoldersOk = await ensureActionFolders(newClient, reconnectAfConfig, logger);
-      if (!reconnectFoldersOk) {
+      if (reconnectFoldersOk) {
+        const resolvedTrashAf2 = await newClient.getSpecialUseFolder('\\Trash') ?? newConfig.review.trashFolder;
+        const processor2 = new ActionFolderProcessor(configRepo, newClient, activityLog, logger, 'INBOX', resolvedTrashAf2);
+        actionFolderPoller = new ActionFolderPoller({
+          client: newClient,
+          configRepo,
+          processor: processor2,
+          logger,
+          pollIntervalMs: reconnectAfConfig.pollInterval * 1000,
+        });
+        actionFolderPoller.start();
+      } else {
         logger.warn('Action folder creation failed after IMAP reconnect');
       }
     }
@@ -243,20 +279,39 @@ async function main(): Promise<void> {
     monitor = new Monitor(config, { imapClient, activityLog, logger });
   }
 
-  // H4b: Start sweeper after monitor (resolve trash folder now that IMAP is connected)
-  await monitor.start();
+  // H4b: Resolve trash folder (needed by processor AND sweeper)
+  const resolvedTrash = await imapClient.getSpecialUseFolder('\\Trash')
+    ?? config.review.trashFolder;
 
-  // H-AF2: Ensure action folders exist (D-07: lazy on first monitoring start, D-10: after IMAP connect)
+  // H-AF2: Ensure action folders exist + set up poller (D-07: before monitor.start)
   const afConfig = configRepo.getActionFolderConfig();
   if (afConfig.enabled) {
     const foldersOk = await ensureActionFolders(imapClient, afConfig, logger);
-    if (!foldersOk) {
+    if (foldersOk) {
+      const afProcessor = new ActionFolderProcessor(configRepo, imapClient, activityLog, logger, 'INBOX', resolvedTrash);
+      actionFolderPoller = new ActionFolderPoller({
+        client: imapClient,
+        configRepo,
+        processor: afProcessor,
+        logger,
+        pollIntervalMs: afConfig.pollInterval * 1000,
+      });
+      // D-07: Blocking pre-scan — process pending action folder messages
+      try {
+        await actionFolderPoller.scanAll();
+      } catch (err) {
+        // D-09: Pre-scan failure is not a startup blocker
+        logger.error({ err }, 'Action folder pre-scan failed, will retry on first poll tick');
+      }
+      // D-02: Start periodic polling
+      actionFolderPoller.start();
+    } else {
       logger.warn('Action folder creation failed — action folder monitoring will be disabled');
     }
   }
 
-  const resolvedTrash = await imapClient.getSpecialUseFolder('\\Trash')
-    ?? config.review.trashFolder;
+  // D-05: Start monitor AFTER action folders are drained
+  await monitor.start();
   sweeper = new ReviewSweeper({
     client: imapClient,
     activityLog,
