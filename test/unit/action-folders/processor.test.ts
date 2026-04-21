@@ -379,4 +379,170 @@ describe('ActionFolderProcessor', () => {
       expect((mockConfigRepo.addRule as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
     });
   });
+
+  describe('processMessage - idempotency (PROC-07)', () => {
+    it('does not create duplicate rule when same sender-action already exists (VIP)', async () => {
+      const existingVip = makeRule({
+        id: 'existing-vip',
+        match: { sender: 'sender@example.com' } as Rule['match'],
+        action: { type: 'skip' } as Rule['action'],
+      });
+      mockConfigRepo = createMockConfigRepo([existingVip]);
+      processor = new ActionFolderProcessor(mockConfigRepo, mockClient, mockActivityLog, mockLogger, 'INBOX', 'Trash');
+
+      const msg = createMessage();
+      const result = await processor.processMessage(msg, 'vip');
+
+      expect(result.ok).toBe(true);
+      expect((mockConfigRepo.addRule as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+      expect((mockClient.moveMessage as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
+        1, 'INBOX', 'Actions/VIP Sender',
+      );
+    });
+
+    it('does not create duplicate rule when same sender-action already exists (Block)', async () => {
+      const existingBlock = makeRule({
+        id: 'existing-block',
+        match: { sender: 'sender@example.com' } as Rule['match'],
+        action: { type: 'delete' } as Rule['action'],
+      });
+      mockConfigRepo = createMockConfigRepo([existingBlock]);
+      processor = new ActionFolderProcessor(mockConfigRepo, mockClient, mockActivityLog, mockLogger, 'INBOX', 'Trash');
+
+      const msg = createMessage();
+      const result = await processor.processMessage(msg, 'block');
+
+      expect(result.ok).toBe(true);
+      expect((mockConfigRepo.addRule as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+      expect((mockClient.moveMessage as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
+        1, 'Trash', 'Actions/Block Sender',
+      );
+    });
+
+    it('logs debug message with sender when skipping creation for duplicate', async () => {
+      const existingVip = makeRule({
+        id: 'existing-vip',
+        match: { sender: 'sender@example.com' } as Rule['match'],
+        action: { type: 'skip' } as Rule['action'],
+      });
+      mockConfigRepo = createMockConfigRepo([existingVip]);
+      processor = new ActionFolderProcessor(mockConfigRepo, mockClient, mockActivityLog, mockLogger, 'INBOX', 'Trash');
+
+      const msg = createMessage();
+      await processor.processMessage(msg, 'vip');
+
+      expect((mockLogger.debug as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
+        expect.objectContaining({ sender: 'sender@example.com' }),
+        expect.stringContaining('skipping creation'),
+      );
+    });
+
+    it('does not log activity when duplicate detected', async () => {
+      const existingVip = makeRule({
+        id: 'existing-vip',
+        match: { sender: 'sender@example.com' } as Rule['match'],
+        action: { type: 'skip' } as Rule['action'],
+      });
+      mockConfigRepo = createMockConfigRepo([existingVip]);
+      processor = new ActionFolderProcessor(mockConfigRepo, mockClient, mockActivityLog, mockLogger, 'INBOX', 'Trash');
+
+      const msg = createMessage();
+      await processor.processMessage(msg, 'vip');
+
+      expect((mockActivityLog.logActivity as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    });
+
+    it('removes conflict rule then detects duplicate, no new rule created (D-03)', async () => {
+      const blockRule = makeRule({
+        id: 'block-1',
+        match: { sender: 'sender@example.com' } as Rule['match'],
+        action: { type: 'delete' } as Rule['action'],
+      });
+      const existingVip = makeRule({
+        id: 'existing-vip',
+        match: { sender: 'sender@example.com' } as Rule['match'],
+        action: { type: 'skip' } as Rule['action'],
+      });
+      mockConfigRepo = createMockConfigRepo([blockRule, existingVip]);
+      processor = new ActionFolderProcessor(mockConfigRepo, mockClient, mockActivityLog, mockLogger, 'INBOX', 'Trash');
+
+      const msg = createMessage();
+      const result = await processor.processMessage(msg, 'vip');
+
+      expect(result.ok).toBe(true);
+      // Conflict block rule removed
+      expect((mockConfigRepo.deleteRule as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith('block-1');
+      // No new rule created (existing VIP detected as duplicate)
+      expect((mockConfigRepo.addRule as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+      // Only one activity log call (for conflict removal, not creation)
+      expect((mockActivityLog.logActivity as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('processMessage - undo with no match (PROC-08)', () => {
+    it('returns ok and moves to INBOX when undoVip finds no matching rule', async () => {
+      mockConfigRepo = createMockConfigRepo([]);
+      processor = new ActionFolderProcessor(mockConfigRepo, mockClient, mockActivityLog, mockLogger, 'INBOX', 'Trash');
+
+      const msg = createMessage();
+      const result = await processor.processMessage(msg, 'undoVip');
+
+      expect(result.ok).toBe(true);
+      expect((mockConfigRepo.deleteRule as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+      expect((mockClient.moveMessage as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
+        1, 'INBOX', 'Actions/Undo VIP',
+      );
+    });
+
+    it('returns ok and moves to INBOX when unblock finds no matching rule', async () => {
+      mockConfigRepo = createMockConfigRepo([]);
+      processor = new ActionFolderProcessor(mockConfigRepo, mockClient, mockActivityLog, mockLogger, 'INBOX', 'Trash');
+
+      const msg = createMessage();
+      const result = await processor.processMessage(msg, 'unblock');
+
+      expect(result.ok).toBe(true);
+      expect((mockConfigRepo.deleteRule as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+      expect((mockClient.moveMessage as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
+        1, 'INBOX', 'Actions/Unblock Sender',
+      );
+    });
+
+    it('logs info with sender when undo finds no matching rule', async () => {
+      mockConfigRepo = createMockConfigRepo([]);
+      processor = new ActionFolderProcessor(mockConfigRepo, mockClient, mockActivityLog, mockLogger, 'INBOX', 'Trash');
+
+      const msg = createMessage();
+      await processor.processMessage(msg, 'undoVip');
+
+      expect((mockLogger.info as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
+        expect.objectContaining({ sender: 'sender@example.com' }),
+        expect.stringContaining('No matching rule'),
+      );
+    });
+  });
+
+  describe('processMessage - crash recovery (D-07)', () => {
+    it('handles crash recovery: rule exists from prior crash, reprocess does not duplicate', async () => {
+      // Simulate: rule was created before crash, message still in action folder
+      const existingVip = makeRule({
+        id: 'crash-recovery-rule',
+        match: { sender: 'sender@example.com' } as Rule['match'],
+        action: { type: 'skip' } as Rule['action'],
+      });
+      mockConfigRepo = createMockConfigRepo([existingVip]);
+      processor = new ActionFolderProcessor(mockConfigRepo, mockClient, mockActivityLog, mockLogger, 'INBOX', 'Trash');
+
+      const msg = createMessage();
+      const result = await processor.processMessage(msg, 'vip');
+
+      expect(result.ok).toBe(true);
+      // No duplicate rule created
+      expect((mockConfigRepo.addRule as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+      // Message still gets moved
+      expect((mockClient.moveMessage as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
+        1, 'INBOX', 'Actions/VIP Sender',
+      );
+    });
+  });
 });
