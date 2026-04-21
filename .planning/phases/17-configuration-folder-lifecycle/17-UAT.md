@@ -30,8 +30,8 @@ result: pass
 
 ### 5. Action Folder Config Update
 expected: Change an action folder name in your config (e.g., rename "⭐ VIP Sender" to "🌟 Super VIP"). The app should detect the change and create the new folder on the IMAP server without restarting.
-result: skipped
-reason: onActionFolderConfigChange only fires on programmatic updates via updateActionFolderConfig(), not file-system changes. No file watcher exists for config.yml hot-reload. This is by design — config changes go through the API/UI, not manual file edits.
+result: resolved_stale
+reason: Test assumed config.yml hot-reload via file watcher, but config changes go through API/UI by design. Phase 22 added folder rename through the settings UI, making manual-edit testing irrelevant.
 
 ### 6. Graceful Degradation on IMAP Failure
 expected: If IMAP is unreachable or folder creation fails, the app should log a warning and continue running — not crash or hang.
@@ -43,7 +43,8 @@ total: 6
 passed: 4
 issues: 0
 pending: 0
-skipped: 1
+skipped: 0
+resolved_stale: 1
 blocked: 0
 
 ## Gaps
