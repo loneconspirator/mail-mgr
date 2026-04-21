@@ -63,6 +63,9 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Idempotent action folder processing (duplicate rule prevention via check-before-create) — v0.6 Phase 21
 - ✓ Undo operations with no matching rule still move message to destination without error — v0.6 Phase 21
 - ✓ Duplicate-rule detection path emits activity log entry for audit trail completeness — v0.6 Phase 23
+- ✓ Action folder config exposed via web API (GET/PUT /api/config/action-folders) — v0.6 Phase 25
+- ✓ Frontend rename guard reads action folder prefix from config API instead of hardcoding — v0.6 Phase 25
+- ✓ Config changes via API trigger poller rebuild with updated folder paths — v0.6 Phase 25
 
 ### Active
 
@@ -71,6 +74,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 ### Post-Milestone
 
 - ✓ Folder rename UI on settings page with IMAP folder rename — Phase 22 (2026-04-21)
+- ✓ Action folder config API & frontend fix — Phase 25 (2026-04-21)
 
 ### Out of Scope
 
@@ -146,4 +150,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-21 after v0.6 Phase 24 — Nyquist Validation Backfill complete (all phases 17-22 now nyquist_compliant: true)*
+*Last updated: 2026-04-21 after v0.6 Phase 25 — Action Folder Config API & Frontend Fix complete (v0.6 milestone final phase)*
