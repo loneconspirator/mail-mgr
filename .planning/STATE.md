@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.6
 milestone_name: Action Folders
 status: executing
-last_updated: "2026-04-21T21:46:55.023Z"
-last_activity: 2026-04-21
+last_updated: "2026-04-21T22:00:02.398Z"
+last_activity: 2026-04-21 -- Phase 25 planning complete
 progress:
   total_phases: 9
   completed_phases: 8
-  total_plans: 13
+  total_plans: 15
   completed_plans: 13
-  percent: 100
+  percent: 87
 ---
 
 # Project State
@@ -28,7 +28,7 @@ Phase: 24
 Plan: Not started
 Milestone: v0.5 shipped (2026-04-20)
 Status: Ready to execute
-Last activity: 2026-04-21
+Last activity: 2026-04-21 -- Phase 25 planning complete
 
 Progress: [██████████] 100%
 
