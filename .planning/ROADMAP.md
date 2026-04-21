@@ -168,7 +168,7 @@ Plans:
 | 22. Folder Rename UI | v0.6 | 2/2 | Complete | 2026-04-20 |
 | 23. Duplicate Path Audit Logging | v0.6 | 1/1 | Complete    | 2026-04-21 |
 | 24. Nyquist Validation Backfill | v0.6 | 2/2 | Complete    | 2026-04-21 |
-| 25. Action Folder Config API & Frontend Fix | v0.6 | 0/2 | Planned | — |
+| 25. Action Folder Config API & Frontend Fix | v0.6 | 2/2 | Complete    | 2026-04-21 |
 
 ### Phase 22: Add folder rename UI to settings page with IMAP folder rename
 
@@ -226,5 +226,5 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 25-01-PLAN.md — Backend config API route (GET/PUT /api/config/action-folders) with tests
-- [ ] 25-02-PLAN.md — Frontend api.ts methods and app.ts hardcoded prefix fix
+- [x] 25-01-PLAN.md — Backend config API route (GET/PUT /api/config/action-folders) with tests
+- [x] 25-02-PLAN.md — Frontend api.ts methods and app.ts hardcoded prefix fix

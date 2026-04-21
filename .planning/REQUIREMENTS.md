@@ -45,9 +45,9 @@ Requirements for Action Folders milestone. Each maps to roadmap phases.
 
 ### Configuration
 
-- [ ] **CONF-01**: Action folder prefix and folder names are configurable with sensible defaults
-- [ ] **CONF-02**: Action folders can be enabled/disabled via config
-- [ ] **CONF-03**: Poll interval is configurable
+- [x] **CONF-01**: Action folder prefix and folder names are configurable with sensible defaults
+- [x] **CONF-02**: Action folders can be enabled/disabled via config
+- [x] **CONF-03**: Poll interval is configurable
 
 ### Extensibility
 
@@ -101,9 +101,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MON-02 | Phase 20 | Pending |
 | LOG-01 | Phase 18, 23 | Complete |
 | LOG-02 | Phase 18, 23 | Complete |
-| CONF-01 | Phase 17, 25 | Pending |
-| CONF-02 | Phase 17, 25 | Pending |
-| CONF-03 | Phase 17, 25 | Pending |
+| CONF-01 | Phase 17, 25 | Complete |
+| CONF-02 | Phase 17, 25 | Complete |
+| CONF-03 | Phase 17, 25 | Complete |
 | EXT-01 | Phase 18 | Pending |
 
 **Coverage:**
