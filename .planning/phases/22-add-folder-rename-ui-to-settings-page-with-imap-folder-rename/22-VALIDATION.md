@@ -1,9 +1,9 @@
 ---
 phase: 22
 slug: add-folder-rename-ui-to-settings-page-with-imap-folder-rename
-status: draft
-nyquist_compliant: false
-wave_0_complete: false
+status: approved
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-04-20
 ---
 
@@ -38,9 +38,8 @@ created: 2026-04-20
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 22-01-01 | 01 | 1 | — | — | N/A | unit | `npx vitest run src/imap/__tests__/client-rename.test.ts` | ❌ W0 | ⬜ pending |
-| 22-01-02 | 01 | 1 | — | — | N/A | unit | `npx vitest run src/web/__tests__/folders-rename.test.ts` | ❌ W0 | ⬜ pending |
-| 22-01-03 | 01 | 1 | — | — | N/A | integration | `npx vitest run src/web/__tests__/settings-rename-ui.test.ts` | ❌ W0 | ⬜ pending |
+| 22-01-01 | 01 | 1 | D-03, D-04, D-07 | — | N/A | unit | `npx vitest run test/unit/imap/client-rename.test.ts` | TDD — created by task | ⬜ pending |
+| 22-01-02 | 01 | 1 | D-04, D-07, D-08 | — | Path traversal prevention | unit | `npx vitest run test/unit/web/folders-rename.test.ts` | TDD — created by task | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -48,11 +47,7 @@ created: 2026-04-20
 
 ## Wave 0 Requirements
 
-- [ ] `src/imap/__tests__/client-rename.test.ts` — stubs for ImapClient.renameFolder
-- [ ] `src/web/__tests__/folders-rename.test.ts` — stubs for POST /api/folders/rename route
-- [ ] `src/web/__tests__/settings-rename-ui.test.ts` — stubs for settings page rename card UI
-
-*Existing vitest infrastructure covers framework installation.*
+Existing test infrastructure covers all phase requirements. New test files are created inline by TDD tasks in Plan 01. No Wave 0 stubs needed.
 
 ---
 
@@ -62,16 +57,17 @@ created: 2026-04-20
 |----------|-------------|------------|-------------------|
 | Folder tree picker visual selection | D-01 | Requires visual browser rendering | Open settings, click a folder in tree, verify highlight and name field appear |
 | Toast notification display | D-06 | Requires browser DOM and CSS | Trigger a rename, verify toast appears with correct message |
+| Special-use folder warning | D-05 | Requires visual confirmation of warning banner | Select a special-use folder (Sent/Drafts), verify warning appears |
 
 ---
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
-- [ ] No watch-mode flags
-- [ ] Feedback latency < 15s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
+- [x] No watch-mode flags
+- [x] Feedback latency < 15s
+- [x] `nyquist_compliant: true` set in frontmatter
 
-**Approval:** pending
+**Approval:** approved 2026-04-20
