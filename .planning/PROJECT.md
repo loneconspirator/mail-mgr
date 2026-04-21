@@ -60,10 +60,12 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Action folder monitoring via poll-based STATUS checks alongside INBOX/Review — v0.6 Phase 20
 - ✓ Startup pre-scan processes pending action folder messages before normal monitoring — v0.6 Phase 20
 - ✓ Action folders always empty after processing (always-empty invariant) — v0.6 Phase 20
+- ✓ Idempotent action folder processing (duplicate rule prevention via check-before-create) — v0.6 Phase 21
+- ✓ Undo operations with no matching rule still move message to destination without error — v0.6 Phase 21
 
 ### Active
 
-- Idempotent action folder processing and edge case resilience — PROC-07, PROC-08 (v0.6 Phase 21+)
+- None — v0.6 Action Folders milestone complete
 
 ### Out of Scope
 
@@ -139,4 +141,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-21 after v0.6 Phase 20 — Monitoring & Startup Recovery complete*
+*Last updated: 2026-04-21 after v0.6 Phase 21 — Idempotency & Edge Cases complete*
