@@ -104,7 +104,9 @@ export class Monitor {
    */
   async stop(): Promise<void> {
     this.client.removeAllListeners();
-    await this.client.disconnect();
+    // Do NOT disconnect — client is shared with other consumers
+    // (action folder poller, getSpecialUseFolder, etc.)
+    // Caller is responsible for client lifecycle.
   }
 
   /**

@@ -271,7 +271,7 @@ async function main(): Promise<void> {
     logger.error({ error }, 'initial envelope header discovery failed');
   }
 
-  if (initialHeader !== config.imap.envelopeHeader) {
+  if ((initialHeader ?? undefined) !== config.imap.envelopeHeader) {
     config.imap.envelopeHeader = initialHeader ?? undefined;
     saveConfig(configPath, config);
     // Rebuild monitor with updated config that includes envelopeHeader
