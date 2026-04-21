@@ -67,6 +67,10 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 
 - None — v0.6 Action Folders milestone complete
 
+### Post-Milestone
+
+- ✓ Folder rename UI on settings page with IMAP folder rename — Phase 22 (2026-04-21)
+
 ### Out of Scope
 
 - Folder creation/deletion from this app's UI — user manages folder structure in mail client
