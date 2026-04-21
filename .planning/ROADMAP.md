@@ -59,7 +59,7 @@ Full details: [milestones/v0.5-ROADMAP.md](milestones/v0.5-ROADMAP.md)
 - [x] **Phase 18: Safety Predicates & Activity Log** - MoveTracker exclusions, shared predicates, action registry, logging extension (completed 2026-04-20)
 - [x] **Phase 19: Action Processing Core** - Sender extraction, rule CRUD, message routing for all four action types (completed 2026-04-20)
 - [x] **Phase 20: Monitoring & Startup Recovery** - Poll integration, priority processing, startup pre-scan, always-empty invariant (completed 2026-04-21)
-- [ ] **Phase 21: Idempotency & Edge Cases** - Duplicate prevention, undo-with-no-match, crash recovery resilience
+- [x] **Phase 21: Idempotency & Edge Cases** - Duplicate prevention, undo-with-no-match, crash recovery resilience (completed 2026-04-21)
 
 ## Phase Details
 
@@ -138,7 +138,7 @@ Plans:
 **Plans**: 1 plan
 
 Plans:
-- [ ] 21-01-PLAN.md — TDD: Idempotency check-before-create and undo-no-match logging
+- [x] 21-01-PLAN.md — TDD: Idempotency check-before-create and undo-no-match logging
 
 ## Progress
 
@@ -164,14 +164,14 @@ Plans:
 | 18. Safety Predicates & Activity Log | v0.6 | 2/2 | Complete    | 2026-04-20 |
 | 19. Action Processing Core | v0.6 | 1/1 | Complete    | 2026-04-20 |
 | 20. Monitoring & Startup Recovery | v0.6 | 2/2 | Complete    | 2026-04-21 |
-| 21. Idempotency & Edge Cases | v0.6 | 0/? | Not started | - |
+| 21. Idempotency & Edge Cases | v0.6 | 1/1 | Complete    | 2026-04-21 |
 
 ### Phase 22: Add folder rename UI to settings page with IMAP folder rename
 
 **Goal:** [To be planned]
 **Requirements**: TBD
 **Depends on:** Phase 21
-**Plans:** 2/2 plans complete
+**Plans:** 1/1 plans complete
 
 Plans:
 - [ ] TBD (run /gsd-plan-phase 22 to break down)
