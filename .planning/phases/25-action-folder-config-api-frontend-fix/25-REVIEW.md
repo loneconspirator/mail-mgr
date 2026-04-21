@@ -1,180 +1,115 @@
 ---
 phase: 25-action-folder-config-api-frontend-fix
-reviewed: 2026-04-21T00:00:00Z
+reviewed: 2026-04-21T12:00:00Z
 depth: standard
-files_reviewed: 6
+files_reviewed: 10
 files_reviewed_list:
+  - src/index.ts
+  - src/monitor/index.ts
   - src/shared/types.ts
   - src/web/frontend/api.ts
   - src/web/frontend/app.ts
   - src/web/routes/action-folder-config.ts
+  - src/web/routes/folders.ts
   - src/web/server.ts
   - test/unit/web/action-folder-config.test.ts
+  - test/unit/web/folders-rename.test.ts
 findings:
   critical: 1
   warning: 3
-  info: 3
-  total: 7
+  info: 2
+  total: 6
 status: issues_found
 ---
 
 # Phase 25: Code Review Report
 
-**Reviewed:** 2026-04-21T00:00:00Z
+**Reviewed:** 2026-04-21T12:00:00Z
 **Depth:** standard
-**Files Reviewed:** 6
+**Files Reviewed:** 10
 **Status:** issues_found
 
 ## Summary
 
-This phase introduces the `GET /api/config/action-folders` and `PUT /api/config/action-folders` API endpoints, wires them into the server, and hooks up frontend consumption in `app.ts` (specifically inside `renderFolderRenameCard` for action-folder protection logic). The shared types file re-exports `ActionFolderConfig` from the config schema. A unit test suite covers the new route.
-
-The implementation is mostly clean and well-structured. One critical issue stands out: the PUT route handler passes the raw, unvalidated request body directly to `updateActionFolderConfig` without any content-type or body-parsing guard, allowing arbitrary non-object payloads to reach the Zod validation layer in unexpected ways. There are also a few warning-level gaps: a race condition in the frontend's action-folder prefix fetch, a missing `await` that silently swallows the result of `renderFolderPicker` in a fallback path, and a bare `catch` that hides validation error detail from the response. Several info-level items round out the review.
-
----
+Reviewed the full file set for phase 25: action folder config API routes, frontend app, folder rename route, monitor, shared types, web server bootstrap, and both test suites. The codebase is generally well-structured with good input validation on the folder rename endpoint (control chars, length limits, INBOX/system folder protection, collision detection) and proper XSS escaping in the frontend via the `esc()` helper. The previous review's CR-01 (null body guard on PUT route) has been fixed. Found one critical path traversal gap on the `oldPath` parameter in the rename endpoint, three warnings around error handling and delimiter detection, and two info-level items.
 
 ## Critical Issues
 
-### CR-01: PUT route casts unvalidated body with `as any`, bypassing type safety entirely
+### CR-01: No path traversal validation on `oldPath` parameter in folder rename
 
-**File:** `src/web/routes/action-folder-config.ts:10-12`
-**Issue:** The handler reads `request.body as Record<string, unknown>` and immediately re-casts it `as any` before passing it to `updateActionFolderConfig`. Fastify does not parse JSON bodies by default unless `Content-Type: application/json` is present AND a body parser is registered. Without an explicit Fastify JSON body parser or schema, `request.body` is `null` when no `Content-Type` header is sent (e.g., a plain `curl -X PUT`). Passing `null as any` into `{ ...this.config.actionFolders, ...null }` produces the existing config unchanged with no error, making a destructive mis-send silently a no-op. The double-cast (`as Record<string, unknown>` then `as any`) also entirely surrenders TypeScript's protection at the boundary and prevents Fastify from schema-validating the input.
-
-```ts
-// Current — unsafe
-const body = request.body as Record<string, unknown>;
-try {
-  const updated = await deps.configRepo.updateActionFolderConfig(body as any);
+**File:** `src/web/routes/folders.ts:29`
+**Issue:** The `newPath` parameter receives thorough validation: control character rejection (line 43), length limit (line 46), `..` traversal check, and delimiter check (line 54). However, `oldPath` receives none of these validations -- it is only checked against `inbox` (line 59) and the action folder prefix (line 65). An attacker could supply `oldPath: "../../something"` or `oldPath` containing control characters to probe or manipulate folder paths outside the intended mailbox hierarchy. Whether this is exploitable depends on the IMAP server's path normalization, but the asymmetric validation is a defense gap -- the backend trusts `oldPath` as a legitimate folder path and passes it directly to `cache.renameFolder()`.
+**Fix:**
+```typescript
+// Add after the existing newPath validations (after line 46), before the INBOX check:
+if (/[\x00-\x1f\x7f]/.test(oldPath)) {
+  return reply.status(400).send({ error: 'Old path cannot contain control characters' });
+}
+if (oldPath.includes('..')) {
+  return reply.status(400).send({ error: 'Path traversal sequences are not allowed' });
+}
 ```
-
-**Fix:** Add a null/object guard before the repository call so a missing or non-object body produces a clear 400 rather than a silent no-op:
-
-```ts
-app.put('/api/config/action-folders', async (request, reply) => {
-  const body = request.body;
-  if (body === null || body === undefined || typeof body !== 'object' || Array.isArray(body)) {
-    return reply.status(400).send({ error: 'Request body must be a JSON object' });
-  }
-  try {
-    const updated = await deps.configRepo.updateActionFolderConfig(body as Partial<ActionFolderConfig>);
-    return updated;
-  } catch (err: any) {
-    return reply.status(400).send({ error: 'Validation failed', details: [err.message] });
-  }
-});
-```
-
----
 
 ## Warnings
 
-### WR-01: Race condition — action-folder prefix fetch result may arrive after folder selection
+### WR-01: Action folder config PUT swallows all errors with generic message, no logging
 
-**File:** `src/web/frontend/app.ts:1646-1648`
-**Issue:** `getActionFolders()` is fired as a floating Promise (`.then(...).catch(...)`) — it is not awaited before `renderFolderPicker` is called on line 1651. If a user selects a folder in the picker before the async fetch completes, `actionFolderPrefix` is still `'Actions'` (the default) when `handleFolderSelection` runs. This means a non-default action-folder prefix won't protect system folders from rename attempts during that window.
-
-```ts
-// Line 1646 — floated, result may arrive too late
-let actionFolderPrefix = 'Actions';
-api.config.getActionFolders().then(cfg => {
-  actionFolderPrefix = cfg.prefix;
-}).catch(() => { /* keep default */ });
-
-// Line 1651 — picker renders immediately, before fetch resolves
-await renderFolderPicker({ ... });
-```
-
-**Fix:** Await both fetches before rendering the picker, with a fallback default:
-
-```ts
-let actionFolderPrefix = 'Actions';
-try {
-  const afCfg = await api.config.getActionFolders();
-  actionFolderPrefix = afCfg.prefix;
-} catch { /* keep default */ }
-
-await renderFolderPicker({ ... });
-```
-
-### WR-02: `details` field in 400 response may expose internal Zod error paths
-
-**File:** `src/web/routes/action-folder-config.ts:14-16`
-**Issue:** The catch block includes `details: [err.message]` in the 400 response. `err.message` from `updateActionFolderConfig` is constructed as `"Validation failed: fieldPath: message, ..."` — the full Zod path and message string. This leaks internal config field names and schema structure to any caller. The test at line 137 only asserts `body.error === 'Validation failed'` and does not validate whether `details` is safe to expose. For a self-hosted personal tool this is low-risk, but the `details` array contains dot-path field names from the config schema that could guide an attacker enumerating config structure in a multi-user deployment.
-
-**Fix:** Either omit `details` entirely or strip paths before responding:
-
-```ts
-return reply.status(400).send({ error: 'Validation failed' });
-```
-
-### WR-03: Missing `await` on re-render `renderFolderPicker` inside rename error handler
-
-**File:** `src/web/frontend/app.ts:1788-1792`
-**Issue:** Inside the rename error handler, `renderFolderPicker` is called with `await`, but the returned Promise is not stored or handled if the function rejects. However more specifically: the `finally` block at line 1793 runs `renameBtn.removeAttribute('disabled')` synchronously — it does not wait for `renderFolderPicker` to complete. If `renderFolderPicker` is asynchronous (it is, given the `await` on line 1651 for the success path), the input may be re-enabled before the picker has finished re-rendering, creating a brief state where the user can interact with stale UI.
-
-```ts
-// Line 1787-1797 — finally does not wait for picker re-render
-await renderFolderPicker({ ... });   // async
-} finally {
-  renameBtn.removeAttribute('disabled');  // runs immediately, not after picker
-  input.removeAttribute('disabled');
-  renameBtn.textContent = 'Rename Folder';
+**File:** `src/web/routes/action-folder-config.ts:18-19`
+**Issue:** The catch block on line 18 discards the actual error from `updateActionFolderConfig` and always returns `{ error: 'Validation failed' }`. If the repository throws a non-validation error (e.g., filesystem write failure, YAML serialization error), the client gets a misleading 400 instead of a 500, and the actual error is lost with no logging. The `err: any` type annotation also loses type safety.
+**Fix:**
+```typescript
+} catch (err: unknown) {
+  const message = err instanceof Error ? err.message : String(err);
+  request.log.error({ err }, 'action folder config update failed');
+  return reply.status(400).send({ error: message || 'Validation failed' });
 }
 ```
 
-**Fix:** Move the `finally` cleanup to run after the `renderFolderPicker` call, or handle the picker re-render outside the try/catch/finally so the button state is restored only after the picker is ready:
+### WR-02: Frontend delimiter detection guesses from path string instead of using tree data
 
-```ts
-try {
-  await api.folders.rename(selectedPath, newPath);
-  // ... success path
-} catch (err) {
-  // ... error handling
-  await renderFolderPicker({ ... });
-} finally {
-  renameBtn.removeAttribute('disabled');
-  input.removeAttribute('disabled');
-  renameBtn.textContent = 'Rename Folder';
+**File:** `src/web/frontend/app.ts:1686-1689`
+**Issue:** The `handleFolderSelection` function guesses the delimiter by scanning for `/` or `.` in the folder path string. If a folder path contains neither character (top-level folder with no children), it defaults to `/`. Meanwhile, the backend gets the actual delimiter from the folder tree node (line 51 in folders.ts: `selectedNode?.delimiter`). This means the frontend could construct a `newPath` with the wrong parent prefix when the IMAP server uses `.` as a delimiter for a folder whose path string does not contain `.`. The rename would then target the wrong destination path.
+**Fix:** Pass the delimiter through the folder picker's `onSelect` callback (the tree data already has this info), or fetch the delimiter from the cached tree response rather than guessing from the path string.
+
+### WR-03: Monitor event listeners accumulate across reconnects without cleanup
+
+**File:** `src/monitor/index.ts:78-89`
+**Issue:** `Monitor.start()` registers `newMail`, `connected`, and `error` event listeners on the IMAP client every time it is called. While `stop()` calls `removeAllListeners()` (line 106), the `onImapConfigChange` handler in `src/index.ts` creates a brand-new Monitor and calls `start()` on it -- but the shared `imapClient` that was rebuilt also gets an `error` listener registered on line 260 of `index.ts` that is never removed. More importantly, if `monitor.start()` were called twice on the same monitor instance without an intervening `stop()`, the listeners would double-register. The code currently avoids this through careful orchestration, but there is no defensive guard.
+**Fix:** Add a guard at the top of `start()`:
+```typescript
+async start(): Promise<void> {
+  // Remove any previously registered listeners to prevent accumulation
+  this.client.removeAllListeners();
+  
+  this.client.on('newMail', () => { ... });
+  // ... rest of start()
 }
 ```
-
-_(The current code already does this structurally — the issue is that `finally` fires before the `await renderFolderPicker` inside catch resolves, because `finally` runs synchronously after the `await` expression is started but the `await` doesn't propagate to `finally`. Wrapping the catch body's picker call in `await` within an `async` IIFE or restructuring the try/catch to not use `finally` for UI cleanup would fix this.)_
-
----
 
 ## Info
 
-### IN-01: `body as any` double-cast pattern is a recurring anti-pattern in route handlers
+### IN-01: Typed `catch (err: any)` in multiple locations
 
-**File:** `src/web/routes/action-folder-config.ts:10-12`
-**Issue:** Beyond the critical safety concern, the `as Record<string, unknown>` followed immediately by `as any` is a code smell — the first cast is pointless if the second discards it. This pattern has appeared in other route handlers in this codebase and should be standardized.
+**File:** `src/web/frontend/app.ts:1432,1467,1581`
+**Issue:** Several error catch blocks use `catch (err: any)` which defeats TypeScript's type safety. The codebase already uses the proper `catch (err: unknown)` pattern with `instanceof Error` narrowing in many other locations within the same file.
+**Fix:** Standardize on `catch (err: unknown)` with `instanceof Error` checks throughout.
 
-**Fix:** Use a single typed cast after a guard check (see CR-01 fix above).
+### IN-02: Duplicate conflict-handling code in proposal approve vs approve-as-review handlers
 
-### IN-02: Test suite does not cover `Content-Type` missing body edge case
-
-**File:** `test/unit/web/action-folder-config.test.ts:93-149`
-**Issue:** All PUT test cases pass a `payload` object, which Fastify's `inject` helper automatically serializes with `Content-Type: application/json`. There is no test for a PUT with no body or a non-JSON body, so the silent no-op described in CR-01 is not caught by the test suite.
-
-**Fix:** Add a test case:
-
-```ts
-it('returns 400 when no body is provided', async () => {
-  const app = buildServer(makeDeps(makeConfig()));
-  const res = await app.inject({ method: 'PUT', url: '/api/config/action-folders' });
-  expect(res.statusCode).toBe(400);
-});
+**File:** `src/web/frontend/app.ts:1431-1551`
+**Issue:** The error handling for "Approve Rule" (lines 1431-1484) and "Approve as Review" (lines 1498-1551) contain nearly identical ~50-line conflict-handling blocks including DOM manipulation, button state management, and "Save Ahead" button creation. This duplication increases maintenance burden and risk of the two code paths diverging.
+**Fix:** Extract shared conflict-handling logic into a helper function, e.g.:
+```typescript
+function handleApprovalConflict(
+  card: HTMLElement, actions: HTMLElement,
+  approveBtn: HTMLElement, approveReviewBtn: HTMLElement,
+  modifyBtn: HTMLElement, dismissBtn: HTMLElement,
+  conflict: ApiError['conflict'], proposalId: number
+): void { ... }
 ```
-
-### IN-03: `api.config.updateActionFolders` is defined in `api.ts` but not called anywhere in the reviewed frontend code
-
-**File:** `src/web/frontend/api.ts:75-78`
-**Issue:** `updateActionFolders` is exported but `app.ts` only calls `getActionFolders`. If the settings UI for action folder configuration is not yet built, this is expected. If it was supposed to be part of this phase, it may be an incomplete implementation. Dead API wrapper code is low risk but worth flagging.
-
-**Fix:** Either wire up the settings UI for action folder configuration or add a comment noting that this will be used in a future phase.
 
 ---
 
-_Reviewed: 2026-04-21T00:00:00Z_
+_Reviewed: 2026-04-21T12:00:00Z_
 _Reviewer: Claude (gsd-code-reviewer)_
 _Depth: standard_
