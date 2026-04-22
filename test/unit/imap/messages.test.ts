@@ -190,6 +190,22 @@ describe('parseMessage', () => {
     expect(result.cc).toEqual([]);
     expect(result.date).toEqual(new Date(0));
   });
+  it('populates headers field when raw headers Buffer is present', () => {
+    const result = parseMessage(makeFetchResult({
+      headers: Buffer.from('X-Mail-Mgr-Sentinel: <test@sentinel>\r\nFrom: alice@example.com\r\n'),
+    }));
+
+    expect(result.headers).toBeDefined();
+    expect(result.headers).toBeInstanceOf(Map);
+    expect(result.headers!.has('x-mail-mgr-sentinel')).toBe(true);
+    expect(result.headers!.get('from')).toBe('alice@example.com');
+  });
+
+  it('headers is undefined when no raw headers Buffer', () => {
+    const result = parseMessage(makeFetchResult());
+
+    expect(result.headers).toBeUndefined();
+  });
 });
 
 function makeReviewMessage(overrides: Partial<ReviewMessage> = {}): ReviewMessage {
@@ -247,5 +263,22 @@ describe('reviewMessageToEmailMessage', () => {
     const em = reviewMessageToEmailMessage(rm);
 
     expect(em.date).toEqual(d);
+  });
+
+  it('passes through headers field', () => {
+    const headers = new Map<string, string>();
+    headers.set('x-mail-mgr-sentinel', '<test@sentinel>');
+    const rm = makeReviewMessage({ headers });
+    const em = reviewMessageToEmailMessage(rm);
+
+    expect(em.headers).toBe(headers);
+    expect(em.headers!.has('x-mail-mgr-sentinel')).toBe(true);
+  });
+
+  it('passes through undefined headers', () => {
+    const rm = makeReviewMessage();
+    const em = reviewMessageToEmailMessage(rm);
+
+    expect(em.headers).toBeUndefined();
   });
 });

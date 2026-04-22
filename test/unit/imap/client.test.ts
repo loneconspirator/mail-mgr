@@ -766,6 +766,111 @@ describe('ImapClient', () => {
     });
   });
 
+  describe('getHeaderFields', () => {
+    it('always includes X-Mail-Mgr-Sentinel even without envelopeHeader config', async () => {
+      // Config without envelopeHeader
+      const noEnvConfig: ImapConfig = { ...TEST_CONFIG };
+      delete (noEnvConfig as Record<string, unknown>).envelopeHeader;
+      const fetchFlow = createMockFlow({
+        fetch: vi.fn(function* () {
+          yield { uid: 1, envelope: {}, flags: new Set() };
+        } as unknown as ImapFlowLike['fetch']),
+      });
+      const f = vi.fn(() => fetchFlow);
+      const c = new ImapClient(noEnvConfig, f);
+
+      await c.connect();
+      await c.fetchNewMessages(0);
+
+      // Verify the fetch query includes headers with X-Mail-Mgr-Sentinel
+      const fetchCall = (fetchFlow.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(fetchCall[1].headers).toEqual(['X-Mail-Mgr-Sentinel']);
+    });
+
+    it('includes envelopeHeader and List-Id when envelopeHeader is configured', async () => {
+      const envConfig: ImapConfig = { ...TEST_CONFIG, envelopeHeader: 'Delivered-To' };
+      const fetchFlow = createMockFlow({
+        fetch: vi.fn(function* () {
+          yield { uid: 1, envelope: {}, flags: new Set() };
+        } as unknown as ImapFlowLike['fetch']),
+      });
+      const f = vi.fn(() => fetchFlow);
+      const c = new ImapClient(envConfig, f);
+
+      await c.connect();
+      await c.fetchNewMessages(0);
+
+      const fetchCall = (fetchFlow.fetch as ReturnType<typeof vi.fn>).mock.calls[0];
+      expect(fetchCall[1].headers).toEqual(['X-Mail-Mgr-Sentinel', 'Delivered-To', 'List-Id']);
+    });
+  });
+
+  describe('parseRawToReviewMessage headers', () => {
+    it('populates headers field when raw headers Buffer is present', async () => {
+      const rawMessages = [
+        {
+          uid: 10,
+          flags: new Set(['\\Seen']),
+          internalDate: new Date('2026-03-01T12:00:00Z'),
+          headers: Buffer.from('X-Mail-Mgr-Sentinel: <test@mail-manager.sentinel>\r\nFrom: alice@test.com\r\n'),
+          envelope: {
+            from: [{ name: 'Alice', address: 'alice@test.com' }],
+            to: [{ name: 'Bob', address: 'bob@test.com' }],
+            cc: [],
+            subject: 'Hello',
+            messageId: '<msg-10@test.com>',
+          },
+        },
+      ];
+
+      mockFlow = createMockFlow({
+        fetch: vi.fn(function* () {
+          yield* rawMessages;
+        } as unknown as ImapFlowLike['fetch']),
+      }) as typeof mockFlow;
+      factory = vi.fn(() => mockFlow);
+      client = new ImapClient(TEST_CONFIG, factory);
+
+      await client.connect();
+      const results = await client.fetchAllMessages('Review');
+
+      expect(results[0].headers).toBeDefined();
+      expect(results[0].headers).toBeInstanceOf(Map);
+      expect(results[0].headers!.has('x-mail-mgr-sentinel')).toBe(true);
+      expect(results[0].headers!.get('from')).toBe('alice@test.com');
+    });
+
+    it('headers is undefined when no raw headers Buffer', async () => {
+      const rawMessages = [
+        {
+          uid: 10,
+          flags: new Set(['\\Seen']),
+          internalDate: new Date('2026-03-01T12:00:00Z'),
+          envelope: {
+            from: [{ name: 'Alice', address: 'alice@test.com' }],
+            to: [{ name: 'Bob', address: 'bob@test.com' }],
+            cc: [],
+            subject: 'Hello',
+            messageId: '<msg-10@test.com>',
+          },
+        },
+      ];
+
+      mockFlow = createMockFlow({
+        fetch: vi.fn(function* () {
+          yield* rawMessages;
+        } as unknown as ImapFlowLike['fetch']),
+      }) as typeof mockFlow;
+      factory = vi.fn(() => mockFlow);
+      client = new ImapClient(TEST_CONFIG, factory);
+
+      await client.connect();
+      const results = await client.fetchAllMessages('Review');
+
+      expect(results[0].headers).toBeUndefined();
+    });
+  });
+
   describe('UID dedup', () => {
     it('fetchNewMessages only returns messages above sinceUid', async () => {
       const messages = [

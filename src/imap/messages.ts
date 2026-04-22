@@ -16,6 +16,7 @@ export interface EmailMessage {
   flags: Set<string>;
   envelopeRecipient?: string;
   visibility?: Visibility;
+  headers?: Map<string, string>;
 }
 
 interface ImapAddressObject {
@@ -64,6 +65,7 @@ export interface ReviewMessage {
   };
   envelopeRecipient?: string;
   visibility?: Visibility;
+  headers?: Map<string, string>;
 }
 
 export function reviewMessageToEmailMessage(rm: ReviewMessage): EmailMessage {
@@ -78,6 +80,7 @@ export function reviewMessageToEmailMessage(rm: ReviewMessage): EmailMessage {
     flags: rm.flags,
     envelopeRecipient: rm.envelopeRecipient,
     visibility: rm.visibility,
+    headers: rm.headers,
   };
 }
 
@@ -132,15 +135,15 @@ export function parseMessage(fetched: ImapFetchResult, envelopeHeader?: string):
     : { name: '', address: '' };
   const to = parseAddressList(envelope?.to);
   const cc = parseAddressList(envelope?.cc);
+  const parsedHeaders = fetched.headers ? parseHeaderLines(fetched.headers) : undefined;
   let envelopeRecipient: string | undefined;
   let visibility: Visibility | undefined;
-  if (envelopeHeader && fetched.headers) {
-    const hdrs = parseHeaderLines(fetched.headers);
-    const recipientVal = hdrs.get(envelopeHeader.toLowerCase());
+  if (envelopeHeader && parsedHeaders) {
+    const recipientVal = parsedHeaders.get(envelopeHeader.toLowerCase());
     if (recipientVal && recipientVal.includes('@')) {
       envelopeRecipient = recipientVal;
     }
-    const listId = hdrs.get('list-id');
+    const listId = parsedHeaders.get('list-id');
     visibility = classifyVisibility(envelopeRecipient, to, cc, listId);
   }
   return {
@@ -154,5 +157,6 @@ export function parseMessage(fetched: ImapFetchResult, envelopeHeader?: string):
     flags: fetched.flags ?? new Set(),
     envelopeRecipient,
     visibility,
+    headers: parsedHeaders,
   };
 }

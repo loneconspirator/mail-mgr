@@ -262,10 +262,13 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     return results;
   }
 
-  /** Return the header field names to fetch, or undefined if not configured. */
-  private getHeaderFields(): string[] | undefined {
-    if (!this.config.envelopeHeader) return undefined;
-    return [this.config.envelopeHeader, 'List-Id'];
+  /** Return the header field names to always fetch (sentinel header + optional envelope headers). */
+  private getHeaderFields(): string[] {
+    const fields = ['X-Mail-Mgr-Sentinel'];
+    if (this.config.envelopeHeader) {
+      fields.push(this.config.envelopeHeader, 'List-Id');
+    }
+    return fields;
   }
 
   /**
@@ -336,16 +339,16 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     const to = parseAddrList(msg.envelope?.to);
     const cc = parseAddrList(msg.envelope?.cc);
 
+    const parsedHeaders = msg.headers ? parseHeaderLines(msg.headers) : undefined;
     let envelopeRecipient: string | undefined;
     let visibility: Visibility | undefined;
 
-    if (this.config.envelopeHeader && msg.headers) {
-      const hdrs = parseHeaderLines(msg.headers);
-      const recipientVal = hdrs.get(this.config.envelopeHeader.toLowerCase());
+    if (this.config.envelopeHeader && parsedHeaders) {
+      const recipientVal = parsedHeaders.get(this.config.envelopeHeader.toLowerCase());
       if (recipientVal && recipientVal.includes('@')) {
         envelopeRecipient = recipientVal;
       }
-      const listId = hdrs.get('list-id');
+      const listId = parsedHeaders.get('list-id');
       visibility = classifyVisibility(envelopeRecipient, to, cc, listId);
     }
 
@@ -362,6 +365,7 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
       },
       envelopeRecipient,
       visibility,
+      headers: parsedHeaders,
     };
   }
 
