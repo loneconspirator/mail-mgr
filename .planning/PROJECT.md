@@ -69,7 +69,24 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 
 ### Active
 
-- None — planning v0.7 Sentinel Message System
+- Sentinel message format with unique headers planted in every tracked folder
+- Message-ID based mapping stored alongside folder purpose
+- Periodic scan locating sentinels across all folders to detect renames
+- Auto-healing folder references when sentinel found in different folder
+- Re-planting sentinels when deleted but folder still exists
+- Failure notification to INBOX when both sentinel and folder are gone
+- Remove folder management/rename card from settings page
+
+## Current Milestone: v0.7 Sentinel Message System
+
+**Goal:** Use IMAP messages as persistent, relocatable tracking beacons to detect folder renames/deletions and automatically maintain all folder references.
+
+**Target features:**
+- Sentinel message core (format, planting, discovery, Message-ID storage)
+- Folder tracking integration (wire sentinels into action folders, rule targets, sweep targets)
+- Rename detection and auto-healing (periodic scan, reference update)
+- Failure detection and INBOX notification
+- Settings UI cleanup (remove folder rename card)
 
 ### Out of Scope
 
@@ -145,4 +162,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-22 after v0.6 milestone completion*
+*Last updated: 2026-04-22 after v0.7 milestone initialization*
