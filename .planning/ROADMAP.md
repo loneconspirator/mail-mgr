@@ -76,7 +76,7 @@ Full details: [milestones/v0.6-ROADMAP.md](milestones/v0.6-ROADMAP.md)
 - [x] **Phase 27: IMAP Sentinel Operations** - APPEND, SEARCH-by-header, DELETE capabilities and startup self-test (completed 2026-04-22)
 - [x] **Phase 28: Sentinel Planting & Lifecycle** - Plant sentinels on startup/rule-create/config-change, clean up on untrack (completed 2026-04-22)
 - [x] **Phase 29: Pipeline Guards** - Every message processor skips sentinel messages (completed 2026-04-22)
-- [ ] **Phase 30: Scanning & Rename Detection** - Periodic scan locates sentinels across folders to detect renames
+- [x] **Phase 30: Scanning & Rename Detection** - Periodic scan locates sentinels across folders to detect renames (completed 2026-04-22)
 - [ ] **Phase 31: Auto-Healing & Failure Handling** - Update references on rename, re-plant on deletion, notify on folder loss
 - [ ] **Phase 32: UI Cleanup** - Remove folder rename card and API from settings page
 
@@ -148,10 +148,10 @@ Plans:
   2. When a sentinel is not found in its expected folder, a deep scan searches all IMAP folders to find it
   3. Scanning runs on its own independent timer and does not block or significantly delay INBOX monitoring
   4. When a sentinel is found in a different folder than recorded, the scan reports the old-path to new-path mapping
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 30-01-PLAN.md — TDD SentinelScanner class (types, two-tier scan, timer lifecycle)
-- [ ] 30-02-PLAN.md — Config schema, barrel export, application wiring
+- [x] 30-01-PLAN.md — TDD SentinelScanner class (types, two-tier scan, timer lifecycle)
+- [x] 30-02-PLAN.md — Config schema, barrel export, application wiring
 
 ### Phase 31: Auto-Healing & Failure Handling
 **Goal**: When folder renames or deletions are detected, the system automatically repairs its configuration or notifies the user
@@ -208,6 +208,6 @@ Plans:
 | 27. IMAP Sentinel Operations | v0.7 | 2/2 | Complete    | 2026-04-22 |
 | 28. Sentinel Planting & Lifecycle | v0.7 | 2/2 | Complete    | 2026-04-22 |
 | 29. Pipeline Guards | v0.7 | 2/2 | Complete   | 2026-04-22 |
-| 30. Scanning & Rename Detection | v0.7 | 0/2 | Not started | - |
+| 30. Scanning & Rename Detection | v0.7 | 2/2 | Complete    | 2026-04-22 |
 | 31. Auto-Healing & Failure Handling | v0.7 | 0/0 | Not started | - |
 | 32. UI Cleanup | v0.7 | 0/0 | Not started | - |
