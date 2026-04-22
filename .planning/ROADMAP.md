@@ -78,7 +78,7 @@ Full details: [milestones/v0.6-ROADMAP.md](milestones/v0.6-ROADMAP.md)
 - [x] **Phase 29: Pipeline Guards** - Every message processor skips sentinel messages (completed 2026-04-22)
 - [x] **Phase 30: Scanning & Rename Detection** - Periodic scan locates sentinels across folders to detect renames (completed 2026-04-22)
 - [x] **Phase 31: Auto-Healing & Failure Handling** - Update references on rename, re-plant on deletion, notify on folder loss (completed 2026-04-22)
-- [ ] **Phase 32: UI Cleanup** - Remove folder rename card and API from settings page
+- [x] **Phase 32: UI Cleanup** - Remove folder rename card and API from settings page (completed 2026-04-22)
 
 ## Phase Details
 
@@ -175,9 +175,9 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. The folder rename card is no longer visible on the settings page
   2. The folder rename API endpoint is removed or returns a deprecation error
-**Plans:** 1 plan
+**Plans:** 1/1 plans complete
 Plans:
-- [ ] 32-01-PLAN.md — Remove folder rename API endpoint, UI card, CSS, and test file
+- [x] 32-01-PLAN.md — Remove folder rename API endpoint, UI card, CSS, and test file
 
 ## Progress
 
@@ -214,4 +214,4 @@ Plans:
 | 29. Pipeline Guards | v0.7 | 2/2 | Complete   | 2026-04-22 |
 | 30. Scanning & Rename Detection | v0.7 | 2/2 | Complete    | 2026-04-22 |
 | 31. Auto-Healing & Failure Handling | v0.7 | 2/2 | Complete    | 2026-04-22 |
-| 32. UI Cleanup | v0.7 | 0/1 | Not started | - |
+| 32. UI Cleanup | v0.7 | 1/1 | Complete    | 2026-04-22 |
