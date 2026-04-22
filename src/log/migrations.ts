@@ -59,6 +59,21 @@ export const migrations: Migration[] = [
       db.exec(`CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposed_rules(status)`);
     },
   },
+  {
+    version: '20260421_001',
+    description: 'Create sentinels table for folder tracking',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS sentinels (
+          message_id TEXT PRIMARY KEY,
+          folder_path TEXT NOT NULL,
+          folder_purpose TEXT NOT NULL,
+          created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+      `);
+      db.exec(`CREATE INDEX IF NOT EXISTS idx_sentinels_folder_path ON sentinels(folder_path)`);
+    },
+  },
 ];
 
 /**
