@@ -406,17 +406,15 @@ function makeDb(): Database.Database {
 | SQL injection via folder_path | Tampering | Parameterized queries (prepared statements) -- already the project standard |
 | Header injection via folder_path | Tampering | Folder paths should not contain `\r\n`; validate or strip CRLF from folderPath before building headers |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
-1. **Body text content for each folder purpose**
+1. **Body text content for each folder purpose** — RESOLVED
    - What we know: Body varies by purpose (D-03), action folders explain what the action does
-   - What's unclear: Exact wording for each purpose type (rule-target, action-folder, review, sweep-target)
-   - Recommendation: Define a `purposeDescription()` helper with sensible defaults; Claude has discretion here per CONTEXT.md
+   - Resolution: Define a `purposeDescription()` helper with sensible defaults per purpose type. Claude has discretion on exact wording per CONTEXT.md.
 
-2. **Should folder_purpose be a strict union type or free-form string?**
+2. **Should folder_purpose be a strict union type or free-form string?** — RESOLVED
    - What we know: D-08 lists examples: 'rule-target', 'action-folder', 'review', 'sweep-target'
-   - What's unclear: Whether future phases might add new purposes
-   - Recommendation: Use a TypeScript union type for known values but store as TEXT in SQLite for forward compatibility. The union type can be extended in later phases.
+   - Resolution: Use a TypeScript union type (`FolderPurpose`) for known values but store as TEXT in SQLite for forward compatibility. The union type can be extended in later phases.
 
 ## Sources
 
