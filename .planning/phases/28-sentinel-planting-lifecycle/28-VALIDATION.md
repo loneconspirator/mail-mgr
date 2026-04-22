@@ -49,7 +49,7 @@ created: 2026-04-21
 
 ## Wave 0 Requirements
 
-- [ ] `src/sentinel/__tests__/lifecycle.test.ts` — stubs for SENT-01, SENT-07
+- [ ] `test/unit/sentinel/lifecycle.test.ts` — stubs for SENT-01, SENT-07
 - [ ] Test fixtures for mock ImapClient, ConfigRepository, and SentinelStore
 
 *Existing vitest infrastructure covers framework needs.*
