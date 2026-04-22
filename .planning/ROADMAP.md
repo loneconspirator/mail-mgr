@@ -74,7 +74,7 @@ Full details: [milestones/v0.6-ROADMAP.md](milestones/v0.6-ROADMAP.md)
 
 - [x] **Phase 26: Sentinel Store & Message Format** - SQLite persistence and message construction for sentinel tracking beacons (completed 2026-04-22)
 - [x] **Phase 27: IMAP Sentinel Operations** - APPEND, SEARCH-by-header, DELETE capabilities and startup self-test (completed 2026-04-22)
-- [ ] **Phase 28: Sentinel Planting & Lifecycle** - Plant sentinels on startup/rule-create/config-change, clean up on untrack
+- [x] **Phase 28: Sentinel Planting & Lifecycle** - Plant sentinels on startup/rule-create/config-change, clean up on untrack (completed 2026-04-22)
 - [ ] **Phase 29: Pipeline Guards** - Every message processor skips sentinel messages
 - [ ] **Phase 30: Scanning & Rename Detection** - Periodic scan locates sentinels across folders to detect renames
 - [ ] **Phase 31: Auto-Healing & Failure Handling** - Update references on rename, re-plant on deletion, notify on folder loss
@@ -119,10 +119,10 @@ Plans:
   2. When a rule is created or config change adds a new folder reference, a sentinel is planted in that folder
   3. When a rule is deleted or config change removes a folder reference, the sentinel is deleted from IMAP and the mapping removed from SQLite
   4. INBOX never receives a sentinel regardless of how many rules reference it
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 28-01-PLAN.md — TDD collectTrackedFolders and reconcileSentinels (lifecycle.ts)
-- [ ] 28-02-PLAN.md — Wire lifecycle into startup sequence and config change handlers
+- [x] 28-01-PLAN.md — TDD collectTrackedFolders and reconcileSentinels (lifecycle.ts)
+- [x] 28-02-PLAN.md — Wire lifecycle into startup sequence and config change handlers
 
 ### Phase 29: Pipeline Guards
 **Goal**: No message processor in the system ever acts on a sentinel message
@@ -200,7 +200,7 @@ Plans:
 | 25. Action Folder Config API & Frontend Fix | v0.6 | 3/4 | Complete | 2026-04-21 |
 | 26. Sentinel Store & Message Format | v0.7 | 2/2 | Complete    | 2026-04-22 |
 | 27. IMAP Sentinel Operations | v0.7 | 2/2 | Complete    | 2026-04-22 |
-| 28. Sentinel Planting & Lifecycle | v0.7 | 0/0 | Not started | - |
+| 28. Sentinel Planting & Lifecycle | v0.7 | 2/2 | Complete    | 2026-04-22 |
 | 29. Pipeline Guards | v0.7 | 0/0 | Not started | - |
 | 30. Scanning & Rename Detection | v0.7 | 0/0 | Not started | - |
 | 31. Auto-Healing & Failure Handling | v0.7 | 0/0 | Not started | - |
