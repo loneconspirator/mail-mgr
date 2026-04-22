@@ -84,7 +84,18 @@ export class ActivityLog {
   /**
    * Log an action result with message and rule context.
    */
-  logActivity(result: ActionResult, message: EmailMessage, rule: Rule | null, source: 'arrival' | 'sweep' | 'batch' | 'action-folder' = 'arrival'): void {
+  /**
+   * Log a sentinel healing event (rename, replant, folder loss).
+   */
+  logSentinelEvent(event: { action: string; folder: string; details: string }): void {
+    this.db.prepare(`
+      INSERT INTO activity (
+        timestamp, message_uid, message_subject, action, folder, success, source
+      ) VALUES (datetime('now'), 0, ?, ?, ?, 1, 'sentinel')
+    `).run(event.details, event.action, event.folder);
+  }
+
+  logActivity(result: ActionResult, message: EmailMessage, rule: Rule | null, source: 'arrival' | 'sweep' | 'batch' | 'action-folder' | 'sentinel' = 'arrival'): void {
     const stmt = this.db.prepare(`
       INSERT INTO activity (
         timestamp, message_uid, message_id, message_from, message_to,
