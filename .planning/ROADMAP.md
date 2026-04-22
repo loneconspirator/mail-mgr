@@ -175,8 +175,9 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. The folder rename card is no longer visible on the settings page
   2. The folder rename API endpoint is removed or returns a deprecation error
-**Plans**: TBD
-**UI hint**: yes
+**Plans:** 1 plan
+Plans:
+- [ ] 32-01-PLAN.md — Remove folder rename API endpoint, UI card, CSS, and test file
 
 ## Progress
 
@@ -213,4 +214,4 @@ Plans:
 | 29. Pipeline Guards | v0.7 | 2/2 | Complete   | 2026-04-22 |
 | 30. Scanning & Rename Detection | v0.7 | 2/2 | Complete    | 2026-04-22 |
 | 31. Auto-Healing & Failure Handling | v0.7 | 2/2 | Complete    | 2026-04-22 |
-| 32. UI Cleanup | v0.7 | 0/0 | Not started | - |
+| 32. UI Cleanup | v0.7 | 0/1 | Not started | - |
