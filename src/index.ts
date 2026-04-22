@@ -10,7 +10,7 @@ import { FolderCache } from './folders/index.js';
 import { BatchEngine } from './batch/index.js';
 import { MoveTracker } from './tracking/index.js';
 import { ensureActionFolders, ActionFolderPoller, ActionFolderProcessor } from './action-folders/index.js';
-import { SentinelStore, SentinelScanner, runSentinelSelfTest, collectTrackedFolders, reconcileSentinels } from './sentinel/index.js';
+import { SentinelStore, SentinelScanner, runSentinelSelfTest, collectTrackedFolders, reconcileSentinels, createScanCompleteHandler } from './sentinel/index.js';
 import { SignalStore } from './tracking/signals.js';
 import { DestinationResolver } from './tracking/destinations.js';
 import { ProposalStore } from './tracking/proposals.js';
@@ -275,12 +275,23 @@ async function main(): Promise<void> {
 
     // Rebuild sentinel scanner with new client
     const updatedConfigForScanner = configRepo.getConfig();
+    const reconnectOnScanComplete = sentinelEnabled
+      ? createScanCompleteHandler({
+          configRepo,
+          configPath,
+          sentinelStore,
+          client: newClient,
+          activityLog,
+          logger,
+        })
+      : undefined;
     sentinelScanner = new SentinelScanner({
       client: newClient,
       sentinelStore,
       scanIntervalMs: updatedConfigForScanner.sentinel.scanIntervalMs,
       enabled: sentinelEnabled,
       logger,
+      onScanComplete: reconnectOnScanComplete,
     });
     sentinelScanner.start();
   });
@@ -365,12 +376,23 @@ async function main(): Promise<void> {
   }
 
   // Start sentinel scanner (D-09: after self-test, independent timer)
+  const onScanComplete = sentinelEnabled
+    ? createScanCompleteHandler({
+        configRepo,
+        configPath,
+        sentinelStore,
+        client: imapClient,
+        activityLog,
+        logger,
+      })
+    : undefined;
   sentinelScanner = new SentinelScanner({
     client: imapClient,
     sentinelStore,
     scanIntervalMs: config.sentinel.scanIntervalMs,
     enabled: sentinelEnabled,
     logger,
+    onScanComplete,
   });
   sentinelScanner.start();
 
