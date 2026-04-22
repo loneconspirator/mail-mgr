@@ -66,6 +66,9 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Action folder config exposed via web API (GET/PUT /api/config/action-folders) — v0.6 Phase 25
 - ✓ Frontend rename guard reads action folder prefix from config API instead of hardcoding — v0.6 Phase 25
 - ✓ Config changes via API trigger poller rebuild with updated folder paths — v0.6 Phase 25
+- ✓ All message processors (action folder, monitor, sweeper, batch, tracker) skip sentinel messages — v0.7 Phase 29
+- ✓ Sentinel detection via shared isSentinel() utility checking X-Mail-Mgr-Sentinel header — v0.7 Phase 29
+- ✓ IMAP fetch always includes sentinel header for detection regardless of envelopeHeader config — v0.7 Phase 29
 
 ### Active
 
@@ -162,4 +165,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-22 after Phase 27 completion (IMAP sentinel operations — APPEND/SEARCH/DELETE + startup self-test)*
+*Last updated: 2026-04-22 after Phase 29 completion (pipeline guards — all 5 processors skip sentinel messages)*
