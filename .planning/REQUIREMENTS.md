@@ -76,37 +76,37 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| SENT-01 | TBD | Pending |
-| SENT-02 | TBD | Pending |
-| SENT-03 | TBD | Pending |
-| SENT-04 | TBD | Pending |
-| SENT-05 | TBD | Pending |
-| SENT-06 | TBD | Pending |
-| SENT-07 | TBD | Pending |
-| SCAN-01 | TBD | Pending |
-| SCAN-02 | TBD | Pending |
-| SCAN-03 | TBD | Pending |
-| SCAN-04 | TBD | Pending |
-| HEAL-01 | TBD | Pending |
-| HEAL-02 | TBD | Pending |
-| HEAL-03 | TBD | Pending |
-| HEAL-04 | TBD | Pending |
-| FAIL-01 | TBD | Pending |
-| FAIL-02 | TBD | Pending |
-| FAIL-03 | TBD | Pending |
-| GUARD-01 | TBD | Pending |
-| GUARD-02 | TBD | Pending |
-| GUARD-03 | TBD | Pending |
-| GUARD-04 | TBD | Pending |
-| GUARD-05 | TBD | Pending |
-| UI-01 | TBD | Pending |
-| UI-02 | TBD | Pending |
+| SENT-01 | Phase 28 | Pending |
+| SENT-02 | Phase 26 | Pending |
+| SENT-03 | Phase 26 | Pending |
+| SENT-04 | Phase 27 | Pending |
+| SENT-05 | Phase 26 | Pending |
+| SENT-06 | Phase 27 | Pending |
+| SENT-07 | Phase 28 | Pending |
+| SCAN-01 | Phase 30 | Pending |
+| SCAN-02 | Phase 30 | Pending |
+| SCAN-03 | Phase 30 | Pending |
+| SCAN-04 | Phase 30 | Pending |
+| HEAL-01 | Phase 31 | Pending |
+| HEAL-02 | Phase 31 | Pending |
+| HEAL-03 | Phase 31 | Pending |
+| HEAL-04 | Phase 31 | Pending |
+| FAIL-01 | Phase 31 | Pending |
+| FAIL-02 | Phase 31 | Pending |
+| FAIL-03 | Phase 31 | Pending |
+| GUARD-01 | Phase 29 | Pending |
+| GUARD-02 | Phase 29 | Pending |
+| GUARD-03 | Phase 29 | Pending |
+| GUARD-04 | Phase 29 | Pending |
+| GUARD-05 | Phase 29 | Pending |
+| UI-01 | Phase 32 | Pending |
+| UI-02 | Phase 32 | Pending |
 
 **Coverage:**
 - v0.7 requirements: 25 total
-- Mapped to phases: 0
-- Unmapped: 25 ⚠️
+- Mapped to phases: 25
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-22*
-*Last updated: 2026-04-22 after initial definition*
+*Last updated: 2026-04-22 after roadmap creation*

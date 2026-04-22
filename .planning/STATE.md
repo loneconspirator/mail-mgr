@@ -2,11 +2,11 @@
 gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: Sentinel Message System
-status: defining_requirements
-last_updated: "2026-04-22T01:20:00.000Z"
+status: ready_to_plan
+last_updated: "2026-04-22T02:00:00.000Z"
 last_activity: 2026-04-22
 progress:
-  total_phases: 0
+  total_phases: 7
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -20,15 +20,15 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** Dramatically reduce inbox volume without losing visibility
-**Current focus:** v0.7 — Sentinel Message System
+**Current focus:** Phase 26 - Sentinel Store & Message Format
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
+Phase: 26 of 32 (Sentinel Store & Message Format)
+Plan: 0 of 0 in current phase
 Milestone: v0.7 Sentinel Message System
-Status: Defining requirements
-Last activity: 2026-04-22 — Milestone v0.7 started
+Status: Ready to plan
+Last activity: 2026-04-22 — v0.7 roadmap created (7 phases, 25 requirements mapped)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -47,6 +47,13 @@ Progress: [░░░░░░░░░░] 0%
 ### Decisions
 
 Decisions are logged in PROJECT.md Key Decisions table.
+Recent decisions affecting current work:
+
+- [v0.7]: Message-ID is the persistent identifier (not UID — UIDVALIDITY changes invalidate UIDs)
+- [v0.7]: Two-tier scan: fast-path checks expected folders, deep scan only on missing sentinels
+- [v0.7]: Auto-healing must NOT trigger full pipeline rebuilds
+- [v0.7]: INBOX never gets a sentinel (cannot be renamed/deleted)
+- [v0.7]: Sentinel cleanup on untrack (rule deleted, config changed)
 
 ### Pending Todos
 
@@ -55,7 +62,7 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 ### Blockers/Concerns
 
-None active.
+- Plan 25-04 (folder rename config propagation) was skipped in v0.6 — superseded by v0.7 sentinel system
 
 ### Quick Tasks Completed
 
@@ -67,5 +74,5 @@ None active.
 ## Session Continuity
 
 Last session: 2026-04-22
-Last activity: 2026-04-22 — Milestone v0.7 started
-Resume file: N/A — defining requirements
+Last activity: 2026-04-22 — v0.7 roadmap created, ready to plan Phase 26
+Resume file: None
