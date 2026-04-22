@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: Sentinel Message System
 status: executing
-last_updated: "2026-04-22T19:07:49.787Z"
-last_activity: 2026-04-22 -- Completed 31-01 (sentinel healer TDD)
+last_updated: "2026-04-22T19:10:45.602Z"
+last_activity: 2026-04-22
 progress:
   total_phases: 7
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 12
-  completed_plans: 11
-  percent: 92
+  completed_plans: 12
+  percent: 100
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 31 of 32 (auto healing & failure handling)
-Plan: 1 of 2
+Plan: 2 of 2
 Milestone: v0.7 Sentinel Message System
-Status: Executing
-Last activity: 2026-04-22 -- Completed 31-01 (sentinel healer TDD)
+Status: Ready to execute
+Last activity: 2026-04-22
 
 Progress: [██████████] 100% (plans 8/8)
 
@@ -56,6 +56,7 @@ Recent decisions affecting current work:
 - [v0.7]: Sentinel cleanup on untrack (rule deleted, config changed)
 - [v0.7]: Config mutations via saveConfig() bypass ConfigRepository listeners to prevent pipeline rebuilds
 - [v0.7]: Dedup folder-loss notifications by removing sentinel mapping after first notification
+- [Phase 31]: Barrel exports already present from 31-01; only src/index.ts needed wiring changes
 
 ### Pending Todos
 
@@ -72,9 +73,10 @@ Recent decisions affecting current work:
 |---|-------------|------|--------|-----------|
 | 260420-did | Add optional folder finder to New Rule modal | 2026-04-20 | a31a7ce | [260420-did-add-optional-folder-finder-to-new-rule-m](./quick/260420-did-add-optional-folder-finder-to-new-rule-m/) |
 | 260420-dsq | Rename skip rule display to leave in place | 2026-04-20 | 7422b67 | [260420-dsq-rename-skip-rule-display-to-leave-in-pla](./quick/260420-dsq-rename-skip-rule-display-to-leave-in-pla/) |
+| Phase 31 P02 | 1min | 1 tasks | 1 files |
 
 ## Session Continuity
 
-Last session: 2026-04-22T19:07:49.784Z
+Last session: 2026-04-22T19:10:45.598Z
 Last activity: 2026-04-22 — Completed 31-01-PLAN.md (sentinel healer TDD)
 Resume file: None

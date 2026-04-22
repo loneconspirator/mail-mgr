@@ -77,7 +77,7 @@ Full details: [milestones/v0.6-ROADMAP.md](milestones/v0.6-ROADMAP.md)
 - [x] **Phase 28: Sentinel Planting & Lifecycle** - Plant sentinels on startup/rule-create/config-change, clean up on untrack (completed 2026-04-22)
 - [x] **Phase 29: Pipeline Guards** - Every message processor skips sentinel messages (completed 2026-04-22)
 - [x] **Phase 30: Scanning & Rename Detection** - Periodic scan locates sentinels across folders to detect renames (completed 2026-04-22)
-- [ ] **Phase 31: Auto-Healing & Failure Handling** - Update references on rename, re-plant on deletion, notify on folder loss
+- [x] **Phase 31: Auto-Healing & Failure Handling** - Update references on rename, re-plant on deletion, notify on folder loss (completed 2026-04-22)
 - [ ] **Phase 32: UI Cleanup** - Remove folder rename card and API from settings page
 
 ## Phase Details
@@ -163,10 +163,10 @@ Plans:
   3. When both sentinel and folder are gone, associated rules/behaviors are disabled and an explanatory notification is APPENDed to INBOX
   4. The system does not auto-recreate deleted folders
   5. All healing events (rename detected, references updated, sentinel re-planted, folder lost) are recorded in the activity log
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 Plans:
 - [x] 31-01-PLAN.md — TDD healer module (rename handler, replant, folder loss, activity logging)
-- [ ] 31-02-PLAN.md — Wire healer into startup and reconnect via onScanComplete callback
+- [x] 31-02-PLAN.md — Wire healer into startup and reconnect via onScanComplete callback
 
 ### Phase 32: UI Cleanup
 **Goal**: The settings page no longer offers manual folder rename since sentinel auto-healing replaces it
@@ -212,5 +212,5 @@ Plans:
 | 28. Sentinel Planting & Lifecycle | v0.7 | 2/2 | Complete    | 2026-04-22 |
 | 29. Pipeline Guards | v0.7 | 2/2 | Complete   | 2026-04-22 |
 | 30. Scanning & Rename Detection | v0.7 | 2/2 | Complete    | 2026-04-22 |
-| 31. Auto-Healing & Failure Handling | v0.7 | 1/2 | In Progress|  |
+| 31. Auto-Healing & Failure Handling | v0.7 | 2/2 | Complete   | 2026-04-22 |
 | 32. UI Cleanup | v0.7 | 0/0 | Not started | - |
