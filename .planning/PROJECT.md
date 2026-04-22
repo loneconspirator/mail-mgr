@@ -72,14 +72,15 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Periodic scan checks sentinel locations via IMAP SEARCH with configurable interval (default 5 min) — v0.7 Phase 30
 - ✓ Deep scan searches all IMAP folders when sentinel not found in expected location — v0.7 Phase 30
 - ✓ Scan reports old-path to new-path mapping when sentinel found in different folder (rename detection) — v0.7 Phase 30
+- ✓ Auto-healing folder references when sentinel found in different folder — v0.7 Phase 31
+- ✓ Re-planting sentinels when deleted but folder still exists — v0.7 Phase 31
+- ✓ Failure notification to INBOX when both sentinel and folder are gone — v0.7 Phase 31
+- ✓ All healing events recorded in activity log with sentinel source — v0.7 Phase 31
 
 ### Active
 
 - Sentinel message format with unique headers planted in every tracked folder — partially validated v0.7 Phase 26 (format builder + SQLite store), Phase 27 (IMAP APPEND/SEARCH/DELETE operations + self-test), Phase 28 (lifecycle planting + cleanup on config changes)
 - Message-ID based mapping stored alongside folder purpose — partially validated v0.7 Phase 26, Phase 27 (IMAP operations layer complete), Phase 28 (reconciliation logic + startup wiring)
-- Auto-healing folder references when sentinel found in different folder
-- Re-planting sentinels when deleted but folder still exists
-- Failure notification to INBOX when both sentinel and folder are gone
 - Remove folder management/rename card from settings page
 
 ## Current Milestone: v0.7 Sentinel Message System
@@ -167,4 +168,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-22 after Phase 29 completion (pipeline guards — all 5 processors skip sentinel messages)*
+*Last updated: 2026-04-22 after Phase 31 completion (auto-healing — rename/replant/folder-loss handling with INBOX notification)*
