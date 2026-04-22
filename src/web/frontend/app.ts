@@ -1,7 +1,7 @@
 import { api, ApiError } from './api.js';
 import type { Rule, ActivityEntry, ImapConfigResponse, ReviewConfig, BatchStatusResponse, DryRunGroup, ProposedRuleCard } from './api.js';
 import type { Action } from '../../shared/types.js';
-import { renderFolderPicker, clearFolderCache } from './folder-picker.js';
+import { renderFolderPicker } from './folder-picker.js';
 import { generateBehaviorDescription } from './rule-display.js';
 
 // --- State ---
@@ -1002,8 +1002,7 @@ async function renderSettings() {
       });
     }
 
-    // Folder Management card
-    await renderFolderRenameCard(app);
+
 
   } catch (e: unknown) {
     app.innerHTML = '';
@@ -1620,192 +1619,6 @@ function formatShortDate(dateStr: string): string {
   } catch {
     return dateStr;
   }
-}
-
-// --- Folder Rename Card ---
-async function renderFolderRenameCard(container: HTMLElement): Promise<void> {
-  const card = h('div', { className: 'settings-card' });
-  card.appendChild(h('h2', {}, 'Folder Management'));
-
-  // Tree picker container
-  const pickerContainer = h('div', {});
-  card.appendChild(pickerContainer);
-
-  // Rename section (initially hidden)
-  const renameSection = h('div', { className: 'rename-section', style: 'display:none' });
-  card.appendChild(renameSection);
-
-  // Empty state message
-  const emptyHint = h('p', { className: 'rename-disabled-hint' }, 'Select a folder above to rename it');
-  card.appendChild(emptyHint);
-
-  let selectedPath = '';
-  let selectedDelimiter = '/';
-
-  let actionFolderPrefix = 'Actions';
-  try {
-    const afCfg = await api.config.getActionFolders();
-    actionFolderPrefix = afCfg.prefix;
-  } catch { /* keep default */ }
-
-  // Render the folder picker
-  await renderFolderPicker({
-    container: pickerContainer,
-    currentValue: '',
-    onSelect: (folderPath: string) => {
-      selectedPath = folderPath;
-      handleFolderSelection(folderPath);
-    },
-  });
-
-  function handleFolderSelection(folderPath: string) {
-    renameSection.innerHTML = '';
-    emptyHint.style.display = 'none';
-
-    // Determine if folder is renamable
-    const isInbox = folderPath.toLowerCase() === 'inbox';
-    const actionPrefix = actionFolderPrefix;
-    const isActionFolder = folderPath === actionPrefix
-      || folderPath.startsWith(actionPrefix + '/')
-      || folderPath.startsWith(actionPrefix + '.');
-
-    if (isInbox) {
-      renameSection.style.display = '';
-      renameSection.appendChild(h('p', { className: 'rename-disabled-hint' }, 'INBOX cannot be renamed'));
-      return;
-    }
-    if (isActionFolder) {
-      renameSection.style.display = '';
-      renameSection.appendChild(h('p', { className: 'rename-disabled-hint' }, 'System folders cannot be renamed'));
-      return;
-    }
-
-    // Extract leaf name
-    const delimiters = ['/', '.'];
-    let delimiter = '/';
-    for (const d of delimiters) {
-      if (folderPath.includes(d)) { delimiter = d; break; }
-    }
-    selectedDelimiter = delimiter;
-    const parts = folderPath.split(delimiter);
-    const leafName = parts[parts.length - 1];
-
-    renameSection.style.display = '';
-
-    // Special-use warning (per D-05)
-    const specialUseFolders = ['sent', 'drafts', 'trash', 'junk', 'archive'];
-    const lowerLeaf = leafName.toLowerCase();
-    const isSpecialUse = specialUseFolders.some(s => lowerLeaf === s || lowerLeaf.includes(s));
-    const lowerPath = folderPath.toLowerCase();
-    const isSpecialPath = specialUseFolders.some(s => lowerPath === s || lowerPath.endsWith(delimiter + s));
-
-    if (isSpecialUse || isSpecialPath) {
-      const warning = h('div', { className: 'rename-warning' }, 'This is a special-use folder. Renaming may affect your mail client.');
-      warning.setAttribute('role', 'status');
-      renameSection.appendChild(warning);
-    }
-
-    // Name input
-    const formGroup = h('div', { className: 'form-group' });
-    const label = h('label', {}, 'New name');
-    const input = h('input', { type: 'text', className: 'form-control', value: leafName }) as HTMLInputElement;
-    const errorDiv = h('div', { className: 'field-error', style: 'display:none' });
-    errorDiv.setAttribute('role', 'alert');
-    formGroup.appendChild(label);
-    formGroup.appendChild(input);
-    formGroup.appendChild(errorDiv);
-    renameSection.appendChild(formGroup);
-
-    // Buttons
-    const btnGroup = h('div', { style: 'display:flex;gap:0.5rem;margin-top:0.75rem' });
-    const cancelBtn = h('button', { className: 'btn' }, 'Keep Current Name');
-    const renameBtn = h('button', { className: 'btn btn-primary' }, 'Rename Folder');
-    btnGroup.appendChild(cancelBtn);
-    btnGroup.appendChild(renameBtn);
-    renameSection.appendChild(btnGroup);
-
-    // Cancel clears selection
-    cancelBtn.addEventListener('click', () => {
-      renameSection.style.display = 'none';
-      emptyHint.style.display = '';
-      selectedPath = '';
-    });
-
-    // Rename handler
-    renameBtn.addEventListener('click', async () => {
-      const newName = input.value.trim();
-      errorDiv.style.display = 'none';
-
-      // Client-side validation
-      if (!newName) {
-        errorDiv.textContent = 'Name cannot be empty';
-        errorDiv.style.display = '';
-        return;
-      }
-      if (newName === leafName) {
-        errorDiv.textContent = 'Name is unchanged';
-        errorDiv.style.display = '';
-        return;
-      }
-      if (newName.includes(selectedDelimiter)) {
-        errorDiv.textContent = 'Name cannot contain path separators';
-        errorDiv.style.display = '';
-        return;
-      }
-
-      // Build new full path: replace leaf segment
-      const parentParts = parts.slice(0, -1);
-      const newPath = parentParts.length > 0
-        ? parentParts.join(selectedDelimiter) + selectedDelimiter + newName
-        : newName;
-
-      // Loading state
-      renameBtn.setAttribute('disabled', '');
-      input.setAttribute('disabled', '');
-      renameBtn.textContent = 'Renaming...';
-
-      try {
-        await api.folders.rename(selectedPath, newPath);
-        toast('Folder renamed to "' + newName + '"');
-        // Clear frontend folder cache and re-render picker (per D-07)
-        clearFolderCache();
-        renameSection.style.display = 'none';
-        emptyHint.style.display = '';
-        selectedPath = '';
-        await renderFolderPicker({
-          container: pickerContainer,
-          currentValue: '',
-          onSelect: (fp: string) => { selectedPath = fp; handleFolderSelection(fp); },
-        });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        // Check if it's a collision (409 from backend returns the message)
-        if (message.includes('already exists')) {
-          errorDiv.textContent = message;
-          errorDiv.style.display = '';
-        } else {
-          toast('Rename failed: ' + message, true);
-        }
-        // Refresh tree on failure too (per D-07)
-        clearFolderCache();
-        await renderFolderPicker({
-          container: pickerContainer,
-          currentValue: selectedPath,
-          onSelect: (fp: string) => { selectedPath = fp; handleFolderSelection(fp); },
-        });
-      } finally {
-        renameBtn.removeAttribute('disabled');
-        input.removeAttribute('disabled');
-        renameBtn.textContent = 'Rename Folder';
-      }
-    });
-
-    // Focus the input on selection (accessibility)
-    input.focus();
-    input.select();
-  }
-
-  container.appendChild(card);
 }
 
 // --- Init ---

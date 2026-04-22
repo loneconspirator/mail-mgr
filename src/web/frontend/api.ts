@@ -79,10 +79,6 @@ export const api = {
   },
   folders: {
     list: () => request<FolderTreeResponse>('/api/folders'),
-    rename: (oldPath: string, newPath: string) => request<{ success: boolean; newPath: string }>('/api/folders/rename', {
-      method: 'POST',
-      body: JSON.stringify({ oldPath, newPath }),
-    }),
   },
   batch: {
     dryRun: (sourceFolder: string) => request<DryRunResponse>('/api/batch/dry-run', { method: 'POST', body: JSON.stringify({ sourceFolder }) }),
