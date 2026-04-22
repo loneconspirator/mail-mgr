@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v0.7
 milestone_name: Sentinel Message System
 status: executing
-last_updated: "2026-04-22T18:49:48.421Z"
-last_activity: 2026-04-22 -- Phase 31 planning complete
+last_updated: "2026-04-22T19:07:49.787Z"
+last_activity: 2026-04-22 -- Completed 31-01 (sentinel healer TDD)
 progress:
   total_phases: 7
   completed_phases: 5
   total_plans: 12
-  completed_plans: 10
-  percent: 83
+  completed_plans: 11
+  percent: 92
 ---
 
 # Project State
@@ -25,10 +25,10 @@ See: .planning/PROJECT.md (updated 2026-04-22)
 ## Current Position
 
 Phase: 31 of 32 (auto healing & failure handling)
-Plan: Not started
+Plan: 1 of 2
 Milestone: v0.7 Sentinel Message System
-Status: Ready to execute
-Last activity: 2026-04-22 -- Phase 31 planning complete
+Status: Executing
+Last activity: 2026-04-22 -- Completed 31-01 (sentinel healer TDD)
 
 Progress: [██████████] 100% (plans 8/8)
 
@@ -54,6 +54,8 @@ Recent decisions affecting current work:
 - [v0.7]: Auto-healing must NOT trigger full pipeline rebuilds
 - [v0.7]: INBOX never gets a sentinel (cannot be renamed/deleted)
 - [v0.7]: Sentinel cleanup on untrack (rule deleted, config changed)
+- [v0.7]: Config mutations via saveConfig() bypass ConfigRepository listeners to prevent pipeline rebuilds
+- [v0.7]: Dedup folder-loss notifications by removing sentinel mapping after first notification
 
 ### Pending Todos
 
@@ -73,6 +75,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-22T18:33:26.974Z
-Last activity: 2026-04-22 — v0.7 roadmap created, ready to plan Phase 26
-Resume file: .planning/phases/31-auto-healing-failure-handling/31-CONTEXT.md
+Last session: 2026-04-22T19:07:49.784Z
+Last activity: 2026-04-22 — Completed 31-01-PLAN.md (sentinel healer TDD)
+Resume file: None

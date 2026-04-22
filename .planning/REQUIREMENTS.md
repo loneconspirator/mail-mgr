@@ -26,16 +26,16 @@ Requirements for Sentinel Message System milestone. Each maps to roadmap phases.
 
 ### Auto-Healing
 
-- [ ] **HEAL-01**: When a sentinel is found in a different folder than recorded, all config/rule references to the old path are updated to the new path
-- [ ] **HEAL-02**: Config reference updates are atomic and do not trigger full pipeline rebuilds (action folder poller, monitor, sweeper)
-- [ ] **HEAL-03**: When a sentinel is missing but its folder still exists, the sentinel is re-planted with a new Message-ID
-- [ ] **HEAL-04**: Activity log records all healing events (rename detected, references updated, sentinel re-planted)
+- [x] **HEAL-01**: When a sentinel is found in a different folder than recorded, all config/rule references to the old path are updated to the new path
+- [x] **HEAL-02**: Config reference updates are atomic and do not trigger full pipeline rebuilds (action folder poller, monitor, sweeper)
+- [x] **HEAL-03**: When a sentinel is missing but its folder still exists, the sentinel is re-planted with a new Message-ID
+- [x] **HEAL-04**: Activity log records all healing events (rename detected, references updated, sentinel re-planted)
 
 ### Failure Handling
 
-- [ ] **FAIL-01**: When both sentinel and folder are gone, associated rules and behaviors are disabled
-- [ ] **FAIL-02**: An explanatory notification message is APPENDed to INBOX describing what broke and how to fix it
-- [ ] **FAIL-03**: System does not auto-recreate deleted folders
+- [x] **FAIL-01**: When both sentinel and folder are gone, associated rules and behaviors are disabled
+- [x] **FAIL-02**: An explanatory notification message is APPENDed to INBOX describing what broke and how to fix it
+- [x] **FAIL-03**: System does not auto-recreate deleted folders
 
 ### Pipeline Guards
 
@@ -87,13 +87,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SCAN-02 | Phase 30 | Pending |
 | SCAN-03 | Phase 30 | Pending |
 | SCAN-04 | Phase 30 | Pending |
-| HEAL-01 | Phase 31 | Pending |
-| HEAL-02 | Phase 31 | Pending |
-| HEAL-03 | Phase 31 | Pending |
-| HEAL-04 | Phase 31 | Pending |
-| FAIL-01 | Phase 31 | Pending |
-| FAIL-02 | Phase 31 | Pending |
-| FAIL-03 | Phase 31 | Pending |
+| HEAL-01 | Phase 31 | Complete |
+| HEAL-02 | Phase 31 | Complete |
+| HEAL-03 | Phase 31 | Complete |
+| HEAL-04 | Phase 31 | Complete |
+| FAIL-01 | Phase 31 | Complete |
+| FAIL-02 | Phase 31 | Complete |
+| FAIL-03 | Phase 31 | Complete |
 | GUARD-01 | Phase 29 | Pending |
 | GUARD-02 | Phase 29 | Pending |
 | GUARD-03 | Phase 29 | Pending |

@@ -163,9 +163,9 @@ Plans:
   3. When both sentinel and folder are gone, associated rules/behaviors are disabled and an explanatory notification is APPENDed to INBOX
   4. The system does not auto-recreate deleted folders
   5. All healing events (rename detected, references updated, sentinel re-planted, folder lost) are recorded in the activity log
-**Plans:** 2 plans
+**Plans:** 1/2 plans executed
 Plans:
-- [ ] 31-01-PLAN.md — TDD healer module (rename handler, replant, folder loss, activity logging)
+- [x] 31-01-PLAN.md — TDD healer module (rename handler, replant, folder loss, activity logging)
 - [ ] 31-02-PLAN.md — Wire healer into startup and reconnect via onScanComplete callback
 
 ### Phase 32: UI Cleanup
@@ -212,5 +212,5 @@ Plans:
 | 28. Sentinel Planting & Lifecycle | v0.7 | 2/2 | Complete    | 2026-04-22 |
 | 29. Pipeline Guards | v0.7 | 2/2 | Complete   | 2026-04-22 |
 | 30. Scanning & Rename Detection | v0.7 | 2/2 | Complete    | 2026-04-22 |
-| 31. Auto-Healing & Failure Handling | v0.7 | 0/2 | Not started | - |
+| 31. Auto-Healing & Failure Handling | v0.7 | 1/2 | In Progress|  |
 | 32. UI Cleanup | v0.7 | 0/0 | Not started | - |
