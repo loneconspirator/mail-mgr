@@ -76,12 +76,13 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Re-planting sentinels when deleted but folder still exists — v0.7 Phase 31
 - ✓ Failure notification to INBOX when both sentinel and folder are gone — v0.7 Phase 31
 - ✓ All healing events recorded in activity log with sentinel source — v0.7 Phase 31
+- ✓ Folder rename card removed from settings page (superseded by sentinel auto-healing) — v0.7 Phase 32
+- ✓ Folder rename API endpoint removed — v0.7 Phase 32
 
 ### Active
 
 - Sentinel message format with unique headers planted in every tracked folder — partially validated v0.7 Phase 26 (format builder + SQLite store), Phase 27 (IMAP APPEND/SEARCH/DELETE operations + self-test), Phase 28 (lifecycle planting + cleanup on config changes)
 - Message-ID based mapping stored alongside folder purpose — partially validated v0.7 Phase 26, Phase 27 (IMAP operations layer complete), Phase 28 (reconciliation logic + startup wiring)
-- Remove folder management/rename card from settings page
 
 ## Current Milestone: v0.7 Sentinel Message System
 
@@ -168,4 +169,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-22 after Phase 31 completion (auto-healing — rename/replant/folder-loss handling with INBOX notification)*
+*Last updated: 2026-04-22 after Phase 32 completion (UI cleanup — removed folder rename card and API, superseded by sentinel auto-healing)*
