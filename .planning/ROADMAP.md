@@ -119,7 +119,10 @@ Plans:
   2. When a rule is created or config change adds a new folder reference, a sentinel is planted in that folder
   3. When a rule is deleted or config change removes a folder reference, the sentinel is deleted from IMAP and the mapping removed from SQLite
   4. INBOX never receives a sentinel regardless of how many rules reference it
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 28-01-PLAN.md — TDD collectTrackedFolders and reconcileSentinels (lifecycle.ts)
+- [ ] 28-02-PLAN.md — Wire lifecycle into startup sequence and config change handlers
 
 ### Phase 29: Pipeline Guards
 **Goal**: No message processor in the system ever acts on a sentinel message
