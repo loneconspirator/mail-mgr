@@ -572,4 +572,418 @@ describe('SentinelHealer', () => {
       expect(store.updateFolderPath).toHaveBeenCalledWith('<s2@test>', 'NewB');
     });
   });
+
+  // ── Folder loss - rule disabling (FAIL-01) ─────────────────────────
+
+  describe('folder loss - rule disabling', () => {
+    function makeFolderLostReport(folder = 'LostFolder'): ScanReport {
+      return {
+        scannedAt: new Date().toISOString(),
+        results: [{
+          status: 'not-found',
+          messageId: '<s1@test>',
+          expectedFolder: folder,
+          folderPurpose: 'rule-target',
+        }],
+        deepScansTriggered: 1,
+        errors: 0,
+      };
+    }
+
+    function makeFolderGoneDeps(config: Config, overrides: Partial<SentinelHealerDeps> = {}) {
+      const client = createMockClient();
+      // Folder NOT in the list = folder is gone
+      client.listMailboxes.mockResolvedValue([
+        { path: 'INBOX', flags: [] },
+        { path: 'OtherFolder', flags: [] },
+      ]);
+      return makeDeps({
+        client: client as any,
+        configRepo: { getConfig: () => config } as any,
+        ...overrides,
+      });
+    }
+
+    it('disables all rules with action.folder matching lost path', async () => {
+      const config = createBaseConfig({
+        rules: [
+          { id: 'r1', name: 'Rule1', enabled: true, order: 0, match: { sender: '*@a.com' }, action: { type: 'move', folder: 'LostFolder' } },
+          { id: 'r2', name: 'Rule2', enabled: true, order: 1, match: { sender: '*@b.com' }, action: { type: 'move', folder: 'LostFolder' } },
+        ] as any,
+      });
+      const deps = makeFolderGoneDeps(config);
+
+      await handleScanReport(makeFolderLostReport(), deps);
+
+      expect(config.rules[0].enabled).toBe(false);
+      expect(config.rules[1].enabled).toBe(false);
+    });
+
+    it('does not disable rules with action.folder NOT matching lost path', async () => {
+      const config = createBaseConfig({
+        rules: [
+          { id: 'r1', name: 'Rule1', enabled: true, order: 0, match: { sender: '*@a.com' }, action: { type: 'move', folder: 'LostFolder' } },
+          { id: 'r2', name: 'Rule2', enabled: true, order: 1, match: { sender: '*@b.com' }, action: { type: 'move', folder: 'SafeFolder' } },
+        ] as any,
+      });
+      const deps = makeFolderGoneDeps(config);
+
+      await handleScanReport(makeFolderLostReport(), deps);
+
+      expect(config.rules[0].enabled).toBe(false);
+      expect(config.rules[1].enabled).toBe(true);
+    });
+
+    it('persists disabled rules via saveConfig', async () => {
+      const config = createBaseConfig({
+        rules: [
+          { id: 'r1', name: 'Rule1', enabled: true, order: 0, match: { sender: '*@a.com' }, action: { type: 'move', folder: 'LostFolder' } },
+        ] as any,
+      });
+      const deps = makeFolderGoneDeps(config);
+
+      await handleScanReport(makeFolderLostReport(), deps);
+
+      expect(mockSaveConfig).toHaveBeenCalledWith('/tmp/config.yml', expect.objectContaining({
+        rules: expect.arrayContaining([
+          expect.objectContaining({ id: 'r1', enabled: false }),
+        ]),
+      }));
+    });
+
+    it('logs warning for review.folder matching lost path but does NOT disable -- D-09', async () => {
+      const config = createBaseConfig();
+      config.review.folder = 'LostFolder';
+      const logger = createMockLogger();
+      const deps = makeFolderGoneDeps(config, { logger: logger as any });
+
+      await handleScanReport(makeFolderLostReport(), deps);
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({ folder: 'LostFolder' }),
+        expect.stringContaining('Review folder lost'),
+      );
+      // review.folder should not be cleared/disabled
+      expect(config.review.folder).toBe('LostFolder');
+    });
+
+    it('logs warning for review.defaultArchiveFolder matching lost path -- D-09', async () => {
+      const config = createBaseConfig();
+      config.review.defaultArchiveFolder = 'LostFolder';
+      const logger = createMockLogger();
+      const deps = makeFolderGoneDeps(config, { logger: logger as any });
+
+      await handleScanReport(makeFolderLostReport(), deps);
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({ folder: 'LostFolder' }),
+        expect.stringContaining('Default archive folder lost'),
+      );
+      expect(config.review.defaultArchiveFolder).toBe('LostFolder');
+    });
+
+    it('logs warning for action folder path matching lost path -- D-10', async () => {
+      const config = createBaseConfig();
+      config.actionFolders.prefix = 'Actions';
+      config.actionFolders.folders.vip = 'VIP';
+      const logger = createMockLogger();
+      const deps = makeFolderGoneDeps(config, { logger: logger as any });
+
+      await handleScanReport(makeFolderLostReport('Actions/VIP'), deps);
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.objectContaining({ folder: 'Actions/VIP' }),
+        expect.stringContaining('Action folder lost'),
+      );
+    });
+  });
+
+  // ── INBOX notification (FAIL-02) ───────────────────────────────────
+
+  describe('INBOX notification', () => {
+    function makeFolderGoneDepsWithClient(config: Config) {
+      const client = createMockClient();
+      client.listMailboxes.mockResolvedValue([
+        { path: 'INBOX', flags: [] },
+      ]);
+      client.appendMessage.mockResolvedValue({ uid: 1 });
+      const store = createMockStore();
+      const activityLog = createMockActivityLog();
+      const deps = makeDeps({
+        client: client as any,
+        configRepo: { getConfig: () => config } as any,
+        sentinelStore: store as any,
+        activityLog: activityLog as any,
+      });
+      return { deps, client, store, activityLog };
+    }
+
+    it('appends notification to INBOX when folder gone', async () => {
+      const config = createBaseConfig({
+        rules: [
+          { id: 'r1', name: 'Rule1', enabled: true, order: 0, match: { sender: '*@a.com' }, action: { type: 'move', folder: 'LostFolder' } },
+        ] as any,
+      });
+      const { deps, client } = makeFolderGoneDepsWithClient(config);
+
+      const report: ScanReport = {
+        scannedAt: new Date().toISOString(),
+        results: [{
+          status: 'not-found',
+          messageId: '<s1@test>',
+          expectedFolder: 'LostFolder',
+          folderPurpose: 'rule-target',
+        }],
+        deepScansTriggered: 1,
+        errors: 0,
+      };
+
+      await handleScanReport(report, deps);
+
+      expect(client.appendMessage).toHaveBeenCalledWith(
+        'INBOX',
+        expect.stringContaining('[Mail Manager] Folder lost: LostFolder'),
+        ['\\Seen'],
+      );
+    });
+
+    it('notification body contains folder path, disabled rule names, and fix instructions', async () => {
+      const config = createBaseConfig({
+        rules: [
+          { id: 'r1', name: 'MyRule', enabled: true, order: 0, match: { sender: '*@a.com' }, action: { type: 'move', folder: 'LostFolder' } },
+        ] as any,
+      });
+      const { deps, client } = makeFolderGoneDepsWithClient(config);
+
+      const report: ScanReport = {
+        scannedAt: new Date().toISOString(),
+        results: [{
+          status: 'not-found',
+          messageId: '<s1@test>',
+          expectedFolder: 'LostFolder',
+          folderPurpose: 'rule-target',
+        }],
+        deepScansTriggered: 1,
+        errors: 0,
+      };
+
+      await handleScanReport(report, deps);
+
+      const rawMessage = client.appendMessage.mock.calls[0][1] as string;
+      expect(rawMessage).toContain('LostFolder');
+      expect(rawMessage).toContain('MyRule');
+      expect(rawMessage).toMatch(/recreate|update/i);
+    });
+
+    it('notification has \\Seen flag', async () => {
+      const config = createBaseConfig({
+        rules: [
+          { id: 'r1', name: 'Rule1', enabled: true, order: 0, match: { sender: '*@a.com' }, action: { type: 'move', folder: 'LostFolder' } },
+        ] as any,
+      });
+      const { deps, client } = makeFolderGoneDepsWithClient(config);
+
+      const report: ScanReport = {
+        scannedAt: new Date().toISOString(),
+        results: [{
+          status: 'not-found',
+          messageId: '<s1@test>',
+          expectedFolder: 'LostFolder',
+          folderPurpose: 'rule-target',
+        }],
+        deepScansTriggered: 1,
+        errors: 0,
+      };
+
+      await handleScanReport(report, deps);
+
+      expect(client.appendMessage).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.any(String),
+        ['\\Seen'],
+      );
+    });
+
+    it('notification has valid RFC 2822 headers', async () => {
+      const config = createBaseConfig({
+        rules: [
+          { id: 'r1', name: 'Rule1', enabled: true, order: 0, match: { sender: '*@a.com' }, action: { type: 'move', folder: 'LostFolder' } },
+        ] as any,
+      });
+      const { deps, client } = makeFolderGoneDepsWithClient(config);
+
+      const report: ScanReport = {
+        scannedAt: new Date().toISOString(),
+        results: [{
+          status: 'not-found',
+          messageId: '<s1@test>',
+          expectedFolder: 'LostFolder',
+          folderPurpose: 'rule-target',
+        }],
+        deepScansTriggered: 1,
+        errors: 0,
+      };
+
+      await handleScanReport(report, deps);
+
+      const rawMessage = client.appendMessage.mock.calls[0][1] as string;
+      expect(rawMessage).toContain('From:');
+      expect(rawMessage).toContain('To:');
+      expect(rawMessage).toContain('Subject:');
+      expect(rawMessage).toContain('Message-ID:');
+      expect(rawMessage).toContain('Date:');
+      expect(rawMessage).toContain('Content-Type: text/plain');
+    });
+  });
+
+  // ── No auto-recreate (FAIL-03) ─────────────────────────────────────
+
+  describe('no auto-recreate', () => {
+    it('does NOT call any folder creation method when folder gone', async () => {
+      const config = createBaseConfig({
+        rules: [
+          { id: 'r1', name: 'Rule1', enabled: true, order: 0, match: { sender: '*@a.com' }, action: { type: 'move', folder: 'LostFolder' } },
+        ] as any,
+      });
+      const client = createMockClient();
+      client.listMailboxes.mockResolvedValue([{ path: 'INBOX', flags: [] }]);
+      const deps = makeDeps({
+        client: client as any,
+        configRepo: { getConfig: () => config } as any,
+      });
+
+      const report: ScanReport = {
+        scannedAt: new Date().toISOString(),
+        results: [{
+          status: 'not-found',
+          messageId: '<s1@test>',
+          expectedFolder: 'LostFolder',
+          folderPurpose: 'rule-target',
+        }],
+        deepScansTriggered: 1,
+        errors: 0,
+      };
+
+      await handleScanReport(report, deps);
+
+      // appendSentinel should NOT be called (that's for replanting, not folder loss)
+      expect(mockAppendSentinel).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Dedup (D-06) ───────────────────────────────────────────────────
+
+  describe('dedup', () => {
+    it('sends notification and removes sentinel mapping on first folder loss', async () => {
+      const config = createBaseConfig({
+        rules: [
+          { id: 'r1', name: 'Rule1', enabled: true, order: 0, match: { sender: '*@a.com' }, action: { type: 'move', folder: 'LostFolder' } },
+        ] as any,
+      });
+      const client = createMockClient();
+      client.listMailboxes.mockResolvedValue([{ path: 'INBOX', flags: [] }]);
+      const store = createMockStore();
+      const activityLog = createMockActivityLog();
+      const deps = makeDeps({
+        client: client as any,
+        configRepo: { getConfig: () => config } as any,
+        sentinelStore: store as any,
+        activityLog: activityLog as any,
+      });
+
+      const report: ScanReport = {
+        scannedAt: new Date().toISOString(),
+        results: [{
+          status: 'not-found',
+          messageId: '<s1@test>',
+          expectedFolder: 'LostFolder',
+          folderPurpose: 'rule-target',
+        }],
+        deepScansTriggered: 1,
+        errors: 0,
+      };
+
+      await handleScanReport(report, deps);
+
+      expect(store.deleteByMessageId).toHaveBeenCalledWith('<s1@test>');
+      expect(activityLog.setState).toHaveBeenCalledWith(
+        'sentinel:notified:LostFolder',
+        expect.any(String),
+      );
+    });
+
+    it('does not send duplicate notification when sentinel mapping already removed', async () => {
+      const config = createBaseConfig();
+      const client = createMockClient();
+      client.listMailboxes.mockResolvedValue([{ path: 'INBOX', flags: [] }]);
+      const store = createMockStore();
+      // Simulate: sentinel mapping was already removed (getByMessageId returns null)
+      store.getByMessageId.mockReturnValue(null);
+      const deps = makeDeps({
+        client: client as any,
+        configRepo: { getConfig: () => config } as any,
+        sentinelStore: store as any,
+      });
+
+      const report: ScanReport = {
+        scannedAt: new Date().toISOString(),
+        results: [{
+          status: 'not-found',
+          messageId: '<s1@test>',
+          expectedFolder: 'LostFolder',
+          folderPurpose: 'rule-target',
+        }],
+        deepScansTriggered: 1,
+        errors: 0,
+      };
+
+      await handleScanReport(report, deps);
+
+      expect(client.appendMessage).not.toHaveBeenCalled();
+    });
+  });
+
+  // ── Folder loss activity logging (HEAL-04) ─────────────────────────
+
+  describe('folder loss activity logging', () => {
+    it('logs folder loss event with action=folder-lost and details', async () => {
+      const config = createBaseConfig({
+        rules: [
+          { id: 'r1', name: 'Rule1', enabled: true, order: 0, match: { sender: '*@a.com' }, action: { type: 'move', folder: 'LostFolder' } },
+        ] as any,
+      });
+      const client = createMockClient();
+      client.listMailboxes.mockResolvedValue([{ path: 'INBOX', flags: [] }]);
+      const activityLog = createMockActivityLog();
+      const deps = makeDeps({
+        client: client as any,
+        configRepo: { getConfig: () => config } as any,
+        activityLog: activityLog as any,
+      });
+
+      const report: ScanReport = {
+        scannedAt: new Date().toISOString(),
+        results: [{
+          status: 'not-found',
+          messageId: '<s1@test>',
+          expectedFolder: 'LostFolder',
+          folderPurpose: 'rule-target',
+        }],
+        deepScansTriggered: 1,
+        errors: 0,
+      };
+
+      await handleScanReport(report, deps);
+
+      expect(activityLog.logSentinelEvent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: 'folder-lost',
+          folder: 'LostFolder',
+        }),
+      );
+      const details = JSON.parse(activityLog.logSentinelEvent.mock.calls[0][0].details);
+      expect(details.disabledRules).toContain('Rule1');
+      expect(details.notificationSent).toBe(true);
+    });
+  });
 });

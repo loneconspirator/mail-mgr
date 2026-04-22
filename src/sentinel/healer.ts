@@ -164,11 +164,95 @@ async function handleReplant(result: NotFound, deps: SentinelHealerDeps): Promis
   deps.logger.info({ folder: result.expectedFolder }, 'Sentinel replanted');
 }
 
-// ── Folder loss handler (stub for Task 2) ─────────────────────────────────
+// ── Folder loss handler ───────────────────────────────────────────────────
 
 async function handleFolderLoss(result: NotFound, deps: SentinelHealerDeps): Promise<void> {
-  // Will be implemented in Task 2
-  deps.logger.warn({ folder: result.expectedFolder }, 'Folder lost -- handler not yet implemented');
+  const config = deps.configRepo.getConfig();
+  const disabledRules: string[] = [];
+
+  // 1. Disable affected rules (D-08, FAIL-01)
+  for (const rule of config.rules) {
+    if ((rule.action.type === 'move' || rule.action.type === 'review') &&
+        'folder' in rule.action && rule.action.folder === result.expectedFolder) {
+      rule.enabled = false;
+      disabledRules.push(rule.name ?? rule.id);
+    }
+  }
+
+  // 2. Log warnings for review config and action folder references (D-09, D-10)
+  if (config.review.folder === result.expectedFolder) {
+    deps.logger.warn({ folder: result.expectedFolder }, 'Review folder lost -- requires manual fix');
+  }
+  if (config.review.defaultArchiveFolder === result.expectedFolder) {
+    deps.logger.warn({ folder: result.expectedFolder }, 'Default archive folder lost -- requires manual fix');
+  }
+  if (config.actionFolders.enabled) {
+    const prefix = config.actionFolders.prefix;
+    for (const folderName of Object.values(config.actionFolders.folders)) {
+      if (`${prefix}/${folderName}` === result.expectedFolder) {
+        deps.logger.warn({ folder: result.expectedFolder }, 'Action folder lost -- requires manual fix');
+      }
+    }
+  }
+
+  // 3. Persist config (D-02 pattern)
+  saveConfig(deps.configPath, config);
+
+  // 4. Build and send INBOX notification (D-05, FAIL-02)
+  const notification = buildNotificationMessage(result.expectedFolder, disabledRules);
+  await deps.client.appendMessage('INBOX', notification, ['\\Seen']);
+
+  // 5. Dedup tracking (D-06)
+  deps.activityLog.setState(`sentinel:notified:${result.expectedFolder}`, new Date().toISOString());
+
+  // 6. Remove sentinel mapping (D-06)
+  deps.sentinelStore.deleteByMessageId(result.messageId);
+
+  // 7. Activity log (D-13)
+  deps.activityLog.logSentinelEvent({
+    action: 'folder-lost',
+    folder: result.expectedFolder,
+    details: JSON.stringify({ disabledRules, notificationSent: true }),
+  });
+
+  deps.logger.info({ folder: result.expectedFolder, disabledRules }, 'Folder loss handled');
+}
+
+// ── Notification builder ──────────────────────────────────────────────────
+
+function buildNotificationMessage(folderPath: string, disabledRules: string[]): string {
+  const messageId = `<sentinel-notify-${Date.now()}@mail-mgr>`;
+  const date = new Date().toUTCString();
+  const subject = `[Mail Manager] Folder lost: ${folderPath}`;
+
+  const rulesText = disabledRules.length > 0
+    ? `The following rules have been disabled:\n${disabledRules.map((r) => `  - ${r}`).join('\n')}`
+    : 'No rules were affected.';
+
+  const body = [
+    `The IMAP folder "${folderPath}" is no longer accessible.`,
+    '',
+    'It may have been deleted or renamed outside of Mail Manager.',
+    '',
+    rulesText,
+    '',
+    'To fix this:',
+    `  1. Recreate the folder "${folderPath}" in your mail client, or`,
+    '  2. Update your Mail Manager configuration to use a different folder.',
+    '',
+    'After fixing, re-enable any disabled rules in the Mail Manager UI.',
+  ].join('\r\n');
+
+  return [
+    `From: Mail Manager <noreply@mail-mgr.local>`,
+    `To: undisclosed-recipients:;`,
+    `Subject: ${subject}`,
+    `Message-ID: ${messageId}`,
+    `Date: ${date}`,
+    `Content-Type: text/plain; charset=utf-8`,
+    ``,
+    body,
+  ].join('\r\n');
 }
 
 // ── Sync callback wrapper ─────────────────────────────────────────────────
