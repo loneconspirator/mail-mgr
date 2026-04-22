@@ -1,5 +1,13 @@
 import type { FolderPurpose } from './format.js';
 import type { Config } from '../config/schema.js';
+import type { SentinelStore } from './store.js';
+import type { ImapClient } from '../imap/index.js';
+import { appendSentinel, findSentinel, deleteSentinel } from './imap-ops.js';
+
+interface Logger {
+  info(obj: Record<string, unknown>, msg: string): void;
+  warn(obj: Record<string, unknown>, msg: string): void;
+}
 
 /**
  * Enumerate all folders that need sentinel tracking based on config.
@@ -49,4 +57,57 @@ export function collectTrackedFolders(config: Config): Map<string, FolderPurpose
   }
 
   return tracked;
+}
+
+/**
+ * Diff tracked folders against the sentinel store, planting missing
+ * sentinels and removing orphaned ones. Per-folder errors are caught
+ * so one bad folder doesn't abort the entire reconciliation.
+ */
+export async function reconcileSentinels(
+  tracked: Map<string, FolderPurpose>,
+  store: SentinelStore,
+  client: ImapClient,
+  logger: Logger,
+): Promise<{ planted: number; removed: number; errors: number }> {
+  let planted = 0;
+  let removed = 0;
+  let errors = 0;
+
+  const existing = store.getAll();
+  const existingFolders = new Set(existing.map((s) => s.folderPath));
+
+  // Plant missing sentinels
+  for (const [folder, purpose] of tracked) {
+    if (existingFolders.has(folder)) continue;
+    try {
+      await appendSentinel(client, folder, purpose, store);
+      planted++;
+      logger.info({ folder, purpose }, 'Planted sentinel');
+    } catch (err) {
+      errors++;
+      logger.warn({ err, folder }, 'Failed to plant sentinel');
+    }
+  }
+
+  // Remove orphaned sentinels
+  for (const sentinel of existing) {
+    if (tracked.has(sentinel.folderPath)) continue;
+    try {
+      const uid = await findSentinel(client, sentinel.folderPath, sentinel.messageId);
+      if (uid !== undefined) {
+        await deleteSentinel(client, sentinel.folderPath, uid, store, sentinel.messageId);
+      } else {
+        // Sentinel not on IMAP — clean store only
+        store.deleteByMessageId(sentinel.messageId);
+      }
+      removed++;
+      logger.info({ folder: sentinel.folderPath }, 'Removed orphaned sentinel');
+    } catch (err) {
+      errors++;
+      logger.warn({ err, folder: sentinel.folderPath }, 'Failed to remove orphaned sentinel');
+    }
+  }
+
+  return { planted, removed, errors };
 }
