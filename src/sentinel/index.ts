@@ -5,3 +5,4 @@ export type { Sentinel, SentinelRow } from './store.js';
 export { appendSentinel, findSentinel, deleteSentinel, runSentinelSelfTest } from './imap-ops.js';
 export type { AppendSentinelResult } from './imap-ops.js';
 export { collectTrackedFolders, reconcileSentinels } from './lifecycle.js';
+export { isSentinel, isSentinelRaw, SENTINEL_HEADER } from './detect.js';
