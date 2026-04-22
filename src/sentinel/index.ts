@@ -8,3 +8,5 @@ export { collectTrackedFolders, reconcileSentinels } from './lifecycle.js';
 export { isSentinel, isSentinelRaw, SENTINEL_HEADER } from './detect.js';
 export { SentinelScanner } from './scanner.js';
 export type { ScanResult, ScanReport, ScanStatus, SentinelScannerDeps, SentinelScannerState } from './scanner.js';
+export { handleScanReport, createScanCompleteHandler } from './healer.js';
+export type { SentinelHealerDeps } from './healer.js';
