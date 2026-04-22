@@ -10,6 +10,7 @@ import { FolderCache } from './folders/index.js';
 import { BatchEngine } from './batch/index.js';
 import { MoveTracker } from './tracking/index.js';
 import { ensureActionFolders, ActionFolderPoller, ActionFolderProcessor } from './action-folders/index.js';
+import { SentinelStore, runSentinelSelfTest, collectTrackedFolders, reconcileSentinels } from './sentinel/index.js';
 import { SignalStore } from './tracking/signals.js';
 import { DestinationResolver } from './tracking/destinations.js';
 import { ProposalStore } from './tracking/proposals.js';
@@ -54,6 +55,9 @@ async function main(): Promise<void> {
   let moveTracker: MoveTracker | undefined;
   let actionFolderPoller: ActionFolderPoller | undefined;
 
+  const sentinelStore = new SentinelStore(activityLog.getDb());
+  let sentinelEnabled = false;
+
   // H1: Create ReviewSweeper (trash folder resolved after IMAP connect)
   let sweeper: ReviewSweeper | undefined = new ReviewSweeper({
     client: imapClient,
@@ -79,6 +83,12 @@ async function main(): Promise<void> {
     monitor.updateRules(rules);
     if (sweeper) sweeper.updateRules(rules);
     batchEngine.updateRules(rules);
+    if (sentinelEnabled) {
+      const updatedConfig = configRepo.getConfig();
+      const tracked = collectTrackedFolders(updatedConfig);
+      reconcileSentinels(tracked, sentinelStore, imapClient, logger)
+        .catch(err => logger.error({ err }, 'Sentinel reconciliation failed after rules change'));
+    }
   });
 
   // H2: Restart sweeper when review config changes
@@ -106,6 +116,11 @@ async function main(): Promise<void> {
       reviewConfig: updatedConfig.review,
       logger,
     });
+    if (sentinelEnabled) {
+      const trackedReview = collectTrackedFolders(configRepo.getConfig());
+      await reconcileSentinels(trackedReview, sentinelStore, imapClient, logger)
+        .catch(err => logger.error({ err }, 'Sentinel reconciliation failed after review config change'));
+    }
   });
 
   // H-AF1: Re-create action folders and rebuild poller when config changes (D-11, D-14)
@@ -116,28 +131,33 @@ async function main(): Promise<void> {
       actionFolderPoller = undefined;
     }
 
-    if (!afConfig.enabled) {
+    if (afConfig.enabled) {
+      const ok = await ensureActionFolders(imapClient, afConfig, logger);
+      if (ok) {
+        // Rebuild poller with new config
+        const resolvedTrashAf = await imapClient.getSpecialUseFolder('\\Trash') ?? config.review.trashFolder;
+        const processor = new ActionFolderProcessor(configRepo, imapClient, activityLog, logger, 'INBOX', resolvedTrashAf);
+        actionFolderPoller = new ActionFolderPoller({
+          client: imapClient,
+          configRepo,
+          processor,
+          logger,
+          pollIntervalMs: afConfig.pollInterval * 1000,
+        });
+        actionFolderPoller.start();
+      } else {
+        logger.warn('Action folder creation failed after config change — monitoring will not start');
+      }
+    } else {
       logger.info('Action folders disabled via config change');
-      return;
     }
 
-    const ok = await ensureActionFolders(imapClient, afConfig, logger);
-    if (!ok) {
-      logger.warn('Action folder creation failed after config change — monitoring will not start');
-      return;
+    // Sentinel reconciliation — runs regardless of enabled state to clean up orphans
+    if (sentinelEnabled) {
+      const trackedAf = collectTrackedFolders(configRepo.getConfig());
+      await reconcileSentinels(trackedAf, sentinelStore, imapClient, logger)
+        .catch(err => logger.error({ err }, 'Sentinel reconciliation failed after action folder config change'));
     }
-
-    // Rebuild poller with new config
-    const resolvedTrashAf = await imapClient.getSpecialUseFolder('\\Trash') ?? config.review.trashFolder;
-    const processor = new ActionFolderProcessor(configRepo, imapClient, activityLog, logger, 'INBOX', resolvedTrashAf);
-    actionFolderPoller = new ActionFolderPoller({
-      client: imapClient,
-      configRepo,
-      processor,
-      logger,
-      pollIntervalMs: afConfig.pollInterval * 1000,
-    });
-    actionFolderPoller.start();
   });
 
   // H3: Stop/rebuild sweeper, monitor, and moveTracker on IMAP config change
@@ -239,6 +259,14 @@ async function main(): Promise<void> {
       envelopeHeader: updatedConfig.imap.envelopeHeader,
     });
     moveTracker.start();
+
+    // Re-run sentinel self-test and reconciliation with new IMAP client
+    sentinelEnabled = await runSentinelSelfTest(newClient, updatedConfig.review.folder, logger);
+    if (sentinelEnabled) {
+      const trackedImap = collectTrackedFolders(updatedConfig);
+      const sentinelResult = await reconcileSentinels(trackedImap, sentinelStore, newClient, logger);
+      logger.info({ ...sentinelResult }, 'Sentinel reconciliation after IMAP reconnect');
+    }
   });
 
   // H5: Pass getter functions so routes always read the current instance
@@ -283,6 +311,9 @@ async function main(): Promise<void> {
   const resolvedTrash = await imapClient.getSpecialUseFolder('\\Trash')
     ?? config.review.trashFolder;
 
+  // Sentinel self-test (D-09: after IMAP connect, before planting)
+  sentinelEnabled = await runSentinelSelfTest(imapClient, config.review.folder, logger);
+
   // H-AF2: Ensure action folders exist + set up poller (D-07: before monitor.start)
   const afConfig = configRepo.getActionFolderConfig();
   if (afConfig.enabled) {
@@ -308,6 +339,13 @@ async function main(): Promise<void> {
     } else {
       logger.warn('Action folder creation failed — action folder monitoring will be disabled');
     }
+  }
+
+  // Initial sentinel reconciliation (D-03: after ensureActionFolders, before monitor.start)
+  if (sentinelEnabled) {
+    const tracked = collectTrackedFolders(config);
+    const sentinelResult = await reconcileSentinels(tracked, sentinelStore, imapClient, logger);
+    logger.info({ ...sentinelResult }, 'Initial sentinel reconciliation complete');
   }
 
   // D-05: Start monitor AFTER action folders are drained
