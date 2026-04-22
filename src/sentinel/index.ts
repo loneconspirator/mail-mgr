@@ -6,3 +6,5 @@ export { appendSentinel, findSentinel, deleteSentinel, runSentinelSelfTest } fro
 export type { AppendSentinelResult } from './imap-ops.js';
 export { collectTrackedFolders, reconcileSentinels } from './lifecycle.js';
 export { isSentinel, isSentinelRaw, SENTINEL_HEADER } from './detect.js';
+export { SentinelScanner } from './scanner.js';
+export type { ScanResult, ScanReport, ScanStatus, SentinelScannerDeps, SentinelScannerState } from './scanner.js';

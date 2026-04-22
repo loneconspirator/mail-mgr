@@ -152,6 +152,14 @@ export const actionFolderConfigSchema = z.object({
   }).default(actionFolderDefaults.folders),
 });
 
+// --- Sentinel config schema ---
+
+const sentinelDefaults = { scanIntervalMs: 300_000 } as const;
+
+export const sentinelConfigSchema = z.object({
+  scanIntervalMs: z.number().int().positive().default(300_000),
+});
+
 // --- Full config schema ---
 
 export const configSchema = z.object({
@@ -160,6 +168,7 @@ export const configSchema = z.object({
   rules: z.array(ruleSchema).default([]),
   review: reviewConfigSchema.default(reviewDefaults),
   actionFolders: actionFolderConfigSchema.default(actionFolderDefaults),
+  sentinel: sentinelConfigSchema.default(sentinelDefaults),
 });
 
 // --- Inferred types ---
@@ -179,5 +188,6 @@ export type ServerConfig = z.infer<typeof serverConfigSchema>;
 export type Config = z.infer<typeof configSchema>;
 export type ActionFolderConfig = z.infer<typeof actionFolderConfigSchema>;
 export type MoveTrackingConfig = z.infer<typeof moveTrackingConfigSchema>;
+export type SentinelConfig = z.infer<typeof sentinelConfigSchema>;
 export type VisibilityMatch = z.infer<typeof visibilityMatchEnum>;
 export type ReadStatusMatch = z.infer<typeof readStatusMatchEnum>;
