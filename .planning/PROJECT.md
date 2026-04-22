@@ -69,12 +69,14 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ All message processors (action folder, monitor, sweeper, batch, tracker) skip sentinel messages — v0.7 Phase 29
 - ✓ Sentinel detection via shared isSentinel() utility checking X-Mail-Mgr-Sentinel header — v0.7 Phase 29
 - ✓ IMAP fetch always includes sentinel header for detection regardless of envelopeHeader config — v0.7 Phase 29
+- ✓ Periodic scan checks sentinel locations via IMAP SEARCH with configurable interval (default 5 min) — v0.7 Phase 30
+- ✓ Deep scan searches all IMAP folders when sentinel not found in expected location — v0.7 Phase 30
+- ✓ Scan reports old-path to new-path mapping when sentinel found in different folder (rename detection) — v0.7 Phase 30
 
 ### Active
 
 - Sentinel message format with unique headers planted in every tracked folder — partially validated v0.7 Phase 26 (format builder + SQLite store), Phase 27 (IMAP APPEND/SEARCH/DELETE operations + self-test), Phase 28 (lifecycle planting + cleanup on config changes)
 - Message-ID based mapping stored alongside folder purpose — partially validated v0.7 Phase 26, Phase 27 (IMAP operations layer complete), Phase 28 (reconciliation logic + startup wiring)
-- Periodic scan locating sentinels across all folders to detect renames
 - Auto-healing folder references when sentinel found in different folder
 - Re-planting sentinels when deleted but folder still exists
 - Failure notification to INBOX when both sentinel and folder are gone
@@ -109,7 +111,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - **Mail client:** Any folder-based mail client (Mac Mail, Thunderbird, etc.)
 - **Database:** SQLite via better-sqlite3
 - **Web UI:** Vanilla HTML/CSS/JS SPA served by Fastify
-- **Testing:** Vitest with 600+ tests (unit + integration)
+- **Testing:** Vitest with 700+ tests (unit + integration)
 - **Codebase:** ~10,000 LOC TypeScript across 50+ source files
 - **Architecture:** Monitor loop polls IMAP, evaluates rules, executes actions, logs activity. Sweep runs periodically on Review folder. BatchEngine applies rules retroactively with chunked execution. Web server exposes REST API for UI.
 - **Key insight:** Folder structure is primarily owned by the mail client/IMAP server. The system discovers what folders exist and uses them. Exception: Action Folders (v0.6) creates a dedicated `Actions/` hierarchy for drag-to-act functionality.
