@@ -105,7 +105,10 @@ Plans:
   2. A sentinel message can be APPENDed to a specified folder with correct headers and Seen flag
   3. A sentinel can be located in a folder by searching for its Message-ID header
   4. A sentinel can be deleted from a folder by UID
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 27-01-PLAN.md — TDD ImapClient APPEND/SEARCH/DELETE extensions
+- [ ] 27-02-PLAN.md — TDD sentinel IMAP operations (imap-ops.ts) and startup self-test
 
 ### Phase 28: Sentinel Planting & Lifecycle
 **Goal**: Sentinels are automatically planted in every tracked folder and cleaned up when folders are no longer tracked
@@ -193,7 +196,7 @@ Plans:
 | 24. Nyquist Validation Backfill | v0.6 | 2/2 | Complete | 2026-04-21 |
 | 25. Action Folder Config API & Frontend Fix | v0.6 | 3/4 | Complete | 2026-04-21 |
 | 26. Sentinel Store & Message Format | v0.7 | 2/2 | Complete    | 2026-04-22 |
-| 27. IMAP Sentinel Operations | v0.7 | 0/0 | Not started | - |
+| 27. IMAP Sentinel Operations | v0.7 | 0/2 | Not started | - |
 | 28. Sentinel Planting & Lifecycle | v0.7 | 0/0 | Not started | - |
 | 29. Pipeline Guards | v0.7 | 0/0 | Not started | - |
 | 30. Scanning & Rename Detection | v0.7 | 0/0 | Not started | - |
