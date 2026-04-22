@@ -148,7 +148,10 @@ Plans:
   2. When a sentinel is not found in its expected folder, a deep scan searches all IMAP folders to find it
   3. Scanning runs on its own independent timer and does not block or significantly delay INBOX monitoring
   4. When a sentinel is found in a different folder than recorded, the scan reports the old-path to new-path mapping
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 30-01-PLAN.md — TDD SentinelScanner class (types, two-tier scan, timer lifecycle)
+- [ ] 30-02-PLAN.md — Config schema, barrel export, application wiring
 
 ### Phase 31: Auto-Healing & Failure Handling
 **Goal**: When folder renames or deletions are detected, the system automatically repairs its configuration or notifies the user
@@ -205,6 +208,6 @@ Plans:
 | 27. IMAP Sentinel Operations | v0.7 | 2/2 | Complete    | 2026-04-22 |
 | 28. Sentinel Planting & Lifecycle | v0.7 | 2/2 | Complete    | 2026-04-22 |
 | 29. Pipeline Guards | v0.7 | 2/2 | Complete   | 2026-04-22 |
-| 30. Scanning & Rename Detection | v0.7 | 0/0 | Not started | - |
+| 30. Scanning & Rename Detection | v0.7 | 0/2 | Not started | - |
 | 31. Auto-Healing & Failure Handling | v0.7 | 0/0 | Not started | - |
 | 32. UI Cleanup | v0.7 | 0/0 | Not started | - |
