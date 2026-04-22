@@ -7,7 +7,7 @@
 - ✅ **v0.3 Folder Taxonomy & Batch Filing** — Phases 1-5 (shipped 2026-04-11)
 - ✅ **v0.4 Extended Matchers & Behavioral Learning** — Phases 6-12 (shipped 2026-04-20)
 - ✅ **v0.5 Sender Disposition Views** — Phases 13-16 (shipped 2026-04-20)
-- 🚧 **v0.6 Action Folders** — Phases 17-25 (in progress)
+- ✅ **v0.6 Action Folders** — Phases 17-25 (shipped 2026-04-22)
 
 ## Phases
 
@@ -51,94 +51,22 @@ Full details: [milestones/v0.5-ROADMAP.md](milestones/v0.5-ROADMAP.md)
 
 </details>
 
-### v0.6 Action Folders (In Progress)
+<details>
+<summary>✅ v0.6 Action Folders (Phases 17-25) — SHIPPED 2026-04-22</summary>
 
-**Milestone Goal:** Let users manage sender dispositions directly from their mail client by moving messages to special IMAP folders.
+- [x] Phase 17: Configuration & Folder Lifecycle (2/2 plans) — Schema, config validation, IMAP folder auto-creation
+- [x] Phase 18: Safety Predicates & Activity Log (2/2 plans) — MoveTracker exclusions, action registry, logging extension
+- [x] Phase 19: Action Processing Core (1/1 plan) — Sender extraction, rule CRUD, conflict resolution, message routing
+- [x] Phase 20: Monitoring & Startup Recovery (2/2 plans) — Poll integration, startup pre-scan, always-empty invariant
+- [x] Phase 21: Idempotency & Edge Cases (1/1 plan) — Duplicate prevention, undo-with-no-match, crash recovery
+- [x] Phase 22: Folder Rename UI (2/2 plans) — IMAP folder rename on settings page with validation
+- [x] Phase 23: Duplicate Path Audit Logging (1/1 plan) — Activity log for duplicate-rule detection path
+- [x] Phase 24: Nyquist Validation Backfill (2/2 plans) — Phases 18-21 brought to Nyquist compliance
+- [x] Phase 25: Action Folder Config API & Frontend Fix (3/4 plans) — Config API, dynamic prefix, 1 plan skipped (superseded by v0.7)
 
-- [x] **Phase 17: Configuration & Folder Lifecycle** - Schema, config validation, and IMAP folder auto-creation (completed 2026-04-20)
-- [x] **Phase 18: Safety Predicates & Activity Log** - MoveTracker exclusions, shared predicates, action registry, logging extension (completed 2026-04-20)
-- [x] **Phase 19: Action Processing Core** - Sender extraction, rule CRUD, message routing for all four action types (completed 2026-04-20)
-- [x] **Phase 20: Monitoring & Startup Recovery** - Poll integration, priority processing, startup pre-scan, always-empty invariant (completed 2026-04-21)
-- [x] **Phase 21: Idempotency & Edge Cases** - Duplicate prevention, undo-with-no-match, crash recovery resilience (completed 2026-04-21)
+Full details: [milestones/v0.6-ROADMAP.md](milestones/v0.6-ROADMAP.md)
 
-## Phase Details
-
-### Phase 17: Configuration & Folder Lifecycle
-**Goal**: System has a validated configuration for action folders and creates the folder hierarchy on startup
-**Depends on**: Nothing (first phase of v0.6)
-**Requirements**: CONF-01, CONF-02, CONF-03, FOLD-01
-**Success Criteria** (what must be TRUE):
-  1. Action folder prefix and individual folder names are configurable with sensible defaults
-  2. Action folders feature can be enabled/disabled via config and poll interval is configurable
-  3. System creates the full `Actions/` folder hierarchy on startup if folders do not already exist
-  4. Folder creation uses array-form paths (separator-safe) and handles already-exists gracefully
-**Plans**: 2 plans
-
-Plans:
-- [x] 17-01-PLAN.md — Zod config schema, ConfigRepository methods, default.yml
-- [x] 17-02-PLAN.md — Folder creation logic, ImapClient update, startup wiring
-
-### Phase 18: Safety Predicates & Activity Log
-**Goal**: MoveTracker correctly ignores action folder moves and the system has reusable building blocks for action processing
-**Depends on**: Phase 17
-**Requirements**: LOG-01, LOG-02, EXT-01
-**Success Criteria** (what must be TRUE):
-  1. Action folder paths are excluded from MoveTracker's user-move detection (isSystemMove recognizes action-folder source)
-  2. Activity log entries with source `action-folder` include rule_id and rule_name fields
-  3. Action types are defined in a registry pattern where each entry specifies folder name, processing function, and message destination
-  4. Shared `findSenderRule(sender, actionType)` predicate exists for reuse by processor
-**Plans**: 2 plans
-
-Plans:
-- [x] 18-01-PLAN.md — Extend isSystemMove and logActivity source union for action-folder
-- [x] 18-02-PLAN.md — Action type registry and sender-utils extraction
-
-### Phase 19: Action Processing Core
-**Goal**: Users can VIP, block, undo-VIP, and unblock senders by moving messages to action folders
-**Depends on**: Phase 18
-**Requirements**: PROC-01, PROC-02, PROC-03, PROC-04, PROC-05, PROC-06, PROC-09, PROC-10, RULE-01, RULE-02, RULE-03, RULE-04
-**Success Criteria** (what must be TRUE):
-  1. Moving a message to VIP Sender creates a sender-only skip rule and returns message to INBOX
-  2. Moving a message to Block Sender creates a sender-only delete rule and moves message to Trash
-  3. Moving a message to Undo VIP or Unblock Sender removes the matching rule and returns message to INBOX
-  4. Created rules pass Zod validation, have UUID + descriptive name, append at end of list, and appear in disposition views
-  5. Messages with unparseable From address are moved to INBOX with an error logged
-  6. If a conflicting sender-only rule exists, it is removed and replaced; both removal and creation are logged
-  7. If a more specific rule exists for the same sender (multi-field match), it is preserved and the action folder rule is appended after it
-**Plans**: 1 plan
-
-Plans:
-- [x] 19-01-PLAN.md — TDD: ActionFolderProcessor with sender extraction, rule CRUD, conflict resolution, message routing
-
-### Phase 20: Monitoring & Startup Recovery
-**Goal**: Action folders are continuously monitored and any pending messages are processed on startup before normal operation
-**Depends on**: Phase 19
-**Requirements**: MON-01, MON-02, FOLD-02, FOLD-03
-**Success Criteria** (what must be TRUE):
-  1. Action folders are polled via STATUS checks alongside INBOX/Review monitoring
-  2. Action folder processing takes priority over regular arrival routing
-  3. On startup, pending messages in action folders are processed before entering normal monitoring loop
-  4. Action folders are always empty after processing completes (no messages left behind)
-**Plans**: 2 plans
-
-Plans:
-- [x] 20-01-PLAN.md — TDD: ActionFolderPoller class with poll/scan/always-empty logic
-- [x] 20-02-PLAN.md — Wire poller into index.ts lifecycle (startup, config, shutdown)
-
-
-
-### Phase 21: Idempotency & Edge Cases
-**Goal**: Processing is resilient to duplicates, missing rules, and crash recovery scenarios
-**Depends on**: Phase 20
-**Requirements**: PROC-07, PROC-08
-**Success Criteria** (what must be TRUE):
-  1. Processing the same message twice does not create duplicate rules (idempotent check-before-create)
-  2. Undo operations with no matching rule still move the message to its destination without error
-  3. Crash-recovery scenario (rule created but message not yet moved) is handled correctly on restart
-**Plans**: 1 plan
-
-Plans:
-- [x] 21-01-PLAN.md — TDD: Idempotency check-before-create and undo-no-match logging
+</details>
 
 ## Progress
 
@@ -160,73 +88,12 @@ Plans:
 | 14. Navigation Shell & Simple Views | v0.5 | 1/1 | Complete | 2026-04-20 |
 | 15. Folder-Grouped Views | v0.5 | 1/1 | Complete | 2026-04-20 |
 | 16. Inline Sender Management | v0.5 | 1/1 | Complete | 2026-04-20 |
-| 17. Configuration & Folder Lifecycle | v0.6 | 2/2 | Complete    | 2026-04-20 |
-| 18. Safety Predicates & Activity Log | v0.6 | 2/2 | Complete    | 2026-04-20 |
-| 19. Action Processing Core | v0.6 | 1/1 | Complete    | 2026-04-20 |
-| 20. Monitoring & Startup Recovery | v0.6 | 2/2 | Complete    | 2026-04-21 |
-| 21. Idempotency & Edge Cases | v0.6 | 1/1 | Complete    | 2026-04-21 |
+| 17. Configuration & Folder Lifecycle | v0.6 | 2/2 | Complete | 2026-04-20 |
+| 18. Safety Predicates & Activity Log | v0.6 | 2/2 | Complete | 2026-04-20 |
+| 19. Action Processing Core | v0.6 | 1/1 | Complete | 2026-04-20 |
+| 20. Monitoring & Startup Recovery | v0.6 | 2/2 | Complete | 2026-04-21 |
+| 21. Idempotency & Edge Cases | v0.6 | 1/1 | Complete | 2026-04-21 |
 | 22. Folder Rename UI | v0.6 | 2/2 | Complete | 2026-04-20 |
-| 23. Duplicate Path Audit Logging | v0.6 | 1/1 | Complete    | 2026-04-21 |
-| 24. Nyquist Validation Backfill | v0.6 | 2/2 | Complete    | 2026-04-21 |
-| 25. Action Folder Config API & Frontend Fix | v0.6 | 3/4 | In Progress | 2026-04-21 |
-
-### Phase 22: Add folder rename UI to settings page with IMAP folder rename
-
-**Goal:** Users can rename IMAP folders from the settings page with full validation and feedback
-**Requirements**: D-01, D-02, D-03, D-04, D-05, D-06, D-07, D-08
-**Depends on:** Phase 21
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 22-01-PLAN.md — Backend: ImapClient renameFolder, FolderCache delegation, POST /api/folders/rename with validation
-- [x] 22-02-PLAN.md — Frontend: Folder Management settings card with tree picker and inline rename
-
-### Phase 23: Duplicate Path Audit Logging
-
-**Goal:** PROC-07 duplicate-rule path emits activity log entry for audit trail completeness
-**Depends on:** Phase 21
-**Requirements:** LOG-01, LOG-02
-**Gap Closure:** Closes integration gap from audit (duplicate-rule path silent operation)
-**Success Criteria** (what must be TRUE):
-  1. When a duplicate rule is detected during action folder processing, a logActivity call is made with source 'action-folder' and appropriate rule_id/rule_name
-  2. Test coverage confirms the duplicate path produces an activity log entry
-**Plans:** 1/1 plans complete
-
-Plans:
-- [x] 23-01-PLAN.md — Add logActivity to duplicate branch and update idempotency tests
-
-### Phase 24: Nyquist Validation Backfill
-
-**Goal:** Bring phases 18-21 to Nyquist compliance with proper VALIDATION.md coverage
-**Depends on:** Phase 23
-**Requirements:** None (process compliance)
-**Gap Closure:** Closes Nyquist tech debt from audit
-**Success Criteria** (what must be TRUE):
-  1. Phase 18 has nyquist_compliant: true in VALIDATION.md
-  2. Phase 19 has nyquist_compliant: true in VALIDATION.md
-  3. Phase 20 has nyquist_compliant: true in VALIDATION.md
-  4. Phase 21 has nyquist_compliant: true in VALIDATION.md
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 24-01-PLAN.md — Audit phases 18-19 VALIDATION.md to Nyquist compliance
-- [x] 24-02-PLAN.md — Audit phases 20-21 VALIDATION.md, full suite run, milestone audit update
-
-### Phase 25: Action Folder Config API & Frontend Fix
-
-**Goal:** Expose action folder configuration via web API and fix frontend hardcoded prefix
-**Depends on:** Phase 24
-**Requirements:** CONF-01, CONF-02, CONF-03
-**Gap Closure:** Closes tech debt from v0.6 audit (hardcoded prefix, dead API path, unreachable handler)
-**Success Criteria** (what must be TRUE):
-  1. Frontend rename guard reads action folder prefix from config instead of hardcoding `'Actions'`
-  2. Web API route exists for reading and updating action folder configuration
-  3. `onActionFolderConfigChange` handler is reachable via the new API route
-  4. Config changes via API trigger poller rebuild with updated folder paths
-**Plans**: 4 plans
-
-Plans:
-- [x] 25-01-PLAN.md — Backend config API route (GET/PUT /api/config/action-folders) with tests
-- [x] 25-02-PLAN.md — Frontend api.ts methods and app.ts hardcoded prefix fix
-- [x] 25-03-PLAN.md — Gap closure: delimiter-aware action folder guard + cold start crash fix
-- [ ] 25-04-PLAN.md — Gap closure: propagate folder renames to config references (review settings + rule targets)
+| 23. Duplicate Path Audit Logging | v0.6 | 1/1 | Complete | 2026-04-21 |
+| 24. Nyquist Validation Backfill | v0.6 | 2/2 | Complete | 2026-04-21 |
+| 25. Action Folder Config API & Frontend Fix | v0.6 | 3/4 | Complete | 2026-04-21 |

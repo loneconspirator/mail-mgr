@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v0.6
 milestone_name: Action Folders
-status: executing
-last_updated: "2026-04-21T23:44:01.041Z"
-last_activity: 2026-04-21
+status: complete
+last_updated: "2026-04-22T01:15:00.000Z"
+last_activity: 2026-04-22
 progress:
   total_phases: 9
   completed_phases: 9
-  total_plans: 16
+  total_plans: 17
   completed_plans: 16
   percent: 100
 ---
@@ -17,18 +17,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-20)
+See: .planning/PROJECT.md (updated 2026-04-22)
 
 **Core value:** Dramatically reduce inbox volume without losing visibility
-**Current focus:** Phase 22 — Add folder rename UI to settings page with IMAP folder rename
+**Current focus:** Planning v0.7 — Sentinel Message System
 
 ## Current Position
 
-Phase: 25
-Plan: Not started
-Milestone: v0.5 shipped (2026-04-20)
-Status: Ready to execute
-Last activity: 2026-04-21
+Phase: 25 (final)
+Milestone: v0.6 shipped (2026-04-22)
+Status: Milestone complete — ready for v0.7
+Last activity: 2026-04-22
 
 Progress: [██████████] 100%
 
@@ -36,7 +35,7 @@ Progress: [██████████] 100%
 
 **Velocity:**
 
-- Total plans completed: 45 (v0.4)
+- Total plans completed: 16 (v0.6)
 - Average duration: —
 - Total execution time: —
 
@@ -44,10 +43,6 @@ Progress: [██████████] 100%
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 13 | 2 | - | - |
-| 14 | 1 | - | - |
-| 15 | 1 | - | - |
-| 16 | 1 | - | - |
 | 17 | 2 | - | - |
 | 18 | 2 | - | - |
 | 19 | 1 | - | - |
@@ -70,7 +65,6 @@ Decisions are logged in PROJECT.md Key Decisions table.
 
 1. **Prevent redundant proposed rules and handle rule ordering conflicts** — Block approval of rules that duplicate existing criteria; warn when shadowed by higher-priority rules with reorder option
 2. **Populate delivered-to field in proposed rules and modify form** — Include delivered-to as matcher in proposals, prepopulate in Modify modal
-4. ~~**Rename skip rule display to leave in place**~~ — DONE (quick-260420-dsq)
 
 ### Blockers/Concerns
 
@@ -85,6 +79,6 @@ None active.
 
 ## Session Continuity
 
-Last session: 2026-04-21T21:46:55.019Z
-Last activity: 2026-04-20 - Completed quick task 260420-dsq: Rename skip rule display to leave in place
-Resume file: .planning/phases/25-action-folder-config-api-frontend-fix/25-CONTEXT.md
+Last session: 2026-04-22
+Last activity: v0.6 milestone completed
+Resume file: N/A — milestone complete

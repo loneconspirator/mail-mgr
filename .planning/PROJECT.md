@@ -69,12 +69,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 
 ### Active
 
-- None — v0.6 Action Folders milestone complete
-
-### Post-Milestone
-
-- ✓ Folder rename UI on settings page with IMAP folder rename — Phase 22 (2026-04-21)
-- ✓ Action folder config API & frontend fix — Phase 25 (2026-04-21)
+- None — planning v0.7 Sentinel Message System
 
 ### Out of Scope
 
@@ -94,8 +89,8 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - **Mail client:** Any folder-based mail client (Mac Mail, Thunderbird, etc.)
 - **Database:** SQLite via better-sqlite3
 - **Web UI:** Vanilla HTML/CSS/JS SPA served by Fastify
-- **Testing:** Vitest with 585+ tests (unit + integration)
-- **Codebase:** ~7,000 LOC TypeScript across 50+ source files
+- **Testing:** Vitest with 600+ tests (unit + integration)
+- **Codebase:** ~10,000 LOC TypeScript across 50+ source files
 - **Architecture:** Monitor loop polls IMAP, evaluates rules, executes actions, logs activity. Sweep runs periodically on Review folder. BatchEngine applies rules retroactively with chunked execution. Web server exposes REST API for UI.
 - **Key insight:** Folder structure is primarily owned by the mail client/IMAP server. The system discovers what folders exist and uses them. Exception: Action Folders (v0.6) creates a dedicated `Actions/` hierarchy for drag-to-act functionality.
 - **Design assumption:** Users may have years of accumulated mail with inconsistent organization. The folder taxonomy works with what exists, not imposing a new structure.
@@ -150,4 +145,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-21 after v0.6 Phase 25 — Action Folder Config API & Frontend Fix complete (v0.6 milestone final phase)*
+*Last updated: 2026-04-22 after v0.6 milestone completion*

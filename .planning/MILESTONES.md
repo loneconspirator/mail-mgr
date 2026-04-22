@@ -1,5 +1,26 @@
 # Milestones
 
+## v0.6 Action Folders (Shipped: 2026-04-22)
+
+**Phases completed:** 9 phases (17-25), 16/17 plans executed, 22 tasks
+**Timeline:** 2 days (2026-04-20 → 2026-04-21)
+**Files changed:** 35 | **LOC delta:** +3,055 / -26
+
+**Key accomplishments:**
+
+- Action folder system — VIP, Block, Undo VIP, Unblock senders via drag-and-drop to special IMAP folders
+- Poll-based monitoring with startup pre-scan and crash recovery (always-empty invariant)
+- Conflict resolution & idempotency for action folder processing (duplicate prevention, undo-with-no-match)
+- IMAP folder rename UI in settings with validation and special-use warnings
+- Action folder config API (GET/PUT) with Zod validation and dynamic prefix support
+- Activity logging extended with source='action-folder' and rule_id/rule_name fields
+
+**Known Gaps:**
+
+- Plan 25-04 (folder rename → config propagation) deliberately skipped — superseded by v0.7 Sentinel Message System
+
+---
+
 ## v0.5 Sender Disposition Views (Shipped: 2026-04-20)
 
 **Phases completed:** 4 phases, 5 plans, 10 tasks
