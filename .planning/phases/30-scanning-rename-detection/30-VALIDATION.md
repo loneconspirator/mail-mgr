@@ -27,7 +27,7 @@ created: 2026-04-22
 
 ## Sampling Rate
 
-- **After every task commit:** Run `npx vitest run src/sentinel/scanner`
+- **After every task commit:** Run `npx vitest run test/unit/sentinel/scanner`
 - **After every plan wave:** Run `npx vitest run`
 - **Before `/gsd-verify-work`:** Full suite must be green
 - **Max feedback latency:** 15 seconds
@@ -38,10 +38,10 @@ created: 2026-04-22
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 30-01-01 | 01 | 1 | SCAN-01 | — | N/A | unit | `npx vitest run src/sentinel/__tests__/scanner` | ❌ W0 | ⬜ pending |
-| 30-01-02 | 01 | 1 | SCAN-02 | — | N/A | unit | `npx vitest run src/sentinel/__tests__/scanner` | ❌ W0 | ⬜ pending |
-| 30-01-03 | 01 | 1 | SCAN-03 | — | N/A | unit | `npx vitest run src/sentinel/__tests__/scanner` | ❌ W0 | ⬜ pending |
-| 30-01-04 | 01 | 1 | SCAN-04 | — | N/A | unit | `npx vitest run src/sentinel/__tests__/scanner` | ❌ W0 | ⬜ pending |
+| 30-01-01 | 01 | 1 | SCAN-01 | — | N/A | unit | `npx vitest run test/unit/sentinel/scanner` | ❌ W0 | ⬜ pending |
+| 30-01-02 | 01 | 1 | SCAN-02 | — | N/A | unit | `npx vitest run test/unit/sentinel/scanner` | ❌ W0 | ⬜ pending |
+| 30-01-03 | 01 | 1 | SCAN-03 | — | N/A | unit | `npx vitest run test/unit/sentinel/scanner` | ❌ W0 | ⬜ pending |
+| 30-01-04 | 01 | 1 | SCAN-04 | — | N/A | unit | `npx vitest run test/unit/sentinel/scanner` | ❌ W0 | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -49,7 +49,7 @@ created: 2026-04-22
 
 ## Wave 0 Requirements
 
-- [ ] `src/sentinel/__tests__/scanner.test.ts` — stubs for SCAN-01 through SCAN-04
+- [ ] `test/unit/sentinel/scanner.test.ts` — stubs for SCAN-01 through SCAN-04
 - [ ] Test fixtures for sentinel store mock data and IMAP folder listing mock
 
 *Existing vitest infrastructure covers framework needs.*
