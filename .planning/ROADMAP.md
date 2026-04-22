@@ -72,7 +72,7 @@ Full details: [milestones/v0.6-ROADMAP.md](milestones/v0.6-ROADMAP.md)
 
 **Milestone Goal:** Use IMAP messages as persistent, relocatable tracking beacons to detect folder renames/deletions and automatically maintain all folder references.
 
-- [ ] **Phase 26: Sentinel Store & Message Format** - SQLite persistence and message construction for sentinel tracking beacons
+- [x] **Phase 26: Sentinel Store & Message Format** - SQLite persistence and message construction for sentinel tracking beacons (completed 2026-04-22)
 - [ ] **Phase 27: IMAP Sentinel Operations** - APPEND, SEARCH-by-header, DELETE capabilities and startup self-test
 - [ ] **Phase 28: Sentinel Planting & Lifecycle** - Plant sentinels on startup/rule-create/config-change, clean up on untrack
 - [ ] **Phase 29: Pipeline Guards** - Every message processor skips sentinel messages
@@ -91,10 +91,10 @@ Full details: [milestones/v0.6-ROADMAP.md](milestones/v0.6-ROADMAP.md)
   2. Sentinel-to-folder mappings (Message-ID, folder path, folder purpose) can be persisted and queried in SQLite
   3. The sentinel format builder refuses to create a sentinel for INBOX
   4. Sentinel body text explains the message's purpose to the user (including action folder descriptions)
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 Plans:
-- [ ] 26-01-PLAN.md — TDD sentinel message format builder (format.ts)
-- [ ] 26-02-PLAN.md — TDD SentinelStore with migration and barrel export (store.ts, migrations, index.ts)
+- [x] 26-01-PLAN.md — TDD sentinel message format builder (format.ts)
+- [x] 26-02-PLAN.md — TDD SentinelStore with migration and barrel export (store.ts, migrations, index.ts)
 
 ### Phase 27: IMAP Sentinel Operations
 **Goal**: The system can plant, find, and remove sentinel messages on the IMAP server
@@ -192,7 +192,7 @@ Plans:
 | 23. Duplicate Path Audit Logging | v0.6 | 1/1 | Complete | 2026-04-21 |
 | 24. Nyquist Validation Backfill | v0.6 | 2/2 | Complete | 2026-04-21 |
 | 25. Action Folder Config API & Frontend Fix | v0.6 | 3/4 | Complete | 2026-04-21 |
-| 26. Sentinel Store & Message Format | v0.7 | 0/2 | Not started | - |
+| 26. Sentinel Store & Message Format | v0.7 | 2/2 | Complete    | 2026-04-22 |
 | 27. IMAP Sentinel Operations | v0.7 | 0/0 | Not started | - |
 | 28. Sentinel Planting & Lifecycle | v0.7 | 0/0 | Not started | - |
 | 29. Pipeline Guards | v0.7 | 0/0 | Not started | - |
