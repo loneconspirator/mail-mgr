@@ -212,5 +212,5 @@ Plans:
 | 28. Sentinel Planting & Lifecycle | v0.7 | 2/2 | Complete    | 2026-04-22 |
 | 29. Pipeline Guards | v0.7 | 2/2 | Complete   | 2026-04-22 |
 | 30. Scanning & Rename Detection | v0.7 | 2/2 | Complete    | 2026-04-22 |
-| 31. Auto-Healing & Failure Handling | v0.7 | 2/2 | Complete   | 2026-04-22 |
+| 31. Auto-Healing & Failure Handling | v0.7 | 2/2 | Complete    | 2026-04-22 |
 | 32. UI Cleanup | v0.7 | 0/0 | Not started | - |
