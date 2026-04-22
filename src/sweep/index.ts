@@ -1,4 +1,5 @@
 import type { ImapClient, ReviewMessage } from '../imap/index.js';
+import { isSentinel } from '../sentinel/index.js';
 import { reviewMessageToEmailMessage } from '../imap/index.js';
 import { evaluateRules } from '../rules/index.js';
 import type { ActivityLog } from '../log/index.js';
@@ -241,6 +242,10 @@ export class ReviewSweeper {
       this.sweepState.unreadMessages = messages.length - readCount;
 
       for (const msg of messages) {
+        // Per D-09: guard before eligibility check
+        if (isSentinel(msg.headers)) {
+          continue;
+        }
         if (!isEligibleForSweep(msg, this.reviewConfig.sweep, now)) {
           continue;
         }

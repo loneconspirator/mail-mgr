@@ -1,5 +1,6 @@
 import type { ImapClient, ImapFlowLike } from '../imap/index.js';
 import { parseHeaderLines } from '../imap/index.js';
+import { SENTINEL_HEADER } from '../sentinel/index.js';
 import type { ActivityLog } from '../log/index.js';
 import type { SignalStore, MoveSignalInput } from './signals.js';
 import type { DestinationResolver } from './destinations.js';
@@ -320,9 +321,12 @@ export class MoveTracker {
 
       const query: Record<string, unknown> = { uid: true, envelope: true, flags: true };
       const envHeader = this.deps.envelopeHeader;
+      // Always fetch sentinel header for guard (per D-06, D-11)
+      const headerFields = ['X-Mail-Mgr-Sentinel'];
       if (envHeader) {
-        query.headers = [envHeader, 'List-Id'];
+        headerFields.push(envHeader, 'List-Id');
       }
+      query.headers = headerFields;
 
       for await (const raw of flow.fetch('1:*', query, { uid: true })) {
         const msg = raw as {
@@ -338,13 +342,20 @@ export class MoveTracker {
           headers?: Buffer;
         };
 
+        // Always parse headers for sentinel detection (per D-11)
+        const hdrs = msg.headers ? parseHeaderLines(msg.headers) : undefined;
+
+        // Exclude sentinels from snapshot to prevent false move detection
+        if (hdrs?.has(SENTINEL_HEADER)) {
+          continue;
+        }
+
         const flags = msg.flags ?? new Set<string>();
         const from = msg.envelope?.from?.[0];
 
         let envelopeRecipient: string | undefined;
         let listId: string | undefined;
-        if (envHeader && msg.headers) {
-          const hdrs = parseHeaderLines(msg.headers);
+        if (envHeader && hdrs) {
           const recipientVal = hdrs.get(envHeader.toLowerCase());
           if (recipientVal && recipientVal.includes('@')) {
             envelopeRecipient = recipientVal;

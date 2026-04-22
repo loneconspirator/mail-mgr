@@ -281,6 +281,68 @@ describe('MoveTracker', () => {
     expect(deps.client.withMailboxLock).not.toHaveBeenCalled();
   });
 
+  it('excludes sentinel messages from folder snapshots', async () => {
+    const deps = createMockDeps();
+
+    // Override withMailboxLock to yield a sentinel message alongside normal ones
+    (deps.client as { withMailboxLock: ReturnType<typeof vi.fn> }).withMailboxLock.mockImplementation(
+      async (folder: string, fn: (flow: unknown) => Promise<unknown>) => {
+        const messages = folder === 'INBOX' ? [
+          {
+            uid: 1,
+            envelope: {
+              messageId: '<msg-1@test.com>',
+              from: [{ address: 'alice@test.com' }],
+              to: [{ address: 'me@test.com' }],
+              cc: [],
+              subject: 'Normal message',
+            },
+            flags: new Set<string>(),
+          },
+          {
+            uid: 2,
+            envelope: {
+              messageId: '<sentinel-1@mail-manager.sentinel>',
+              from: [{ address: 'sentinel@mail-manager.local' }],
+              to: [{ address: 'me@test.com' }],
+              cc: [],
+              subject: 'Sentinel Message',
+            },
+            flags: new Set<string>(),
+            headers: Buffer.from('X-Mail-Mgr-Sentinel: <sentinel-1@mail-manager.sentinel>\r\n'),
+          },
+          {
+            uid: 3,
+            envelope: {
+              messageId: '<msg-3@test.com>',
+              from: [{ address: 'bob@test.com' }],
+              to: [{ address: 'me@test.com' }],
+              cc: [],
+              subject: 'Another normal message',
+            },
+            flags: new Set<string>(),
+          },
+        ] : [];
+        const flow = {
+          mailbox: { uidValidity: 100 },
+          fetch: async function* () {
+            for (const msg of messages) {
+              yield msg;
+            }
+          },
+        };
+        return fn(flow);
+      },
+    );
+
+    const tracker = new MoveTracker(deps);
+    await tracker.runScanForTest();
+
+    // Sentinel should be excluded from tracked count (only UIDs 1,3 in INBOX)
+    const state = tracker.getState();
+    expect(state.messagesTracked).toBe(2);
+  });
+
   it('start() does nothing when enabled=false', () => {
     const deps = createMockDeps({ enabled: false });
     const tracker = new MoveTracker(deps);

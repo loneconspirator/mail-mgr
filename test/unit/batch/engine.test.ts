@@ -656,6 +656,46 @@ describe('BatchEngine INBOX mode', () => {
   });
 });
 
+describe('BatchEngine sentinel guard', () => {
+  it('dryRun excludes sentinel messages from groups', async () => {
+    const deps = makeDeps();
+    const sentinelMsg = makeReviewMessage({
+      uid: 99,
+      headers: new Map([['x-mail-mgr-sentinel', '<sentinel-1@mail-manager.sentinel>']]),
+    });
+    const normalMsg = makeReviewMessage({ uid: 1 });
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([sentinelMsg, normalMsg]);
+    mockedEvaluateRules.mockReturnValue(null);
+
+    const engine = new BatchEngine(deps);
+    const groups = await engine.dryRun('TestFolder');
+
+    // Only the normal message should appear in groups
+    const totalCount = groups.reduce((sum, g) => sum + g.count, 0);
+    expect(totalCount).toBe(1);
+  });
+
+  it('execute skips sentinel messages without processing them', async () => {
+    const deps = makeDeps();
+    const sentinelMsg = makeReviewMessage({
+      uid: 99,
+      headers: new Map([['x-mail-mgr-sentinel', '<sentinel-1@mail-manager.sentinel>']]),
+    });
+    const normalMsg = makeReviewMessage({ uid: 1 });
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([sentinelMsg, normalMsg]);
+    const rule = makeRule();
+    mockedEvaluateRules.mockReturnValue(rule);
+
+    const engine = new BatchEngine(deps);
+    await engine.execute('TestFolder');
+
+    // Only 1 message should be moved (the normal one)
+    expect(deps.client.moveMessage).toHaveBeenCalledTimes(1);
+    // evaluateRules called only for non-sentinel
+    expect(mockedEvaluateRules).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe('BatchEngine Review mode', () => {
   it('ineligible messages are skipped', async () => {
     const deps = makeDeps();

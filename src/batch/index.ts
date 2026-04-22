@@ -6,6 +6,7 @@ import { executeAction } from '../actions/index.js';
 import type { ActionContext, ActionResult } from '../actions/index.js';
 import type { ActivityLog } from '../log/index.js';
 import type { Rule, ReviewConfig } from '../config/index.js';
+import { isSentinel } from '../sentinel/index.js';
 import pinoLib from 'pino';
 import type pino from 'pino';
 
@@ -92,6 +93,10 @@ export class BatchEngine {
       const groupMap = new Map<string, DryRunGroup>();
 
       for (const raw of messages) {
+        // Per D-10: guard in dry-run loop
+        if (isSentinel(raw.headers)) {
+          continue;
+        }
         const msg = reviewMessageToEmailMessage(raw);
 
         let key: string;
@@ -186,6 +191,10 @@ export class BatchEngine {
         const chunk = messages.slice(i, i + CHUNK_SIZE);
 
         for (const raw of chunk) {
+          // Per D-10: guard in execute loop
+          if (isSentinel(raw.headers)) {
+            continue;
+          }
           const msg = reviewMessageToEmailMessage(raw);
 
           // Review mode: use sweep eligibility and destination resolution

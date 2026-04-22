@@ -530,6 +530,48 @@ describe('ReviewSweeper.runSweep', () => {
     expect(client.fetchAllMessages).not.toHaveBeenCalled();
   });
 
+  it('skips sentinel messages in sweep loop', async () => {
+    const sentinelMsg = makeReviewMessage({
+      uid: 5,
+      flags: new Set(['\\Seen']),
+      internalDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+      headers: new Map([['x-mail-mgr-sentinel', '<sentinel-1@mail-manager.sentinel>']]),
+    });
+    const normalMsg = makeReviewMessage({
+      uid: 10,
+      flags: new Set(['\\Seen']),
+      internalDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+    });
+
+    const client = makeMockClient();
+    (client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([sentinelMsg, normalMsg]);
+
+    const activityLog = makeMockActivityLog();
+
+    const sweeper = new ReviewSweeper({
+      client,
+      activityLog,
+      rules: [],
+      reviewConfig: {
+        folder: 'Review',
+        defaultArchiveFolder: 'MailingLists',
+        trashFolder: 'Trash',
+        sweep: { intervalHours: 6, readMaxAgeDays: 7, unreadMaxAgeDays: 14 },
+      },
+      trashFolder: 'Trash',
+      logger: silentLogger,
+    });
+
+    await sweeper.runSweep();
+
+    // Only the normal message should be moved, not the sentinel
+    expect(client.moveMessage).toHaveBeenCalledTimes(1);
+    expect(client.moveMessage).toHaveBeenCalledWith(10, 'MailingLists', 'Review');
+
+    const state = sweeper.getState();
+    expect(state.lastSweep!.messagesArchived).toBe(1);
+  });
+
   it('handles empty review folder gracefully', async () => {
     const client = makeMockClient();
     (client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([]);
