@@ -17,6 +17,21 @@ export interface MailboxLock {
   release(): void;
 }
 
+export interface AppendResponse {
+  destination: string;
+  uidValidity?: bigint;
+  uid?: number;
+  seq?: number;
+}
+
+export interface SearchQuery {
+  header?: Record<string, string | boolean>;
+  seen?: boolean;
+  all?: boolean;
+  uid?: string;
+  [key: string]: unknown;
+}
+
 export interface ImapFlowLike {
   connect(): Promise<void>;
   logout(): Promise<void>;
@@ -30,6 +45,9 @@ export interface ImapFlowLike {
   status(path: string, query: Record<string, boolean>): Promise<Record<string, number>>;
   listTree(options?: Record<string, unknown>): Promise<unknown>;
   noop(): Promise<void>;
+  append(path: string, content: string | Buffer, flags?: string[], idate?: Date): Promise<AppendResponse | false>;
+  search(query: SearchQuery, options?: { uid?: boolean }): Promise<number[] | false | undefined>;
+  messageDelete(range: number[] | string, options?: { uid?: boolean }): Promise<boolean>;
   on(event: string, listener: (...args: unknown[]) => void): this;
   removeAllListeners(event?: string): this;
   usable: boolean;
@@ -187,6 +205,31 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   async renameFolder(oldPath: string, newPath: string): Promise<void> {
     await this.withMailboxLock('INBOX', async (flow) => {
       await flow.mailboxRename(oldPath, newPath);
+    });
+  }
+
+  async appendMessage(folder: string, raw: string, flags: string[]): Promise<AppendResponse> {
+    if (!this.flow) throw new Error('Not connected');
+    const result = await this.flow.append(folder, raw, flags);
+    if (result === false) {
+      throw new Error(`APPEND to ${folder} failed`);
+    }
+    return result;
+  }
+
+  async searchByHeader(folder: string, headerName: string, headerValue: string): Promise<number[]> {
+    return this.withMailboxSwitch(folder, async (flow) => {
+      const result = await flow.search(
+        { header: { [headerName]: headerValue } },
+        { uid: true },
+      );
+      return Array.isArray(result) ? result : [];
+    });
+  }
+
+  async deleteMessage(folder: string, uid: number): Promise<boolean> {
+    return this.withMailboxSwitch(folder, async (flow) => {
+      return flow.messageDelete([uid], { uid: true });
     });
   }
 
