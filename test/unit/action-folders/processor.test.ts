@@ -579,6 +579,43 @@ describe('ActionFolderProcessor', () => {
     });
   });
 
+  describe('processMessage - sentinel guard', () => {
+    it('returns ok with sender sentinel and skips rule creation for sentinel messages', async () => {
+      const msg = createMessage({
+        headers: new Map([['x-mail-mgr-sentinel', '<test-id@mail-manager.sentinel>']]),
+      });
+      const result = await processor.processMessage(msg, 'vip');
+
+      expect(result).toMatchObject({
+        ok: true,
+        action: 'vip',
+        sender: 'sentinel',
+      });
+      // No rules created
+      expect((mockConfigRepo.addRule as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+      // No message move
+      expect((mockClient.moveMessage as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    });
+
+    it('processes normally when headers do not contain sentinel header', async () => {
+      const msg = createMessage({
+        headers: new Map([['subject', 'Hello']]),
+      });
+      const result = await processor.processMessage(msg, 'vip');
+
+      expect(result.ok).toBe(true);
+      expect((mockConfigRepo.addRule as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
+    });
+
+    it('processes normally when headers are undefined', async () => {
+      const msg = createMessage(); // no headers property
+      const result = await processor.processMessage(msg, 'vip');
+
+      expect(result.ok).toBe(true);
+      expect((mockConfigRepo.addRule as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
+    });
+  });
+
   describe('processMessage - Zod schema validation (RULE-01)', () => {
     it('created rule input passes Zod ruleSchema when combined with a UUID id', async () => {
       // Capture the rule input passed to addRule

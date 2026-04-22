@@ -8,6 +8,7 @@ import type { Rule } from '../config/schema.js';
 import type { Logger } from 'pino';
 import { ACTION_REGISTRY } from './registry.js';
 import { findSenderRule } from '../rules/sender-utils.js';
+import { isSentinel } from '../sentinel/index.js';
 
 export type ProcessResult =
   | { ok: true; action: ActionType; sender: string; ruleId?: string }
@@ -30,6 +31,12 @@ export class ActionFolderProcessor {
   ) {}
 
   async processMessage(message: EmailMessage, actionType: ActionType): Promise<ProcessResult> {
+    // Per D-07: guard before sender extraction
+    if (isSentinel(message.headers)) {
+      this.logger.debug({ uid: message.uid }, 'Skipping sentinel message');
+      return { ok: true, action: actionType, sender: 'sentinel' };
+    }
+
     const actionDef = ACTION_REGISTRY[actionType];
     const sender = extractSender(message);
     const sourceFolder = this.getSourceFolder(actionType);

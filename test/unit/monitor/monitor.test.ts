@@ -271,6 +271,51 @@ describe('Monitor', () => {
     await client2.disconnect();
   });
 
+  it('skips sentinel messages without evaluating rules or logging activity', async () => {
+    const rule = makeRule();
+    const config = makeConfig([rule]);
+    const flow = makeMockFlow();
+
+    // Create a fetch result that includes sentinel header
+    const sentinelResult = {
+      uid: 1,
+      flags: new Set<string>(),
+      envelope: {
+        messageId: '<sentinel-1@mail-manager.sentinel>',
+        from: [{ name: '', address: 'sentinel@mail-manager.local' }],
+        to: [{ name: '', address: 'me@test.com' }],
+        cc: [],
+        subject: 'Sentinel Message',
+        date: new Date(),
+      },
+      headers: Buffer.from('X-Mail-Mgr-Sentinel: <sentinel-1@mail-manager.sentinel>\r\n'),
+    };
+
+    (flow.fetch as ReturnType<typeof vi.fn>).mockReturnValue({
+      async *[Symbol.asyncIterator]() {
+        yield sentinelResult;
+      },
+    });
+
+    const client = new ImapClient(config.imap, () => flow);
+    const monitor = new Monitor(config, { imapClient: client, activityLog, logger: silentLogger });
+
+    await client.connect();
+    await monitor.processNewMessages();
+
+    // No move should have happened
+    expect(flow.messageMove).not.toHaveBeenCalled();
+
+    // No activity logged
+    const entries = activityLog.getRecentActivity();
+    expect(entries).toHaveLength(0);
+
+    // Message should NOT be counted as processed (sentinel skipped before processing)
+    expect(monitor.getState().messagesProcessed).toBe(0);
+
+    await client.disconnect();
+  });
+
   it('updateRules replaces the active rule set', async () => {
     const config = makeConfig([]);
     const flow = makeMockFlow();

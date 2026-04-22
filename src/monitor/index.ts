@@ -8,6 +8,7 @@ import { evaluateRules } from '../rules/index.js';
 import { executeAction } from '../actions/index.js';
 import type { ActionContext } from '../actions/index.js';
 import { ActivityLog } from '../log/index.js';
+import { isSentinel } from '../sentinel/index.js';
 
 export interface MonitorState {
   connectionStatus: string;
@@ -145,6 +146,12 @@ export class Monitor {
    * Evaluate rules against a single message and execute matching action.
    */
   private async processMessage(message: EmailMessage): Promise<void> {
+    // Per D-08: guard before evaluateRules
+    if (isSentinel(message.headers)) {
+      this.logger.debug({ uid: message.uid }, 'Skipping sentinel message');
+      return;
+    }
+
     this.logger.info(
       { uid: message.uid, from: message.from.address, subject: message.subject },
       'Processing message',
