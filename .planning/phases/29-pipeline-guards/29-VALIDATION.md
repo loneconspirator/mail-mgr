@@ -38,12 +38,13 @@ created: 2026-04-21
 
 | Task ID | Plan | Wave | Requirement | Threat Ref | Secure Behavior | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|------------|-----------------|-----------|-------------------|-------------|--------|
-| 29-01-01 | 01 | 1 | GUARD-01 thru GUARD-05 | — | Sentinel messages skipped by all processors | unit | `npx vitest run src/sentinel/detect.test.ts` | ❌ W0 | ⬜ pending |
-| 29-01-02 | 01 | 1 | GUARD-01 | — | Action folder processor ignores sentinels | unit | `npx vitest run src/action-folders/processor.test.ts` | ✅ | ⬜ pending |
-| 29-01-03 | 01 | 1 | GUARD-02 | — | Monitor skips sentinel evaluation | unit | `npx vitest run src/monitor/monitor.test.ts` | ✅ | ⬜ pending |
-| 29-01-04 | 01 | 1 | GUARD-03 | — | Sweeper leaves sentinel in place | unit | `npx vitest run src/sweep/sweep.test.ts` | ✅ | ⬜ pending |
-| 29-01-05 | 01 | 1 | GUARD-04 | — | Batch engine excludes sentinels | unit | `npx vitest run src/batch/engine.test.ts` | ✅ | ⬜ pending |
-| 29-01-06 | 01 | 1 | GUARD-05 | — | Move tracker excludes sentinels from snapshots | unit | `npx vitest run src/tracking/tracker.test.ts` | ✅ | ⬜ pending |
+| 29-01-01 | 01 | 1 | — | — | isSentinel detection utility | unit | `npx vitest run test/unit/sentinel/detect.test.ts` | ❌ W0 | ⬜ pending |
+| 29-01-02 | 01 | 1 | — | — | IMAP fetch includes sentinel header | unit | `npx vitest run test/unit/imap/client.test.ts` | ✅ | ⬜ pending |
+| 29-02-01 | 02 | 2 | GUARD-01 | — | Action folder processor ignores sentinels | unit | `npx vitest run test/unit/action-folders/processor.test.ts` | ✅ | ⬜ pending |
+| 29-02-02 | 02 | 2 | GUARD-02 | — | Monitor skips sentinel evaluation | unit | `npx vitest run test/unit/monitor/monitor.test.ts` | ✅ | ⬜ pending |
+| 29-02-03 | 02 | 2 | GUARD-03 | — | Sweeper leaves sentinel in place | unit | `npx vitest run test/unit/sweep/sweep.test.ts` | ✅ | ⬜ pending |
+| 29-02-04 | 02 | 2 | GUARD-04 | — | Batch engine excludes sentinels | unit | `npx vitest run test/unit/batch/engine.test.ts` | ✅ | ⬜ pending |
+| 29-02-05 | 02 | 2 | GUARD-05 | — | Move tracker excludes sentinels from snapshots | unit | `npx vitest run test/unit/tracking/tracker.test.ts` | ✅ | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
 
@@ -51,7 +52,7 @@ created: 2026-04-21
 
 ## Wave 0 Requirements
 
-- [ ] `src/sentinel/detect.test.ts` — stubs for isSentinel detection utility tests
+- [ ] `test/unit/sentinel/detect.test.ts` — stubs for isSentinel detection utility tests
 
 *Existing test infrastructure covers all other phase requirements.*
 

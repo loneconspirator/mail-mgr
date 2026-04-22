@@ -360,18 +360,18 @@ if (isSentinelRaw(msg.headers)) {
 | A2 | ImapFlow fetches the specific headers listed in the `headers` array of the fetch query | Fetch Change Strategy | High -- if ImapFlow fetches ALL headers regardless, no fetch change needed. Verify with ImapFlow docs. |
 | A3 | The `reviewMessageToEmailMessage()` conversion function will need updating to pass through the new `headers` field | Architecture Patterns | Low -- straightforward code change |
 
-## Open Questions
+## Open Questions (RESOLVED)
 
 1. **Action folder processor return type for sentinel skip**
    - What we know: `processMessage()` returns `ProcessResult` union type
    - What's unclear: What should the sentinel skip return look like? It's not really a success or failure.
-   - Recommendation: Return `{ ok: true, action: actionType, sender: 'sentinel' }` -- the poller doesn't do anything special with the return value beyond logging
+   - RESOLVED: Return `{ ok: true, action: actionType, sender: 'sentinel' }` -- the poller doesn't do anything special with the return value beyond logging
 
 2. **Should the guard be in the poller or processor for action folders?**
    - D-07 says processor, but the poller is where `fetchAllMessages()` results are iterated
    - The poller calls `reviewMessageToEmailMessage()` then passes to processor
    - Guard in processor is correct per decision, but the poller could also skip the conversion for sentinels
-   - Recommendation: Guard in processor as decided; the conversion is cheap
+   - RESOLVED: Guard in processor as decided; the conversion is cheap
 
 ## Sources
 
