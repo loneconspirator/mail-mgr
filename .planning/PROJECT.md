@@ -69,8 +69,8 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 
 ### Active
 
-- Sentinel message format with unique headers planted in every tracked folder — partially validated v0.7 Phase 26 (format builder + SQLite store)
-- Message-ID based mapping stored alongside folder purpose — partially validated v0.7 Phase 26
+- Sentinel message format with unique headers planted in every tracked folder — partially validated v0.7 Phase 26 (format builder + SQLite store), Phase 27 (IMAP APPEND/SEARCH/DELETE operations + self-test)
+- Message-ID based mapping stored alongside folder purpose — partially validated v0.7 Phase 26, Phase 27 (IMAP operations layer complete)
 - Periodic scan locating sentinels across all folders to detect renames
 - Auto-healing folder references when sentinel found in different folder
 - Re-planting sentinels when deleted but folder still exists
@@ -162,4 +162,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-22 after Phase 26 completion (sentinel format builder + SQLite store)*
+*Last updated: 2026-04-22 after Phase 27 completion (IMAP sentinel operations — APPEND/SEARCH/DELETE + startup self-test)*
