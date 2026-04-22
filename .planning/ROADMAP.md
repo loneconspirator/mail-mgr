@@ -134,7 +134,10 @@ Plans:
   3. Review sweeper encounters a sentinel message and leaves it in place (does not archive or delete it)
   4. Batch filing engine encounters a sentinel message and excludes it from processing
   5. Move tracker encounters a sentinel message and does not log it as a user-initiated move
-**Plans**: TBD
+**Plans:** 2 plans
+Plans:
+- [ ] 29-01-PLAN.md — Sentinel detection utility, IMAP fetch extension, message type headers
+- [ ] 29-02-PLAN.md — Guards in all 5 processors (action folder, monitor, sweeper, batch, tracker)
 
 ### Phase 30: Scanning & Rename Detection
 **Goal**: The system periodically verifies sentinel locations and detects when folders have been renamed
@@ -201,7 +204,7 @@ Plans:
 | 26. Sentinel Store & Message Format | v0.7 | 2/2 | Complete    | 2026-04-22 |
 | 27. IMAP Sentinel Operations | v0.7 | 2/2 | Complete    | 2026-04-22 |
 | 28. Sentinel Planting & Lifecycle | v0.7 | 2/2 | Complete    | 2026-04-22 |
-| 29. Pipeline Guards | v0.7 | 0/0 | Not started | - |
+| 29. Pipeline Guards | v0.7 | 0/2 | Not started | - |
 | 30. Scanning & Rename Detection | v0.7 | 0/0 | Not started | - |
 | 31. Auto-Healing & Failure Handling | v0.7 | 0/0 | Not started | - |
 | 32. UI Cleanup | v0.7 | 0/0 | Not started | - |
