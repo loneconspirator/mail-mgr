@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { ImapClient, type ImapFlowLike, type ImapFlowFactory, type ConnectionState, type ReviewMessage } from '../../../src/imap/index.js';
+import { ImapClient, type ImapFlowLike, type ImapFlowFactory, type ConnectionState, type ReviewMessage, type AppendResponse } from '../../../src/imap/index.js';
 import type { ImapConfig } from '../../../src/config/index.js';
 
 const TEST_CONFIG: ImapConfig = {
@@ -22,6 +22,9 @@ function createMockFlow(overrides: Partial<ImapFlowLike> = {}): ImapFlowLike {
     noop: vi.fn(async () => {}),
     getMailboxLock: vi.fn(async () => ({ release: vi.fn() })),
     list: vi.fn(async () => []),
+    append: vi.fn(async () => ({ destination: 'TestFolder', uid: 1, uidValidity: BigInt(1), seq: 1 })),
+    search: vi.fn(async () => []),
+    messageDelete: vi.fn(async () => true),
     on(event: string, listener: (...args: unknown[]) => void) {
       if (!listeners.has(event)) listeners.set(event, []);
       listeners.get(event)!.push(listener);
@@ -662,6 +665,103 @@ describe('ImapClient', () => {
     it('throws when not connected', async () => {
       await expect(
         client.withMailboxSwitch('Review', async () => 'nope'),
+      ).rejects.toThrow('Not connected');
+    });
+  });
+
+  describe('appendMessage', () => {
+    it('calls flow.append with folder, raw, and flags', async () => {
+      await client.connect();
+      await client.appendMessage('Folder', 'raw-content', ['\\Seen']);
+      expect(mockFlow.append).toHaveBeenCalledWith('Folder', 'raw-content', ['\\Seen']);
+    });
+
+    it('returns AppendResponse from flow', async () => {
+      await client.connect();
+      const result = await client.appendMessage('Folder', 'raw-content', ['\\Seen']);
+      expect(result).toHaveProperty('destination', 'TestFolder');
+      expect(result).toHaveProperty('uid', 1);
+    });
+
+    it('throws when not connected', async () => {
+      await expect(
+        client.appendMessage('Folder', 'raw-content', ['\\Seen']),
+      ).rejects.toThrow('Not connected');
+    });
+
+    it('throws when append returns false', async () => {
+      mockFlow = createMockFlow({
+        append: vi.fn(async () => false),
+      }) as typeof mockFlow;
+      factory = vi.fn(() => mockFlow);
+      client = new ImapClient(TEST_CONFIG, factory);
+
+      await client.connect();
+      await expect(
+        client.appendMessage('Folder', 'raw-content', ['\\Seen']),
+      ).rejects.toThrow();
+    });
+  });
+
+  describe('searchByHeader', () => {
+    it('searches with header query and uid option', async () => {
+      await client.connect();
+      await client.searchByHeader('Folder', 'X-Mail-Mgr-Sentinel', '<test@id>');
+      expect(mockFlow.search).toHaveBeenCalledWith(
+        { header: { 'X-Mail-Mgr-Sentinel': '<test@id>' } },
+        { uid: true },
+      );
+      expect(mockFlow.getMailboxLock).toHaveBeenCalledWith('Folder');
+    });
+
+    it('returns UIDs from search result', async () => {
+      mockFlow = createMockFlow({
+        search: vi.fn(async () => [42, 99]),
+      }) as typeof mockFlow;
+      factory = vi.fn(() => mockFlow);
+      client = new ImapClient(TEST_CONFIG, factory);
+
+      await client.connect();
+      const result = await client.searchByHeader('Folder', 'X-Test', 'val');
+      expect(result).toEqual([42, 99]);
+    });
+
+    it('returns empty array when search returns false', async () => {
+      mockFlow = createMockFlow({
+        search: vi.fn(async () => false),
+      }) as typeof mockFlow;
+      factory = vi.fn(() => mockFlow);
+      client = new ImapClient(TEST_CONFIG, factory);
+
+      await client.connect();
+      const result = await client.searchByHeader('Folder', 'X-Test', 'val');
+      expect(result).toEqual([]);
+    });
+
+    it('throws when not connected', async () => {
+      await expect(
+        client.searchByHeader('Folder', 'X-Test', 'val'),
+      ).rejects.toThrow('Not connected');
+    });
+  });
+
+  describe('deleteMessage', () => {
+    it('calls messageDelete with uid array and uid option', async () => {
+      await client.connect();
+      await client.deleteMessage('Folder', 42);
+      expect(mockFlow.messageDelete).toHaveBeenCalledWith([42], { uid: true });
+      expect(mockFlow.getMailboxLock).toHaveBeenCalledWith('Folder');
+    });
+
+    it('returns boolean from messageDelete', async () => {
+      await client.connect();
+      const result = await client.deleteMessage('Folder', 42);
+      expect(result).toBe(true);
+    });
+
+    it('throws when not connected', async () => {
+      await expect(
+        client.deleteMessage('Folder', 42),
       ).rejects.toThrow('Not connected');
     });
   });
