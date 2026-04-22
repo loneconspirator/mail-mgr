@@ -1,167 +1,142 @@
-# Feature Research: Action Folders
+# Feature Landscape: Sentinel Message System
 
-**Domain:** Email management -- mail-client-driven rule management via IMAP folders
-**Researched:** 2026-04-20
-**Confidence:** HIGH (well-scoped PRD, existing codebase understood, clear prior art from SaneBox)
+**Domain:** IMAP folder tracking via planted beacon messages
+**Researched:** 2026-04-21
+**Confidence:** MEDIUM (novel pattern with no off-the-shelf prior art; IMAP primitives well-understood, but sentinel-as-folder-tracker is a custom design)
 
-## Feature Landscape
+## Table Stakes
 
-### Table Stakes (Users Expect These)
+Features the sentinel system must have or it provides zero value over the current hardcoded folder paths.
 
-Features that must work correctly or the action folder concept is dead on arrival. The user moved a message to a folder and expects something to happen -- if it doesn't, trust is permanently broken.
+| Feature | Why Expected | Complexity | Dependencies | Notes |
+|---------|--------------|------------|--------------|-------|
+| Plant sentinel on startup | Without sentinels in folders, there is nothing to track | Low | IMAP APPEND, ImapFlow `append()` | One message per tracked folder. Must use `append()` with RFC822 content + `\Seen` flag |
+| Unique Message-ID per sentinel | The lookup key that survives folder renames | Low | UUID generation | Format: `<sentinel-{purpose}-{uuid}@mail-mgr>`. Purpose encodes what the folder is for (action-vip, review, rule-target-{id}, sweep-archive, etc.) |
+| Message-ID to folder mapping in SQLite | Persistent record of "sentinel X lives in folder Y" | Low | Existing SQLite infra | New table: `sentinels(message_id TEXT PK, purpose TEXT, folder_path TEXT, planted_at TEXT)` |
+| Per-folder SEARCH to locate sentinel | Core detection mechanism -- find sentinel by Message-ID header | Med | ImapFlow `search({ header: { 'Message-ID': id } })` within mailbox lock | IMAP SEARCH HEADER is per-folder only, no global search exists in the protocol |
+| Periodic scan across all tracked folders | Detect renames by finding sentinel in a different folder than recorded | Med | Existing poll timer pattern, `listMailboxes()` | Scan frequency separate from mail processing poll -- every 5-10 minutes is fine |
+| Auto-heal folder references on rename | When sentinel found in new location, update all config/rules referencing old path | High | Config repository, rule storage, action folder config, sweep config | This is the whole point. Must update: action folder paths, rule target folders, review folder, archive folder, trash folder |
+| Re-plant sentinel when deleted | User or server purges the sentinel but folder still exists | Med | Folder existence check via `status()`, then re-append | Generate new Message-ID, update SQLite mapping |
+| Failure notification to INBOX | When sentinel AND folder are gone, alert the user | Med | IMAP APPEND to INBOX | Human-readable email: "Mail Manager lost track of folder X. Please reconfigure." |
+| Sentinel message format (minimally visible) | Users should not be confused by sentinel messages | Med | RFC822 message construction | Mark `\Seen`, use descriptive Subject ("Mail Manager Tracking Beacon -- do not delete"), small plain-text body explaining purpose |
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Folder auto-creation on startup | User should not have to manually create `Actions/*` folders. System infrastructure, not user taxonomy. | LOW | `ImapFlowLike.mailboxCreate` already available. Create `Actions/` prefix + 4 subfolders. Handle "already exists" gracefully (IMAP CREATE on existing folder = error on some servers, no-op on others). |
-| Always-empty-after-processing | Messages sitting in action folders = confusion. User expects immediate effect, not accumulation. | MEDIUM | Must process on every poll/IDLE cycle AND on startup (restart recovery). The "always empty" invariant is the core UX promise. |
-| Restart recovery | If system crashes with messages in action folders, they must be processed on next startup, not lost or ignored. | MEDIUM | Pre-scan action folders before entering normal monitor loop. Depends on: startup sequencing in `src/index.ts`. |
-| Correct sender extraction | User moves a message from `sender@example.com` and expects a rule for exactly that sender. Lowercase, bare address, no display name. | LOW | `EmailMessage.from.address` already normalized in `parseMessage`. Just use it. |
-| Idempotent processing | Crash after rule creation but before message move must not create duplicate rules on restart. | MEDIUM | Check for existing enabled sender-only rule with same glob + action type before creating. Depends on: `isSenderOnly()` from `dispositions.ts`, `ConfigRepository.getRules()`. |
-| Message lands in correct destination | VIP/Undo VIP -> archive, Block -> Trash, Unblock -> INBOX. Message must not vanish or stay in action folder. | LOW | Reuse `executeMove` from `src/actions/index.ts`. Destinations are deterministic per action type. |
-| Activity logging with distinct source | User must be able to see "this rule was created because I moved a message to VIP Sender" in the activity log. | LOW | New `source = 'action-folder'` value. Existing `logActivity` signature already accepts source string. |
-| Rules appear in disposition views | VIP rule shows in Priority Senders, Block rule shows in Blocked Senders. No special handling needed because action folder rules ARE standard sender-only rules. | LOW | Zero work if rules are created correctly via `ConfigRepository.addRule()`. The disposition query API in `dispositions.ts` filters by `isSenderOnly()` + action type. This is the key architectural win of the v0.5 design. |
-| Rules appear in main rule list | Action folder rules are editable/deletable from the web UI like any other rule. No second-class citizens. | LOW | Same as above -- standard rules via `ConfigRepository.addRule()`. |
-| Configurable folder names and prefix | IMAP hierarchy separators vary (`.` vs `/`), users may want different names. | LOW | New `actionFolders` section in config schema. Defaults to `Actions/VIP Sender` etc. |
-| Duplicate prevention (create operations) | Moving 3 messages from same sender to VIP Sender should create ONE rule, not three. | MEDIUM | Before creating: query existing rules for matching sender glob + action type. Depends on: ability to query rules by sender, which `dispositions.ts` already does implicitly. |
-| No-op tolerance (undo operations) | `Undo VIP` with no matching VIP rule should still move the message to archive, not error. | LOW | Just log "no matching rule found" and proceed with message move. |
-| Error handling for malformed From | Message with no parseable From address must not silently disappear. Move to INBOX + log error. | LOW | Defensive check on `message.from.address` before processing. |
+## Differentiators
 
-### Differentiators (Competitive Advantage)
+Features that elevate from "works" to "works well." Not expected in an MVP but high value.
 
-Features that go beyond "it works" into "this is actually pleasant to use."
+| Feature | Value Proposition | Complexity | Dependencies | Notes |
+|---------|-------------------|------------|--------------|-------|
+| Scan all folders (not just tracked) for lost sentinels | If a folder is renamed to something unexpected, scanning only the old path fails. Scanning globally finds the sentinel wherever it went | High | `listMailboxes()` + per-folder SEARCH | Expensive: N folders x 1 SEARCH each. Mitigate by scanning tracked folders first (fast path), then falling back to full scan only when a sentinel is missing from its expected location |
+| MAILBOXID integration (RFC 8474) | Servers supporting OBJECTID can detect renames without sentinel messages at all -- the MAILBOXID persists across renames | Med | ImapFlow supports OBJECTID in search; need to check CAPABILITY response | Fastmail authored RFC 8474 so likely supports it. Use as optimization: if OBJECTID available, use it; fall back to sentinel scan otherwise. Do NOT make this the only strategy -- many servers lack support |
+| Batched folder scanning | Instead of N individual SEARCH commands, batch folder checks to reduce round trips | Low | Group folders, reuse connection | ImapFlow already handles connection pooling via mailbox locks |
+| Sentinel health dashboard | UI showing sentinel status per folder: healthy/missing/relocated | Low | New API endpoint, frontend panel | Useful for debugging. Shows last-seen time, current folder, any recent relocations |
+| Graceful sentinel migration on config change | When user changes action folder prefix via API, replant sentinels in new folders rather than losing track | Med | Config change event handler (already exists for poller rebuild) | Wire into existing `configRepo` change listener |
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Extensible action type registry | Adding future action types (e.g., `Route to Review`, `File to [Folder]`) requires registering an entry, not modifying processing logic. | MEDIUM | Each action type = { folderName, processFn(message, configRepo), destinationFolder }. Registry pattern over switch statement. Not strictly needed for v0.6's 4 folder types, but prevents technical debt. |
-| Descriptive auto-generated rule names | Rules created via action folders get names like `"VIP: sender@example.com"` or `"Block: sender@example.com"`. | LOW | Uses existing optional `name` field. Makes disposition views and rule list more scannable. |
-| Near-instant responsiveness | User moves message, rule exists within seconds (one poll cycle). SaneBox benchmark: 2-5 minutes. We can beat that significantly with IDLE or short poll intervals. | MEDIUM | If action folders are IDLE-monitored (not just polled), response time drops to seconds. Current monitor uses IDLE for INBOX. Extending to action folders means multiple IDLE connections or a polling fallback with short interval. IMAP only allows one IDLE per connection. |
-| Multi-folder monitoring integration | Action folders monitored alongside INBOX and Review, not as a separate subsystem. Unified processing pipeline. | MEDIUM | Extends the `Monitor` class or creates a sibling `ActionFolderProcessor`. Must not block or delay normal INBOX processing. |
-| Priority processing | Action folder messages processed before regular arrival routing. The user explicitly requested an action -- it takes precedence. | LOW | Check action folders first in the processing loop, before INBOX scan. |
+## Anti-Features
 
-### Anti-Features (Commonly Requested, Often Problematic)
+Features to explicitly NOT build. These are traps.
 
-| Feature | Why Requested | Why Problematic | Alternative |
-|---------|---------------|-----------------|-------------|
-| Bulk action folder operations (move 50 messages = 50 rules) | "I want to VIP all messages from a newsletter" | Creates 50 duplicate rule creation attempts, all but 1 are no-ops. Wastes processing time. User intent is ambiguous -- do they want 1 rule or 50? The answer is 1. | Duplicate prevention handles this naturally. 50 messages from same sender = 1 rule + 49 no-ops + 50 message moves. Document this as expected behavior. |
-| Nested action folders (`Actions/File to/Projects/`) | Power users want folder-based filing | Dramatically increases complexity: folder name becomes parameter, requires parsing subfolder paths, folder creation/discovery changes. Out of scope for v0.6 per PRD. | Defer to future milestone. Web UI already handles complex routing rules. |
-| Action folders for non-sender rules | "I want to route based on subject from action folder" | A message doesn't carry enough context to define a subject/recipient rule. Sender is the only unambiguous dimension extractable from a single message. | Keep action folders sender-only. Complex rules require the web UI. |
-| IMAP NOTIFY for instant detection | "I want zero latency" | IMAP NOTIFY is poorly supported across servers and clients. imapflow doesn't support it. IDLE + short poll achieves sub-10-second latency which is plenty. | IDLE on primary connection + poll on action folders at 10-15 second intervals. |
-| Undo/redo system for action folder ops | "I accidentally VIP'd someone" | Undo VIP and Unblock Sender folders already exist as the undo mechanism. A separate undo system is redundant complexity. | The 4-folder design IS the undo system: VIP/Undo VIP, Block/Unblock. |
-| Confirmation/notification after processing | "Did it work?" | Would require push notifications, email replies, or a separate notification channel. The action folder being empty IS the confirmation -- if the message is gone, it worked. | Activity log in web UI for auditing. Message disappearance from action folder = confirmation. |
-| Auto-creating rules with `move` action type from action folders | "I want to file to specific folders from mail client" | Requires knowing the destination folder, which can't be inferred from the action folder name alone (unless nested folders, which is anti-feature above). | `skip` (VIP) and `delete` (Block) are the only action types that need no additional parameters. `move` requires a folder target -- use web UI. |
+| Anti-Feature | Why Avoid | What to Do Instead |
+|--------------|-----------|-------------------|
+| Hidden/invisible sentinel messages | Impossible with standard IMAP. No way to hide a message from mail clients. Attempting tricks (zero-width subjects, empty bodies) just confuses users more | Make sentinels clearly labeled with descriptive subject and body. Mark as `\Seen`. Users who understand will leave them alone; the re-plant mechanism handles deletion |
+| Global cross-folder search in one IMAP command | Does not exist in IMAP protocol. Building an abstraction that pretends it does will hide the real cost (N sequential folder opens) | Explicitly iterate folders. Fast-path known folders first, full scan as fallback |
+| Modifying message headers/flags as tracking mechanism | IMAP does not support modifying existing message headers. Custom flags/keywords are unreliable across servers (some strip them) | Use Message-ID which is immutable and universally searchable via HEADER search |
+| Real-time rename detection via IMAP IDLE/NOTIFY | IDLE only monitors the currently selected folder. NOTIFY (RFC 5465) is barely supported. Neither reliably catches folder renames | Poll-based periodic scan. The existing app is already poll-based; this fits naturally |
+| Automatic folder creation when sentinel is lost | If both sentinel and folder are gone, the app should NOT recreate the folder -- the user may have intentionally deleted it | Notify the user via INBOX message. Let them decide what to do |
+| CONDSTORE/QRESYNC for rename detection | Already researched and rejected in v0.4 -- these extensions track flag changes and UID validity, not folder renames | Sentinel message approach (the whole point of this milestone) |
+| Sentinel in INBOX | INBOX cannot be renamed or deleted. Planting a sentinel there wastes a visible message slot for zero benefit | Skip INBOX in sentinel planting. It is the one folder guaranteed to exist |
 
 ## Feature Dependencies
 
 ```
-[Config schema: actionFolders section]
-    |-- required by --> [Folder auto-creation on startup]
-    |                       |-- required by --> [Monitoring integration]
-    |                                               |-- required by --> [Message processing]
-    |                                                                       |-- required by --> [Activity logging]
-    |
-    |-- required by --> [Action type registry]
-                            |-- required by --> [Message processing]
+Plant sentinel on startup
+  --> Message-ID to folder mapping in SQLite (need to store what was planted)
+  --> Sentinel message format (need the message content to APPEND)
 
-[Existing: isSenderOnly() + disposition query API (v0.5)]
-    |-- required by --> [Duplicate prevention / idempotent processing]
-    |-- required by --> [Rule creation via ConfigRepository.addRule()]
+Per-folder SEARCH to locate sentinel
+  --> Message-ID to folder mapping in SQLite (need to know what to search for)
 
-[Existing: ConfigRepository.addRule() / deleteRule()]
-    |-- required by --> [Rule creation from action folders]
-    |-- required by --> [Rule removal (undo operations)]
+Periodic scan across tracked folders
+  --> Per-folder SEARCH (the scan mechanism)
+  --> Message-ID to folder mapping (what to look for, where expected)
 
-[Existing: executeAction / executeMove (src/actions/)]
-    |-- required by --> [Message destination routing after processing]
+Auto-heal folder references on rename
+  --> Periodic scan (detects the rename)
+  --> Config repository integration (update action folder paths)
+  --> Rule storage integration (update rule target folders)
+  --> Sweep config integration (update archive/trash folders)
 
-[Existing: ActivityLog.logActivity() with source param]
-    |-- required by --> [Activity logging with 'action-folder' source]
+Re-plant sentinel when deleted
+  --> Periodic scan (detects missing sentinel in existing folder)
+  --> Plant sentinel (the re-plant mechanism)
 
-[Existing: Monitor IDLE/poll loop]
-    |-- enhances --> [Multi-folder monitoring for action folders]
+Failure notification to INBOX
+  --> Periodic scan (detects both sentinel and folder gone)
+  --> IMAP APPEND to INBOX (delivery mechanism)
+
+Global folder scan (differentiator)
+  --> Per-folder SEARCH (same mechanism, more folders)
+  --> listMailboxes() (need full folder list)
+
+MAILBOXID integration (differentiator)
+  --> CAPABILITY check on connect
+  --> Fallback to sentinel scan when unsupported
 ```
 
-### Dependency Notes
+## Folder Categories That Need Sentinels
 
-- **Config schema must come first:** Everything downstream needs to know folder names, prefix, and enabled state.
-- **Folder creation depends on config:** Can't create folders without knowing their names.
-- **Monitoring depends on folder existence:** Can't watch folders that don't exist yet.
-- **Processing depends on monitoring:** Can't process messages you're not watching.
-- **Duplicate prevention depends on v0.5 disposition infrastructure:** The `isSenderOnly()` predicate and rule querying from `dispositions.ts` are the foundation for checking "does a matching rule already exist?"
-- **Rule creation/removal depends on ConfigRepository:** `addRule()` and `deleteRule()` handle validation, persistence, and change notification. Action folders must use these, not bypass them.
-- **Activity logging depends on processing:** Log after the action, not before.
+Based on the existing codebase, these are all the folder references that could break on rename:
 
-## MVP Definition
+| Folder Reference | Source | Current Storage | Sentinel Purpose Tag |
+|-----------------|--------|-----------------|---------------------|
+| Review folder | `config.review.folder` | config.yml | `review` |
+| Default archive folder | `config.review.defaultArchiveFolder` | config.yml | `sweep-archive` |
+| Trash folder | `config.review.trashFolder` | config.yml / special-use | `sweep-trash` |
+| Action folder: VIP | `config.actionFolders.folders.vip` | config.yml | `action-vip` |
+| Action folder: Block | `config.actionFolders.folders.block` | config.yml | `action-block` |
+| Action folder: Undo VIP | `config.actionFolders.folders.undoVip` | config.yml | `action-undo-vip` |
+| Action folder: Unblock | `config.actionFolders.folders.unblock` | config.yml | `action-unblock` |
+| Rule target folders | `rule.action.folder` (move rules) | SQLite rules table | `rule-target-{ruleId}` |
+| Rule review folders | `rule.action.folder` (review rules with custom folder) | SQLite rules table | `rule-review-{ruleId}` |
 
-### Launch With (v0.6 core)
+**Note on Trash:** Trash is resolved via IMAP special-use attribute (`\Trash`) with config fallback. Special-use folders cannot be renamed by users (the attribute follows the folder). Sentinel may be unnecessary here -- verify at implementation time.
 
-These are the features that make action folders functional and trustworthy.
+## Scan Strategy: Two-Tier
 
-- [x] Config schema for `actionFolders` section with defaults -- gates everything else
-- [x] Folder auto-creation on startup -- system infrastructure
-- [x] Restart recovery (pre-scan action folders before monitor loop) -- crash safety
-- [x] Sender extraction + rule creation via ConfigRepository -- the actual point of the feature
-- [x] Sender extraction + rule removal for undo operations -- completes the 4-folder set
-- [x] Duplicate prevention / idempotent processing -- prevents garbage rules
-- [x] Message destination routing (archive, Trash, INBOX) -- messages must go somewhere
-- [x] Activity logging with `action-folder` source -- auditability
-- [x] Monitoring integration (poll-based at minimum) -- detection mechanism
-- [x] Error handling for malformed From -- defensive edge case
-- [x] Descriptive auto-generated rule names -- low effort, high clarity
+1. **Fast scan (every cycle):** Check each sentinel's expected folder. SEARCH that one folder for the Message-ID. If found, all good. If not found, mark as "missing" and queue for deep scan.
 
-### Add After Validation (v0.6.x if needed)
+2. **Deep scan (on missing sentinels only):** Iterate all IMAP folders, SEARCH each for the missing sentinel's Message-ID. If found in a different folder, that is a rename -- auto-heal. If not found anywhere, check if the expected folder still exists (via `status()`). If folder exists but sentinel gone, re-plant. If folder gone too, notify user.
 
-- [ ] IDLE-based monitoring for action folders (if poll latency proves annoying in practice)
-- [ ] UI indicator showing action folder status (enabled/disabled, last processed)
-- [ ] Activity log filtering by `action-folder` source in the web UI
+This two-tier approach means the common case (nothing changed) is cheap: N SEARCH commands where N is the number of tracked folders (typically 8-12). The expensive global scan only triggers when something is actually wrong.
 
-### Future Consideration (v0.7+)
+## MVP Recommendation
 
-- [ ] Extensible action type registry for additional folder types -- defer until a second action type is needed
-- [ ] Nested action folders for folder-based filing -- complex, needs own milestone
-- [ ] `Actions/Route to Review` folder type -- simple extension once registry exists
+**Phase 1 -- Core sentinel infrastructure:**
+1. Sentinel message format and APPEND mechanism
+2. SQLite storage for sentinel mappings
+3. Plant sentinels in all tracked folders on startup
 
-## Feature Prioritization Matrix
+**Phase 2 -- Detection and healing:**
+4. Periodic scan (fast path: check expected folders)
+5. Deep scan fallback (search all folders for missing sentinels)
+6. Auto-heal: update config/rules when rename detected
+7. Re-plant when sentinel deleted but folder exists
 
-| Feature | User Value | Implementation Cost | Priority |
-|---------|------------|---------------------|----------|
-| Folder auto-creation on startup | HIGH | LOW | P1 |
-| Always-empty-after-processing | HIGH | MEDIUM | P1 |
-| Restart recovery | HIGH | MEDIUM | P1 |
-| Correct sender extraction | HIGH | LOW | P1 |
-| Idempotent processing | HIGH | MEDIUM | P1 |
-| Message destination routing | HIGH | LOW | P1 |
-| Activity logging | MEDIUM | LOW | P1 |
-| Duplicate prevention | HIGH | MEDIUM | P1 |
-| Configurable folder names | MEDIUM | LOW | P1 |
-| Descriptive rule names | MEDIUM | LOW | P1 |
-| Error handling (malformed From) | MEDIUM | LOW | P1 |
-| No-op tolerance (undo) | MEDIUM | LOW | P1 |
-| Extensible action registry | LOW | MEDIUM | P2 |
-| Near-instant responsiveness (IDLE) | MEDIUM | HIGH | P2 |
-| Priority processing | LOW | LOW | P2 |
-| Multi-folder monitoring (IDLE) | MEDIUM | HIGH | P2 |
+**Phase 3 -- Failure handling and cleanup:**
+8. INBOX notification when folder is truly gone
+9. Remove folder rename card from settings UI
+10. Sentinel health API endpoint (optional differentiator)
 
-## Competitor Feature Analysis
-
-| Feature | SaneBox | Mail-Mgr Action Folders | Notes |
-|---------|---------|------------------------|-------|
-| Folder-based training | Move email to SaneLater/SaneBlackHole to train AI | Move to VIP/Block/Undo VIP/Unblock to create/remove deterministic rules | SaneBox uses ML; we use explicit sender-only rules. Simpler, more predictable. |
-| Responsiveness | 2-5 minute sync cycle | Sub-60-second poll, potentially sub-10-second with IDLE | We win on responsiveness because we run locally against the IMAP server. |
-| Folder creation | SaneBox creates folders automatically | Same -- auto-create on startup | Parity. |
-| Undo mechanism | Move email back to Inbox to undo | Dedicated Undo VIP / Unblock Sender folders | Our approach is more explicit and discoverable. SaneBox requires knowing to move back to Inbox. |
-| Bulk operations | Supports bulk move-to-train | One rule per unique sender regardless of message count | Handled via duplicate prevention. Same end result. |
-| Rule visibility | Hidden ML model, no rule list | Full rule list in web UI, disposition views, editable | Transparency advantage -- user can see and modify every rule. |
-| Non-sender rules | AI classifies by content, not just sender | Sender-only from action folders | Intentional limitation -- complex rules need web UI. |
+**Defer:**
+- MAILBOXID/OBJECTID integration: Nice optimization but adds complexity and only helps on supporting servers. Revisit after core sentinel system is proven.
+- Sentinel health dashboard UI: API endpoint is cheap, full UI is gold plating for v0.7.
 
 ## Sources
 
-- [SaneBox: How to train/teach SaneBox](https://www.sanebox.com/help/140-how-do-i-train-teach-sanebox) -- folder-based training UX
-- [SaneBox: Email Organize bulk operations](https://www.sanebox.com/help/80-sanebox-email-organize-quickly-process-email-in-bulk) -- bulk action handling
-- [SaneBox: Sane folder choices](https://www.sanebox.com/help/138-beyond-sanelater-more-sane-folder-choices) -- folder naming patterns
-- [SaneBox Review 2025](https://www.fahimai.com/sanebox) -- responsiveness and UX expectations
-- Existing codebase: `src/web/routes/dispositions.ts` (isSenderOnly predicate), `src/config/repository.ts` (addRule/deleteRule), `src/monitor/index.ts` (IDLE/poll pattern), `src/actions/index.ts` (executeMove), `src/config/schema.ts` (rule validation)
-- PRD: `docs/prd-v0.6.md` -- authoritative requirements
-
----
-*Feature research for: Action Folders (v0.6 milestone)*
-*Researched: 2026-04-20*
+- [ImapFlow API documentation](https://imapflow.com/docs/api/imapflow-client/) -- append(), search(), header search -- HIGH confidence
+- [ImapFlow search guide](https://imapflow.com/docs/guides/searching/) -- header search syntax confirmed -- HIGH confidence
+- [RFC 8474: IMAP OBJECTID Extension](https://www.rfc-editor.org/rfc/rfc8474.html) -- MAILBOXID survives renames -- HIGH confidence
+- [RFC 3501: IMAP4rev1](https://tools.ietf.org/html/rfc3501) -- SEARCH is per-folder, APPEND semantics -- HIGH confidence
+- [Chilkat IMAP header search](https://cknotes.com/imap-search-for-messages-by-message-id-or-any-email-header-field/) -- Message-ID searchable via HEADER criterion -- MEDIUM confidence
+- [Limilabs IMAP folder rename detection](https://www.limilabs.com/qa/2820/how-to-know-if-an-imap-folder-has-been-renamed) -- UIDVALIDITY does not help with renames -- MEDIUM confidence
+- Existing codebase: `src/tracking/destinations.ts` already does Message-ID search across folders (fetch+iterate pattern) -- can be upgraded to use IMAP SEARCH -- HIGH confidence

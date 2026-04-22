@@ -1,258 +1,345 @@
-# Domain Pitfalls: Action Folders for Mail Manager v0.6
+# Pitfalls Research: IMAP Sentinel Message System
 
-**Domain:** Adding action folder / mail-client-driven rule management to an existing IMAP email management system
-**Researched:** 2026-04-20
+**Domain:** Adding sentinel/beacon messages to an existing IMAP mail management system
+**Researched:** 2026-04-21
+**Confidence:** HIGH (IMAP protocol behavior well-documented; integration risks identified from codebase analysis)
 
 ## Critical Pitfalls
 
-Mistakes that cause data loss, duplicate rules, or broken monitoring.
+### Pitfall 1: Action Folder Processor Picks Up Sentinel Messages
 
-### Pitfall 1: MoveTracker Interprets Action Folder Moves as User-Initiated Moves
+**What goes wrong:**
+The action folder poller uses `fetchAllMessages(path)` then processes every message through `ActionFolderProcessor.processMessage()`. If a sentinel is planted in an action folder (e.g., `Actions/VIP Sender`), the processor extracts the sender, creates a rule for the sentinel's From address, and moves the sentinel to INBOX or Trash. The sentinel is destroyed and a garbage rule is created.
 
-**What goes wrong:** The MoveTracker polls INBOX and Review for disappeared UIDs, cross-references the activity log to exclude system moves, and logs signals for anything it considers user-initiated. When the action folder processor moves a message from an action folder to its destination (e.g., Trash, default archive, INBOX), MoveTracker could see the message appear in those folders and, on subsequent scans, track it. Worse: if a user drags a message from INBOX to `Actions/Block Sender`, MoveTracker sees a disappearance from INBOX. It won't find a system move in the activity log (the action folder hasn't processed yet), so it logs a false move signal. The PatternDetector then proposes rules based on garbage data.
+**Why it happens:**
+The action folder processor has no concept of "skip this message" -- it processes every message in the folder. The always-empty invariant (FOLD-02) means it actively tries to drain every message. Sentinel messages planted for folder tracking look like regular messages to the processor.
 
-**Why it happens:** MoveTracker's `isSystemMove()` checks for source values `arrival`, `sweep`, `batch`. The new `action-folder` source doesn't exist yet. Even after adding it, there's a timing window: the user moves a message to an action folder, MoveTracker scans before the action folder processor runs, and sees a disappeared message with no system move logged.
+**How to avoid:**
+Sentinel messages MUST use a recognizable marker that the action folder processor checks before processing. Two options:
+1. Use a custom header (e.g., `X-Mail-Mgr-Sentinel: true`) and add a guard at the top of `ActionFolderProcessor.processMessage()` that skips messages with this header. Requires fetching headers during action folder poll, which currently only fetches envelope data.
+2. Use a specific \Flagged or custom keyword flag. Simpler check but custom keywords may not survive all IMAP servers.
 
-**Consequences:** False move signals pollute the signal store. PatternDetector proposes bogus rules. Users see phantom proposed rules they didn't cause.
+Option 1 (custom header check) is safer because headers are immutable after message creation. The sentinel scan already needs to fetch headers to find sentinels, so the fetch infrastructure exists.
 
-**Prevention:**
-1. Add `'action-folder'` to the `isSystemMove()` source list in `ActivityLog` immediately.
-2. Log action folder activity BEFORE moving the message to its destination, so MoveTracker's cross-reference catches it.
-3. For the INBOX disappearance timing gap: action folder paths must be excluded from MoveTracker's destination resolution. If a message disappears from INBOX and lands in `Actions/*`, that's not a user move to track — it's an action folder operation in progress.
-4. Consider adding action folder paths to a "known system folders" exclusion list in MoveTracker.
+**Warning signs:**
+- Rules appearing for addresses like `sentinel@mail-mgr.local` or whatever the sentinel From address is
+- Sentinel messages disappearing from action folders shortly after planting
+- Action folder activity log showing sentinel processing
 
-**Detection:** Spurious proposed rules appearing after action folder usage. Move signals with `destinationFolder` pointing to action folder paths.
-
-**Phase:** Must be addressed in the first implementation phase, before any action folder processing code runs alongside MoveTracker.
-
----
-
-### Pitfall 2: Crash Between Rule Creation and Message Move (Split-Brain State)
-
-**What goes wrong:** The action folder processor creates a rule (persisted to config YAML via `ConfigRepository.addRule()`), then attempts to move the message to its destination. If the process crashes, the IMAP connection drops, or the move fails, the rule exists but the message is still sitting in the action folder. On restart, the system re-processes the action folder and finds the message again. Without proper duplicate detection, it creates a second identical rule.
-
-**Why it happens:** Rule creation (sync write to YAML) and IMAP message move (async network operation) are not atomic. They cannot be made atomic — they span different systems (filesystem vs. IMAP server).
-
-**Consequences:** Duplicate rules in the rule list. The `first-match-wins` evaluator means the duplicate is harmless for routing, but it clutters the UI and confuses the user. The disposition views show duplicate entries.
-
-**Prevention:**
-1. Order of operations: create/find rule FIRST, move message SECOND. This is the PRD's prescribed order (AF-07).
-2. Before creating any rule, query existing rules for a sender-only rule with the same sender glob AND same action type. The `isSenderOnly()` predicate from `dispositions.ts` plus an action type filter gives this check.
-3. Log the activity entry after rule creation but before the move attempt. This way, even if the move fails, the activity log records what happened.
-4. On startup recovery: scan action folders, check for existing matching rules, skip creation if found, then move the message.
-
-**Detection:** Duplicate sender entries in disposition views. Two rules with identical `match.sender` and `action.type`.
-
-**Phase:** Core processing logic phase — this is the heart of idempotent processing (AF-07).
+**Phase to address:**
+Phase 1 (Sentinel Core) must define the sentinel format including the skip-guard header. Phase 2 (Integration) must wire the guard into the action folder processor.
 
 ---
 
-### Pitfall 3: IMAP Folder Creation Fails Silently or Creates Wrong Hierarchy
+### Pitfall 2: Monitor Rule Engine Routes Sentinel Messages
 
-**What goes wrong:** `mailboxCreate('Actions/VIP Sender')` behaves differently depending on the server's hierarchy separator. On a server using `.` as separator, this might create a literal folder named `Actions/VIP Sender` instead of a nested `Actions` > `VIP Sender` hierarchy. Or the server might reject the creation because `/` is not the separator character. Or it creates the folders but the mail client displays them unexpectedly.
+**What goes wrong:**
+When a sentinel is planted in INBOX (to track INBOX itself or during initial creation before moving), the Monitor's `processNewMessages()` picks it up, evaluates it against rules, and potentially moves it to a different folder. If the sentinel's subject or From address matches a rule pattern (e.g., a wildcard rule), the sentinel gets routed away from its intended folder.
 
-**Why it happens:** IMAP hierarchy separators are server-specific (`.` on Cyrus/Dovecot-dot-mode, `/` on most others). ImapFlow's `mailboxCreate` accepts either a string path or an array of path components. When given a string with `/`, ImapFlow handles separator translation — but this behavior must be verified. When given an array like `['Actions', 'VIP Sender']`, ImapFlow explicitly builds the hierarchy using the server's actual separator.
+**Why it happens:**
+The Monitor processes ALL new messages in INBOX via UID-based tracking (`fetchNewMessages(sinceUid)`). There's no exclusion mechanism. Any message that arrives in INBOX -- including ones the app itself planted -- gets rule evaluation.
 
-**Consequences:** Action folders don't exist where expected. The monitor can't find them. Messages moved by the user go to non-existent or wrong folders. The mail client shows mangled folder names.
+**How to avoid:**
+Add a sentinel check in `Monitor.processMessage()` before rule evaluation. Check for the sentinel header and skip processing. This is the same guard pattern as the action folder fix but applied in the monitor pipeline. The monitor already fetches envelope + headers, so adding a header check is low-cost.
 
-**Prevention:**
-1. Use `mailboxCreate(['Actions', 'VIP Sender'])` (array form) instead of string form. This lets ImapFlow handle separator translation correctly.
-2. After creation, verify the folders exist by listing mailboxes and checking paths.
-3. Discover the server's hierarchy separator from the folder tree (already available via `listFolders()` — the `delimiter` field on `FolderNode`) and use it when constructing paths for monitoring.
-4. Store the actual created paths (as returned by the server) rather than assuming the configured names map 1:1 to IMAP paths.
-5. Test with Fastmail (the primary test server) but document the separator assumption.
+Alternative: Plant sentinels directly in their target folders (never in INBOX) using ImapFlow's APPEND command. This avoids the monitor entirely for non-INBOX folders. For INBOX sentinel specifically, the guard is still needed.
 
-**Detection:** Startup logs showing folder creation errors. Action folders not appearing in the mail client. `listFolders()` not returning expected paths.
+**Warning signs:**
+- Sentinel messages appearing in unexpected folders
+- Activity log showing sentinel messages being processed by rules
+- INBOX sentinel going missing
 
-**Phase:** Folder creation/lifecycle phase — must be the first phase since everything else depends on folders existing.
-
----
-
-### Pitfall 4: IDLE Only Monitors One Folder — Action Folders Go Unnoticed
-
-**What goes wrong:** IMAP IDLE (RFC 2177) only works on the currently selected mailbox. The existing `ImapClient` opens INBOX and IDLEs on it. When a user moves a message to `Actions/VIP Sender`, no IDLE notification fires because IDLE is watching INBOX, not the action folder. The action folder message sits unprocessed until... something else triggers a check.
-
-**Why it happens:** This is a fundamental IMAP protocol limitation. One connection = one IDLE = one folder. The NOTIFY extension (RFC 5465) could monitor multiple folders on one connection, but support is sparse and the PRD explicitly puts it out of scope.
-
-**Consequences:** Poor responsiveness. The user moves a message to an action folder expecting near-instant feedback (the PRD calls this out: "the user expects near-immediate feedback"). Instead, nothing happens until a poll cycle runs.
-
-**Prevention:**
-1. Poll-based monitoring for action folders on a short interval (e.g., 5-10 seconds). This is separate from MoveTracker's 30-second scan cycle.
-2. Do NOT try to open a second IMAP connection for IDLE on action folders — this doubles connection count and most servers limit concurrent connections (Fastmail allows 10-20).
-3. Piggyback action folder checks onto existing poll/IDLE cycles: when the IDLE timer fires NOOP to cycle IDLE (every `idleTimeout` ms, default 5 min), also check action folders. But 5 minutes is too slow — so add a dedicated shorter-interval poller.
-4. The dedicated poller should use `withMailboxLock` (not `withMailboxSwitch`) to avoid disrupting the INBOX IDLE. Actually — `withMailboxLock` also switches the selected mailbox. This needs careful design.
-
-**Detection:** Messages sitting in action folders for minutes instead of seconds. User complaints about lag.
-
-**Phase:** Monitoring integration phase. This is an architectural decision that shapes the entire action folder processing pipeline.
+**Phase to address:**
+Phase 1 (Sentinel Core) -- APPEND directly to target folder avoids most of this. Phase 2 (Integration) -- add guard for INBOX sentinel case.
 
 ---
 
-### Pitfall 5: withMailboxLock/withMailboxSwitch Disrupts INBOX IDLE
+### Pitfall 3: UIDVALIDITY Changes Invalidate Stored Sentinel UIDs
 
-**What goes wrong:** The current `ImapClient` has two methods for operating on non-INBOX folders: `withMailboxLock(folder, fn)` and `withMailboxSwitch(folder, fn)`. Both acquire a lock on the target folder, which means the IMAP connection switches away from INBOX. While the lock is held, IDLE on INBOX is suspended. If the action folder poller frequently checks 4 action folders, it repeatedly disrupts INBOX monitoring, creating windows where new INBOX arrivals go unnoticed.
+**What goes wrong:**
+If you store the sentinel's UID to quickly locate it later (for deletion/re-planting), a UIDVALIDITY change makes that UID meaningless. The sentinel appears "missing" even though it still exists in the folder. The system then re-plants a duplicate sentinel, creating ghost sentinels that accumulate over time.
 
-**Why it happens:** Single IMAP connection architecture. `withMailboxSwitch` stops IDLE, switches mailbox, does work, switches back, restarts IDLE. `withMailboxLock` is similar but doesn't explicitly restart IDLE. Each action folder check requires a mailbox switch.
+**Why it happens:**
+UIDVALIDITY changes when a folder is deleted and recreated with the same name, when the server is migrated, or on some misconfigured servers randomly. Per RFC 3501, when UIDVALIDITY changes, all previously stored UIDs are invalid.
 
-**Consequences:** Missed or delayed INBOX arrival processing. The more action folders checked and the more frequently they're polled, the longer IDLE gaps become. At 4 folders checked every 5 seconds, that's potentially 4 mailbox switches every 5 seconds, each breaking IDLE for the duration of the fetch.
+**How to avoid:**
+Do NOT rely on UIDs for sentinel identification. Use Message-ID header search exclusively. The sentinel's Message-ID is the stable identifier across UIDVALIDITY changes. The scan procedure should be: open folder, SEARCH for header `Message-ID` matching the stored value. If found, sentinel is present. If not found, sentinel is missing.
 
-**Prevention:**
-1. Batch all action folder checks into a single mailbox-switch session. Don't switch 4 times — switch once per folder but sequentially within one "action folder scan" window, then return to INBOX.
-2. Use a `status()` call (IMAP STATUS command) to check message count without switching mailboxes. STATUS can query a folder's message count without selecting it, preserving the current IDLE. Only switch to the action folder if STATUS shows messages > 0.
-3. Keep the action folder poll interval reasonable (10-15 seconds, not sub-second). The user can tolerate a 10-second delay.
-4. After the action folder scan completes, explicitly reopen INBOX and restart IDLE/polling.
+Store only the Message-ID in the sentinel registry, never the UID. UIDs can be used as a short-lived optimization within a single session but must never be persisted.
 
-**Detection:** Monitor logs showing gaps in INBOX processing. `newMail` events not firing during action folder scans.
+**Warning signs:**
+- Multiple sentinel messages accumulating in the same folder
+- Sentinel scan reporting "missing" sentinels that are actually present
+- Log messages about UIDVALIDITY changes
 
-**Phase:** Monitoring integration phase — must be designed together with the polling architecture.
+**Phase to address:**
+Phase 1 (Sentinel Core) -- design the storage schema around Message-ID only, not UID.
 
 ---
 
-## Moderate Pitfalls
+### Pitfall 4: SEARCH by Header Not Supported on All Servers
 
-### Pitfall 6: Action Folder Processing Races with Arrival Routing
+**What goes wrong:**
+The sentinel scan relies on `SEARCH HEADER Message-ID <value>` to locate sentinels. Some IMAP servers (notably older Dovecot configurations) have header search disabled or return zero results even when the header exists. The sentinel system silently fails -- it thinks all sentinels are missing and re-plants duplicates everywhere.
 
-**What goes wrong:** A message arrives in INBOX. The Monitor evaluates rules and decides to move it to Review. Simultaneously, the user manually moves the same message from INBOX to `Actions/VIP Sender`. The Monitor's move and the user's move race — whoever wins, the loser gets an IMAP error (message not found at expected UID). If the Monitor wins, the message lands in Review and the action folder processor never sees it. If the user wins, the Monitor fails to move it (UID gone from INBOX) but the action folder processor creates the VIP rule.
+**Why it happens:**
+IMAP SEARCH by header is part of the base RFC 3501 spec, but server implementations vary. Some servers disable header indexing for performance. The ImapFlow maintainer explicitly notes: "IMAP search is heavily dependent on what the server actually supports."
 
-**Why it happens:** The user can interact with their mailbox at any time. There's no lock between the user's mail client and the monitor's processing loop.
+**How to avoid:**
+1. On first startup, run a self-test: plant a test sentinel, then immediately SEARCH for it. If SEARCH fails, log a clear error and refuse to start the sentinel system.
+2. Use a distinctive, searchable Subject line as a fallback. SEARCH by Subject is more universally supported than SEARCH by arbitrary header.
+3. For Fastmail specifically (the primary target), header SEARCH works reliably. But the self-test ensures we detect problems on other servers immediately rather than silently corrupting state.
 
-**Prevention:**
-1. The Monitor already handles per-message errors gracefully (try/catch around each message in `processNewMessages`). A failed move for a disappeared message should log and continue, not crash the loop. Verify this works.
-2. The action folder processor should handle the case where a message it's trying to process has already been moved by the Monitor — if the action folder is empty when it gets there, that's fine.
-3. Accept that this is a rare edge case. The timing window is small (seconds). The correct behavior is: whoever processes first wins, the other gracefully handles the miss.
+**Warning signs:**
+- Sentinel scan always reports zero sentinels found
+- Duplicate sentinels accumulating in folders
+- SEARCH commands returning empty results in IMAP debug logs
 
-**Phase:** Core processing logic — ensure error handling is robust.
+**Phase to address:**
+Phase 1 (Sentinel Core) -- implement self-test during sentinel system initialization.
 
-### Pitfall 7: Config YAML Write Conflicts Under Concurrent Operations
+---
 
-**What goes wrong:** The action folder processor calls `configRepo.addRule()` to create a rule. At the same time, the user creates a rule via the web UI, which also calls `configRepo.addRule()`. Both read the current config, both append a rule, and the second write clobbers the first — one rule is lost.
+### Pitfall 5: Sentinel Scan Across Many Folders Creates Excessive IMAP Traffic
 
-**Why it happens:** `ConfigRepository` reads from and writes to a YAML file. It holds an in-memory copy (`this.config`) that it mutates and then persists. Node.js is single-threaded, so truly simultaneous writes can't happen — but if the action folder processor yields (await) between reading and writing, a web UI request could interleave.
+**What goes wrong:**
+Each folder scan requires: SELECT folder, SEARCH for header, then SELECT next folder. For a mailbox with 50+ folders, each poll cycle generates 100+ IMAP commands. This is slow (each SELECT has network latency), may trigger rate limits, and disrupts the INBOX idle/poll loop because the existing `withMailboxSwitch` stops idle, switches folders, then restores INBOX.
 
-**Consequences:** Lost rules. The user creates a rule via the UI but it vanishes because the action folder processor's write overwrites it.
+**Why it happens:**
+IMAP requires a folder to be SELECTed before any SEARCH can run. There's no cross-folder search in standard IMAP. The existing `ImapClient.withMailboxSwitch()` method stops idle monitoring during the switch, creating a window where new INBOX messages are missed.
 
-**Prevention:**
-1. Verify that `ConfigRepository.addRule()` is synchronous after the initial read — looking at the code, `addRule` is synchronous: it pushes to the array and calls `persist()` (which calls `saveConfig`, a sync write). So interleaving within `addRule` is not possible.
-2. The real risk is if action folder processing happens inside an async context that yields between reading config state and calling `addRule()`. Keep the "check for duplicate" and "add rule" steps as close together as possible, with no awaits between them.
-3. The `configRepo` is a singleton — all mutations go through the same in-memory object. This is actually safe in Node.js's single-threaded model as long as there are no awaits between the read-check and the write.
+**How to avoid:**
+1. Scan folders in batches with configurable interval (e.g., scan 5 folders per cycle, full scan every 5 minutes rather than every poll cycle).
+2. Only scan folders that have sentinels registered -- don't scan ALL folders, just the ones the app cares about. The sentinel registry knows exactly which folders have sentinels.
+3. Run the full scan less frequently than the main poll interval (e.g., every 5-10 minutes instead of every 15-60 seconds).
+4. Use a dedicated IMAP connection for sentinel scanning so the primary connection's IDLE isn't disrupted. The Fastmail 500-logins-per-10-minutes limit is generous enough for a second connection.
 
-**Phase:** Core processing logic — verify during implementation that no async gaps exist in the check-then-create flow.
+**Warning signs:**
+- Increased latency in INBOX message processing during sentinel scans
+- IMAP connection timeouts during large scans
+- Rate limit errors from the server
+- Gaps in new message detection (missed during folder switches)
 
-### Pitfall 8: Undo Operations Delete the Wrong Rule
+**Phase to address:**
+Phase 3 (Rename Detection) -- this is where periodic scanning is implemented. Design the scan scheduler in Phase 1 but implement the throttled scanning in Phase 3.
 
-**What goes wrong:** The user has two rules for `alice@example.com`: one `skip` (VIP) rule created via the UI with additional match criteria (e.g., subject filter), and one `skip` rule created as a pure sender-only rule. The user moves a message from Alice to `Actions/Undo VIP`. The action folder processor searches for a sender-only `skip` rule matching `alice@example.com` and deletes... which one? If it deletes the UI-created rule (which isn't sender-only), the user loses a carefully crafted rule. If it correctly filters to sender-only rules, it deletes the right one. But what if there are TWO sender-only skip rules for the same sender (shouldn't happen, but could via config editing)?
+---
 
-**Why it happens:** The undo operation needs to find "the" matching rule, but there might be zero, one, or multiple candidates.
+### Pitfall 6: Race Condition Between Sentinel Scan and User Folder Operations
 
-**Prevention:**
-1. Undo operations MUST filter using `isSenderOnly()` — never delete a rule that has additional match criteria beyond sender.
-2. If multiple sender-only rules match, delete the LAST one created (highest order value) — this is most likely the one the user wants to undo.
-3. Log which rule was deleted (rule ID, rule name) in the activity entry for auditability.
-4. If no matching rule is found, still move the message to its destination (PRD AF-01 specifies this: "This is not an error").
+**What goes wrong:**
+User renames folder A to B in their mail client. The sentinel scan starts, SELECTs folder A (which no longer exists), gets an error, concludes the sentinel is lost. Before the next scan discovers the sentinel in folder B, the system fires a "folder missing" notification or tries to update config references. Meanwhile, the sentinel is perfectly fine in its renamed folder.
 
-**Phase:** Core processing logic — rule lookup and deletion.
+**Why it happens:**
+Folder renames are atomic from the IMAP server's perspective but the sentinel scan takes time to traverse all folders. Between detecting "folder A missing" and "sentinel found in folder B," there's a window where the system has incorrect state.
 
-### Pitfall 9: Action Folder Messages Without Valid From Headers
+**How to avoid:**
+Implement a two-phase detection pattern:
+1. Phase 1: Detect "sentinel missing from expected folder" -- mark as PENDING, do NOT act.
+2. Phase 2: Scan remaining folders looking for the sentinel. If found elsewhere, it's a rename. If not found anywhere, it's a deletion.
+3. Only after completing the full scan, act on the results.
 
-**What goes wrong:** A message in an action folder has a malformed, missing, or multi-address From header. The processor extracts `undefined` or an empty string as the sender, then creates a rule with `match.sender: ""` or `match.sender: undefined`. This rule either fails Zod validation (good) or passes and matches everything (catastrophic — every email gets blocked/VIP'd).
+Never fire "folder missing" notifications based on a single folder check. Always complete the full scan first.
 
-**Why it happens:** Email From headers are notoriously messy. Bounces have `<>` as From. Some spam has no From. Some messages have multiple From addresses (rare but RFC-legal).
+**Warning signs:**
+- Spurious "folder missing" notifications followed by immediate "folder found" corrections
+- Config references flickering between old and new folder paths
+- Activity log showing rapid remove/restore cycles
 
-**Consequences:** A rule with an empty or wildcard sender glob could match ALL incoming email and route everything to Trash (if it was a Block operation) or mark everything as VIP.
+**Phase to address:**
+Phase 3 (Rename Detection) -- the two-phase detection pattern must be the core design of the rename detection algorithm.
 
-**Prevention:**
-1. Extract and validate the sender address BEFORE any rule creation. If empty, null, or not a valid email pattern, abort processing for that message.
-2. Move the problematic message to INBOX (not Trash, not lost) with an error log entry. The PRD specifies this (AF-03).
-3. Test with edge cases: `<>`, no From header, multiple From addresses, display-name-only (no address part), internationalized addresses.
-4. The Zod schema's `z.string().min(1)` on `emailMatchSchema.sender` provides a safety net, but don't rely on it — validate before reaching the schema.
+---
 
-**Phase:** Sender extraction utility — early phase.
+### Pitfall 7: Sentinel Messages Visible to Users in Mail Clients
 
-### Pitfall 10: Folder Cache Serves Stale Data After Action Folder Creation
+**What goes wrong:**
+Sentinels appear as regular messages in the user's mail client (Mac Mail, Thunderbird, etc.). They show up in unread counts, search results, and folder message lists. Users see confusing messages with subjects like "Mail Manager Sentinel" and wonder what they are. Worse, users might delete them, breaking folder tracking.
 
-**What goes wrong:** The `FolderCache` caches the folder tree with a 5-minute TTL. On startup, the system creates action folders, but the folder cache was populated before creation. Any component querying the folder cache (folder picker, batch engine folder validation) doesn't see the action folders. The tree picker in the UI shows stale data.
+**Why it happens:**
+IMAP has no concept of "hidden" messages. Every message in a folder is visible to all clients. There's no flag or attribute that hides messages from mail clients.
 
-**Why it happens:** `FolderCache` has a time-based TTL and no invalidation hook for folder creation events.
+**How to avoid:**
+Minimize visibility impact:
+1. Mark sentinels as \Seen immediately on creation so they don't inflate unread counts.
+2. Use a clear, non-alarming Subject (e.g., "Mail Manager - Folder Tracker (do not delete)").
+3. Keep the message body minimal with a brief explanation of what it is and why it shouldn't be deleted.
+4. Use a Date header in the past (e.g., year 2000) so sentinels sort to the bottom of chronological folder views.
+5. Consider using \Flagged to make them visually distinct but be aware this may draw MORE attention in some clients.
 
-**Prevention:**
-1. Invalidate the folder cache after action folder creation on startup.
-2. Add a `FolderCache.invalidate()` method if one doesn't exist.
-3. This is a minor UX issue — the action folders shouldn't appear in the tree picker anyway (they're system infrastructure, not filing destinations). But the folder list API should reflect them for debugging/status purposes.
+Accept that sentinels will be visible. Design for graceful re-planting when users inevitably delete them.
 
-**Phase:** Folder creation/lifecycle phase.
+**Warning signs:**
+- User reports of mysterious messages appearing in folders
+- Sentinels contributing to unread badge counts
+- Users deleting sentinels
 
-## Minor Pitfalls
+**Phase to address:**
+Phase 1 (Sentinel Core) -- message format design. Phase 4 (Failure Detection) -- re-planting when sentinels are deleted.
 
-### Pitfall 11: Action Folder Names with Special Characters Cause IMAP Encoding Issues
+---
 
-**What goes wrong:** Folder names like "VIP Sender" contain spaces. Some IMAP servers or clients may encode these differently (modified UTF-7 per RFC 3501). If the configured folder name and the IMAP-encoded name don't match, the system creates the folder but can't find it when monitoring.
+### Pitfall 8: Message-ID Collisions in Sentinel Generation
 
-**Prevention:**
-1. Use ImapFlow's path handling throughout — it handles modified UTF-7 encoding automatically.
-2. Don't string-compare folder paths directly. Use the paths as returned by `listMailboxes()` after creation.
-3. Avoid special characters in default folder names. "VIP Sender" with a space is fine for ImapFlow but test it.
+**What goes wrong:**
+If the sentinel Message-ID generation uses a predictable or insufficiently unique scheme, two sentinels could share a Message-ID. The SEARCH then returns the wrong sentinel, and the system believes a folder has been renamed when it hasn't (or vice versa).
 
-**Phase:** Folder creation phase — verify with Fastmail.
+**Why it happens:**
+Message-IDs are supposed to be globally unique per RFC 2822, but the uniqueness is only as good as the generation algorithm. If using a simple scheme like `<sentinel-{folderpath}@mail-mgr>`, renaming a folder and creating a new one with the old name would create a collision.
 
-### Pitfall 12: Action Folder Config Changes Require Folder Rename/Recreation
+**How to avoid:**
+Use UUID-based Message-IDs: `<sentinel-{uuid}@mail-mgr.local>`. The UUID is generated once when the sentinel is planted and stored in the registry. Never derive the Message-ID from the folder path or any mutable attribute.
 
-**What goes wrong:** The user changes `actionFolders.prefix` from "Actions" to "MailMgr" in config. The old `Actions/*` folders still exist on the IMAP server with messages in them. The new `MailMgr/*` folders get created on restart. Now there are two sets of action folders. Messages in the old folders are orphaned.
+**Warning signs:**
+- SEARCH returning sentinels from wrong folders
+- Rename detection reporting false positives
+- Multiple folders mapping to the same sentinel Message-ID
 
-**Prevention:**
-1. On config change, check old folders for remaining messages and process them before switching.
-2. Or: don't support renaming in v0.6. Document that changing action folder names requires manual cleanup.
-3. Log a warning on startup if the old folder paths exist and contain messages.
+**Phase to address:**
+Phase 1 (Sentinel Core) -- Message-ID format definition.
 
-**Phase:** Configuration phase — document the limitation, don't over-engineer rename support for v0.6.
+---
 
-### Pitfall 13: Rule Order Collisions When Multiple Messages Processed Simultaneously
+### Pitfall 9: APPEND Command Fails Silently or Behaves Differently Across Servers
 
-**What goes wrong:** Two messages arrive in action folders at the same time. Both call `configRepo.nextOrder()` to get the next order value. Both get the same value. Both create rules with the same `order`. First-match-wins evaluation becomes unpredictable for these two rules.
+**What goes wrong:**
+Planting a sentinel uses IMAP APPEND to inject a message directly into a folder. Some servers modify the message during APPEND (stripping headers, rewriting Message-ID, adding headers). If the Message-ID is modified, the sentinel becomes unfindable by SEARCH.
 
-**Prevention:**
-1. Node.js is single-threaded — if messages are processed sequentially (which they should be, like the Monitor's serial loop), this can't happen.
-2. Ensure the action folder processor processes messages one at a time, not in parallel.
-3. Even if order collisions occur, sender-only rules for different senders won't conflict. Same order is cosmetically ugly but not functionally broken.
+**Why it happens:**
+IMAP servers may run spam filters, virus scanners, or content filters on APPENDed messages. Some servers normalize Message-ID format. RFC 3501 says the server SHOULD preserve the message but doesn't mandate it.
 
-**Phase:** Core processing logic — ensure sequential processing.
+**How to avoid:**
+1. After APPEND, immediately SEARCH for the sentinel to verify it was stored correctly.
+2. If SEARCH fails, fetch the most recent message in the folder and check if the Message-ID was rewritten.
+3. Store the actual Message-ID found on the server, not the one we intended to set.
+4. Include the self-test (Pitfall 4) as the first operation -- if the self-test sentinel can't be found by its Message-ID after APPEND, the system knows it can't work on this server.
 
-### Pitfall 14: Notification Fatigue from `onRulesChange` Callbacks
+**Warning signs:**
+- Sentinel planted successfully (APPEND returns OK) but SEARCH immediately fails
+- Message-ID in fetched sentinel differs from what was APPENDed
+- Extra headers added to sentinel messages
 
-**What goes wrong:** Processing 10 action folder messages triggers 10 `addRule()` calls, each firing `notifyRulesChange()`, which calls `monitor.updateRules()`, `sweeper.updateRules()`, and `batchEngine.updateRules()`. This is 10 redundant rule reloads, potentially causing the Monitor to re-evaluate in-progress messages with a slightly different rule set each time.
+**Phase to address:**
+Phase 1 (Sentinel Core) -- verify-after-plant pattern in the APPEND implementation.
 
-**Prevention:**
-1. Batch action folder processing: collect all rule changes, make them, then the final `persist()` triggers one notification.
-2. Or accept the overhead — `updateRules()` just replaces the rule array reference. It's cheap. The Monitor's in-progress message already captured its matched rule before the update.
-3. Don't over-optimize in v0.6. If it becomes a problem with many simultaneous action folder messages, add batching later.
+---
 
-**Phase:** Not critical for any specific phase — monitor during testing.
+### Pitfall 10: Config Reference Update Creates Inconsistent State
 
-## Phase-Specific Warnings
+**What goes wrong:**
+When a sentinel is found in a different folder (rename detected), the system updates folder references in config. But folder paths appear in multiple places: rule `action.folder` fields, `review.folder`, `review.defaultArchiveFolder`, `review.trashFolder`, action folder prefix, and action folder names. If the update misses one reference or crashes mid-update, the config has some references pointing to the old path and some to the new path.
 
-| Phase Topic | Likely Pitfall | Mitigation |
-|-------------|---------------|------------|
-| Folder creation/lifecycle | P3 (hierarchy separators), P10 (stale cache), P11 (encoding) | Use array-form `mailboxCreate`, invalidate cache after creation, verify paths from server |
-| Monitoring integration | P4 (IDLE single-folder), P5 (mailbox switch disrupts IDLE) | STATUS pre-check before switching, batched folder scans, dedicated short-interval poller |
-| Core processing logic | P2 (crash idempotency), P6 (arrival race), P7 (config write conflicts), P8 (wrong rule deletion), P13 (order collisions) | Check-before-create, sequential processing, `isSenderOnly()` filter for undo |
-| MoveTracker integration | P1 (false move signals) | Add `action-folder` to system sources, exclude action folder paths from tracking |
-| Sender extraction | P9 (malformed From headers) | Validate before rule creation, fallback to INBOX move |
-| Configuration | P12 (folder rename orphans) | Don't support rename in v0.6, document limitation |
-| Activity logging | P4 (source type) | Add `'action-folder'` source to type union, update `isSystemMove()` |
+**Why it happens:**
+The existing codebase stores folder paths as strings in multiple config locations. There's no single "folder registry" -- each subsystem stores its own folder reference. The `ConfigRepository` persists to disk after each change, but if the process crashes between updating two references, the config file has partial updates.
 
-## Historical Context: The v0.4 Phase 7 Clobber Incident
+**How to avoid:**
+1. Build a `findAllFolderReferences(oldPath): Reference[]` function that scans ALL config locations for a folder path. This prevents missing a reference.
+2. Apply all reference updates in a single `ConfigRepository` transaction -- update all references, then persist once.
+3. Log every reference update for audit trail.
+4. On startup, run a consistency check: for every folder referenced in config, verify a sentinel exists (or the folder is a well-known path like INBOX).
 
-This project has a history of worktree merges destroying existing features. The MEMORY.md warns: "verify worktree branch point before merge, check for deletions after." For v0.6:
+**Warning signs:**
+- Rules still pointing to old folder path after rename detection
+- Review config pointing to renamed folder while action folders updated correctly
+- "Folder not found" errors for one subsystem but not others after a rename
 
-- Action folder code touches the Monitor, ImapClient, ConfigRepository, ActivityLog, and config schema — all core modules.
-- Each phase should verify that existing functionality (INBOX monitoring, Review sweeps, MoveTracker, batch filing, disposition views) still works after changes.
-- Integration tests that exercise the full pipeline (arrival -> rule evaluation -> move -> activity log -> MoveTracker scan) should run after each phase.
-- Do NOT use worktrees for parallel development of action folder phases.
+**Phase to address:**
+Phase 3 (Rename Detection) -- the reference update logic. Must enumerate ALL reference locations from the schema analysis.
+
+---
+
+## Technical Debt Patterns
+
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Store sentinel UID alongside Message-ID for fast lookup | Avoids SEARCH on every scan | UID invalidation on UIDVALIDITY change, stale UID bugs | Never -- Message-ID search is the only reliable method |
+| Skip the APPEND verification step | Faster sentinel planting | Silent failures when server modifies Message-ID | Only during development/testing, never in production |
+| Single IMAP connection for scanning + monitoring | Simpler connection management | IDLE disruption during scans, missed messages | Acceptable for MVP if scan interval is long enough (>5 min) |
+| Scan all folders instead of only registered ones | Simpler scan logic, discovers sentinels in unexpected places | O(n) IMAP commands where n = total folders, slow on large mailboxes | Acceptable for initial implementation if user has <50 folders |
+
+## Integration Gotchas
+
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| Action Folder Processor | Not checking for sentinel header before processing | Add sentinel header guard as first check in `processMessage()` |
+| Monitor Rule Engine | Sentinel in INBOX gets evaluated against rules | Add sentinel header guard in `Monitor.processMessage()` before rule evaluation |
+| Sweep System | Sentinel in Review folder gets swept/archived after age threshold | Sentinel check in sweep evaluation, or exclude sentinels from age-based sweeps |
+| Batch Filing Engine | Batch apply includes sentinel messages in results | Filter sentinels from batch filing message lists |
+| Move Tracking | Sentinel moves detected as user moves, triggering pattern proposals | Exclude sentinel moves from move tracking signal logging |
+| Folder Discovery Cache | Sentinel scan triggers folder list refresh, invalidating cache timing | Coordinate cache invalidation between sentinel scan and folder discovery |
+| Config File Writes | Multiple folder reference updates cause multiple file writes | Batch all reference updates into single persist() call |
+
+## Performance Traps
+
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| Full-folder scan on every poll cycle | Slow INBOX response, missed messages during scan | Separate scan interval (5+ min), scan only registered folders | >20 registered folders, <30s poll interval |
+| SEARCH on large folders | Scan takes 10+ seconds per folder | Use narrow SEARCH criteria (header + date range), avoid body search | Folders with >10,000 messages |
+| Opening/closing folders rapidly | Server rate limits, connection drops | Batch folder operations, add small delay between SELECTs | >50 folders scanned in rapid succession |
+| Re-planting sentinels too eagerly | Duplicate sentinels accumulate, SEARCH returns multiple results | Confirm sentinel truly missing (full scan complete), debounce re-plant with cooldown | Network glitches causing transient SEARCH failures |
+
+## UX Pitfalls
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| Sentinel subject is cryptic or alarming | User panics, deletes sentinel, reports bug | Clear subject: "Mail Manager - Folder Tracker (do not delete)" |
+| Sentinel appears as unread | Inflates unread count in mail client | Plant with \Seen flag set |
+| Sentinel sorts to top of folder | User sees it every time they open folder | Use old Date header so it sorts to bottom |
+| No explanation in message body | User has no idea what the message is | Brief body: "This message helps Mail Manager track this folder. If deleted, it will be recreated automatically." |
+| "Folder missing" notification for transient issues | False alarm notifications in INBOX | Two-phase detection with debounce before notifying |
+
+## "Looks Done But Isn't" Checklist
+
+- [ ] **Sentinel Planting:** Often missing the \Seen flag -- verify sentinels don't inflate unread counts
+- [ ] **SEARCH Verification:** Often missing the post-APPEND verification -- verify sentinel is findable after planting
+- [ ] **Guard Coverage:** Often missing one processing pipeline -- verify ALL pipelines (monitor, action folders, sweep, batch, move tracking) have sentinel guards
+- [ ] **Reference Enumeration:** Often missing a config location -- verify ALL folder reference sites are covered (rules, review config, action folder config, sweep targets)
+- [ ] **Self-Test:** Often missing server compatibility check -- verify sentinel system validates SEARCH works on startup
+- [ ] **Race Protection:** Often missing the two-phase scan -- verify rename detection completes full scan before acting
+- [ ] **Duplicate Prevention:** Often missing re-plant debounce -- verify transient failures don't create duplicate sentinels
+- [ ] **INBOX Sentinel:** Often treated same as other folders -- verify INBOX sentinel has special handling for the monitor pipeline
+
+## Recovery Strategies
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| Sentinel processed as regular mail | LOW | Re-plant sentinel; delete garbage rule if created; add missing guard |
+| Duplicate sentinels in folder | LOW | SEARCH returns multiple UIDs, delete all but first, update registry |
+| Config references partially updated | MEDIUM | Run consistency check, manually fix remaining references, add atomic update |
+| SEARCH not working on server | HIGH | Cannot use sentinel system on this server; fall back to manual folder management |
+| UIDVALIDITY caused phantom missing sentinels | LOW | Full scan by Message-ID across all folders will find them; clean up duplicates |
+| User deleted sentinel | LOW | Next scan detects missing, re-plants automatically; explain in INBOX notification |
+
+## Pitfall-to-Phase Mapping
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| Action folder processes sentinel | Phase 2 (Integration) | Test: plant sentinel in action folder, verify it's not processed |
+| Monitor routes sentinel | Phase 2 (Integration) | Test: sentinel in INBOX is skipped by rule evaluation |
+| UIDVALIDITY invalidates UIDs | Phase 1 (Sentinel Core) | Schema stores Message-ID only, no UID persistence |
+| SEARCH not supported | Phase 1 (Sentinel Core) | Self-test on startup, clear error if SEARCH fails |
+| Excessive IMAP traffic | Phase 3 (Rename Detection) | Scan only registered folders, configurable interval |
+| Race condition on rename | Phase 3 (Rename Detection) | Two-phase detection, no action until full scan complete |
+| Visible to mail clients | Phase 1 (Sentinel Core) | \Seen flag, past date, clear subject/body |
+| Message-ID collision | Phase 1 (Sentinel Core) | UUID-based generation, never derived from folder path |
+| APPEND modifies message | Phase 1 (Sentinel Core) | Verify-after-plant, store actual server Message-ID |
+| Partial config update | Phase 3 (Rename Detection) | Atomic multi-reference update, consistency check on startup |
+| Sweep processes sentinel | Phase 2 (Integration) | Test: sentinel in Review folder survives sweep cycle |
+| Move tracking logs sentinel | Phase 2 (Integration) | Test: sentinel move not recorded as user move signal |
+| Batch filing includes sentinel | Phase 2 (Integration) | Test: batch filing skips sentinel messages |
 
 ## Sources
 
-- ImapFlow documentation: https://imapflow.com/module-imapflow-ImapFlow.html
-- IMAP IDLE limitations (RFC 2177): https://en.wikipedia.org/wiki/IMAP_IDLE
-- IMAP hierarchy separator issues: https://www.chilkatsoft.com/p/p_262.asp
-- IMAP NOTIFY extension (RFC 5465): https://mailarchive.ietf.org/arch/msg/imapext/Qn4f3QrmijuwLsjxB4dFIM2TpL8/
-- Mozilla Bugzilla IMAP hierarchy delimiter: https://bugzilla.mozilla.org/show_bug.cgi?id=773579
-- Codebase analysis: `src/monitor/index.ts`, `src/tracking/index.ts`, `src/imap/client.ts`, `src/config/repository.ts`, `src/actions/index.ts`, `src/log/index.ts`, `src/web/routes/dispositions.ts`, `src/config/schema.ts`
+- [ImapFlow SEARCH header issue](https://github.com/postalsys/imapflow/issues/77) -- server dependency of header search
+- [ImapFlow searching guide](https://imapflow.com/docs/guides/searching/) -- search criteria and limitations
+- [Fastmail account limits](https://www.fastmail.help/hc/en-us/articles/1500000277382-Account-limits) -- 500 logins per 10 minutes
+- [UIDVALIDITY in IMAP](https://www.limilabs.com/blog/unique-id-in-imap-protocol) -- UID/UIDVALIDITY semantics
+- [Thunderbird UIDVALIDITY resync bug](https://bugzilla.mozilla.org/show_bug.cgi?id=1584983) -- real-world UIDVALIDITY change impact
+- [RFC 3501 IMAP4rev1](https://tools.ietf.org/html/rfc3501) -- SEARCH, APPEND, UIDVALIDITY specifications
+- [RFC 2822 Message-ID](https://github.com/franzinc/imap/blob/master/rfc2822.txt) -- uniqueness guarantees
+- [Google IMAP SEARCH % bug](https://issuetracker.google.com/issues/183677218) -- Message-ID special character issues
+- Codebase analysis: `src/action-folders/processor.ts`, `src/monitor/index.ts`, `src/action-folders/poller.ts`, `src/imap/client.ts`
+
+---
+*Pitfalls research for: IMAP Sentinel Message System (mail-mgr v0.7)*
+*Researched: 2026-04-21*

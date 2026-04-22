@@ -1,356 +1,489 @@
 # Architecture Patterns
 
-**Domain:** Action folder integration into existing IMAP email management system
-**Researched:** 2026-04-20
+**Domain:** Sentinel message system for IMAP folder rename/deletion detection
+**Researched:** 2026-04-21
 
 ## Recommended Architecture
 
 ### Overview
 
-Action folders are a **new processing pipeline** that sits alongside the existing Monitor (arrival routing) and Sweep (review lifecycle) pipelines. They share the IMAP client, rule service (ConfigRepository), and activity log, but have their own dedicated processor with a distinct processing model: extract sender from message, create/remove a rule, move message to its final destination.
+The sentinel system is a **cross-cutting tracking layer** that plants invisible IMAP messages into tracked folders, then periodically scans for them to detect folder renames and deletions. Unlike the existing pipelines (Monitor, Sweeper, ActionFolderPoller) which each own a specific folder domain, the sentinel system touches ALL folders referenced anywhere in config -- rule targets, review folder, action folder prefix, sweep destinations.
 
-The recommended approach is **Option B from the PRD: a dedicated ActionFolderProcessor** with its own poll timer, not piggybacked on MoveTracker or the Monitor's IDLE loop. The reasoning is architectural clarity and the fact that IMAP IDLE only watches one mailbox at a time (ImapFlow opens INBOX for IDLE). Action folders need polling anyway.
+The system has three distinct responsibilities:
+1. **Planting** -- APPEND sentinel messages into tracked folders
+2. **Scanning** -- SEARCH for sentinels across all folders to detect renames
+3. **Healing** -- Update config references and re-plant when renames/deletions detected
 
 ```
                      +------------------+
                      |    ImapClient     |  (shared, single connection)
                      +--------+---------+
                               |
-            +-----------------+------------------+
-            |                 |                  |
-     +------+------+  +------+------+  +--------+--------+
-     |   Monitor   |  |   Sweeper   |  | ActionFolder    |
-     | (IDLE/poll  |  | (periodic   |  | Processor       |
-     |  on INBOX)  |  |  on Review) |  | (poll Actions/*)|
-     +------+------+  +------+------+  +--------+--------+
-            |                 |                  |
-            v                 v                  v
-     +------+------+  +------+------+  +--------+--------+
-     | evaluateRules| | sweepResolve|  | ActionRegistry  |
-     | executeAction| | moveMessage |  | (lookup action, |
-     +------+------+  +------+------+  |  create/remove  |
-            |                 |        |  rule, move msg) |
-            |                 |        +--------+--------+
-            |                 |                  |
-            +--------+--------+------------------+
-                     |
-              +------+------+
-              | ActivityLog  |  (shared, source='action-folder')
-              +------+------+
-              | ConfigRepo   |  (shared, addRule/deleteRule)
-              +-------------+
+         +--------------------+--------------------+
+         |          |         |         |           |
+  +------+------+  |  +------+------+  |  +--------+--------+
+  |   Monitor   |  |  |   Sweeper   |  |  | ActionFolder    |
+  | (IDLE/poll) |  |  | (periodic)  |  |  | Poller          |
+  +-------------+  |  +-------------+  |  +-----------------+
+                   |                   |
+            +------+------+     +------+------+
+            |  Sentinel   |     |  Sentinel   |
+            |  Scanner    |     |  Store      |
+            | (periodic   |     | (SQLite:    |
+            |  SEARCH     |     |  message_id |
+            |  across all |     |  -> folder  |
+            |  folders)   |     |  + purpose) |
+            +------+------+     +------+------+
+                   |                   |
+                   v                   v
+            +------+-------------------+------+
+            |       ConfigRepository          |
+            |  (update folder refs on rename) |
+            +------+--------------------------+
+                   |
+                   v
+            +------+------+
+            | ActivityLog |
+            | (log heals, |
+            |  notify on  |
+            |  deletion)  |
+            +--------------+
 ```
 
-### Component Boundaries
+### Key Design Decision: Separate Timer, Not Piggyback on Existing Polls
 
-| Component | Responsibility | Communicates With | New/Modified |
-|-----------|---------------|-------------------|--------------|
-| `ActionFolderProcessor` | Poll action folders, process messages, orchestrate rule ops + message moves | ImapClient, ActionRegistry, ConfigRepository, ActivityLog | **NEW** |
-| `ActionRegistry` | Define action types (vip, block, undoVip, unblock) with folder name, processing function, message destination | ConfigRepository (for rule CRUD) | **NEW** |
-| `ActionFolderConfig` (Zod schema) | Validate `actionFolders` config section (enabled, prefix, folder names) | Config schema | **MODIFIED** (schema.ts) |
-| `ConfigRepository` | Rule CRUD (addRule, deleteRule already exist) | Persists to config file | **MODIFIED** (add `findSenderRule` helper) |
-| `ActivityLog` | Log action-folder operations | SQLite | **MODIFIED** (extend source type) |
-| `ImapClient` | Folder creation on startup, message fetch from action folders, message move | IMAP server | **EXISTING** (no changes needed -- createMailbox and withMailboxLock already exist) |
-| `src/index.ts` (main) | Wire up ActionFolderProcessor, run startup folder creation and recovery processing | All components | **MODIFIED** |
-| `isSenderOnly` predicate | Already in dispositions.ts, reusable for finding matching sender rules | N/A | **EXISTING** (extract to shared util) |
+The sentinel scanner runs on its own `setInterval` timer (recommended: every 5 minutes), NOT integrated into the Monitor's poll loop or the ActionFolderPoller. Rationale:
 
-### Data Flow
+1. **Different cadence** -- Monitor polls for new INBOX mail (fast, event-driven via IDLE). Sentinel scanning is slow, infrequent, and scans ALL folders. Coupling them would either slow down mail processing or scan too frequently.
+2. **Different IMAP operations** -- Monitor uses `fetch()` on INBOX. Sentinel uses `search()` across N folders. Completely different workloads.
+3. **Independence** -- Sentinel scanning should work even if Monitor or ActionFolderPoller are stopped/rebuilding.
 
-**Happy path: User moves message to `Actions/VIP Sender`**
+This follows the same pattern as ActionFolderPoller: a dedicated timer with its own `processing` guard.
+
+## Component Boundaries
+
+### New Components
+
+| Component | File | Responsibility |
+|-----------|------|----------------|
+| `SentinelStore` | `src/sentinel/store.ts` | SQLite table mapping Message-ID to folder path + purpose. CRUD operations. |
+| `SentinelPlanter` | `src/sentinel/planter.ts` | Constructs RFC 822 sentinel messages, APPENDs to folders via ImapClient. Marks as `\Seen` to avoid unread noise. |
+| `SentinelScanner` | `src/sentinel/scanner.ts` | Periodic timer. SEARCHes for sentinel header across all IMAP folders. Compares found locations to SentinelStore. Triggers healing. |
+| `SentinelHealer` | `src/sentinel/healer.ts` | Updates ConfigRepository folder references when renames detected. Re-plants sentinels when deleted. Sends INBOX notification on folder deletion. |
+| `SentinelManager` | `src/sentinel/index.ts` | Facade that wires Planter, Scanner, Store, Healer together. Exposes `start()`, `stop()`, `plantAll()`, `scan()`. |
+
+### Existing Components Modified
+
+| Component | Modification | Why |
+|-----------|-------------|-----|
+| `ImapClient` | Add `append()`, `search()`, `messageDelete()` methods wrapping ImapFlow | Sentinel needs APPEND to plant messages, SEARCH by header to find them, DELETE to clean up |
+| `ImapFlowLike` interface | Add `append`, `search`, `messageDelete` to the interface | Type safety for the new ImapClient methods |
+| `ActivityLog` / migrations | New `sentinel_mappings` table via migration | Persistent storage for sentinel Message-ID -> folder mappings |
+| `ConfigRepository` | Add method to bulk-update folder references across all config sections | When a rename is detected, ALL references to old path must change atomically |
+| `ensureActionFolders` | After creating folders, call `SentinelPlanter.plant()` for each | New action folders get sentinels immediately |
+| `src/index.ts` | Wire up SentinelManager, pass to lifecycle hooks | Startup planting, periodic scanning, rebuild on IMAP reconnect |
+
+### Components NOT Modified
+
+| Component | Why Left Alone |
+|-----------|---------------|
+| Monitor | Does not interact with sentinels. Sentinels are marked `\Seen` and have no From address, so they won't match any rules. |
+| ReviewSweeper | Sentinels in Review folder will be old+read, but sweep should skip them. Add sentinel Message-ID check OR use a custom flag. |
+| ActionFolderProcessor | Action folders should always be empty. If a sentinel somehow ends up being "processed," the lack of From header means extraction fails gracefully. |
+
+## Data Model
+
+### sentinel_mappings Table (SQLite, via migration)
+
+```sql
+CREATE TABLE sentinel_mappings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  message_id TEXT NOT NULL UNIQUE,     -- RFC 822 Message-ID of sentinel
+  folder_path TEXT NOT NULL,           -- Current known folder path
+  purpose TEXT NOT NULL,               -- 'rule_target', 'review', 'action_prefix', 'sweep_default', 'trash'
+  config_key TEXT,                     -- JSON path into config for this ref, e.g. 'review.folder' or 'rules[uuid].action.folder'
+  planted_at TEXT NOT NULL DEFAULT (datetime('now')),
+  last_seen_at TEXT,                   -- Updated each scan when sentinel found
+  status TEXT NOT NULL DEFAULT 'active' -- 'active', 'missing', 'orphaned'
+);
+CREATE INDEX idx_sentinel_message_id ON sentinel_mappings(message_id);
+CREATE INDEX idx_sentinel_folder ON sentinel_mappings(folder_path);
+CREATE INDEX idx_sentinel_status ON sentinel_mappings(status);
+```
+
+**Purpose values and their config locations:**
+
+| Purpose | Config Key Pattern | Example |
+|---------|-------------------|---------|
+| `rule_target` | `rules[{id}].action.folder` | `rules[abc-123].action.folder = "Receipts"` |
+| `review` | `review.folder` | `review.folder = "Review"` |
+| `review_archive` | `review.defaultArchiveFolder` | `review.defaultArchiveFolder = "MailingLists"` |
+| `trash` | `review.trashFolder` | `review.trashFolder = "Trash"` |
+| `action_prefix` | `actionFolders.prefix` | `actionFolders.prefix = "Actions"` |
+
+### Sentinel Message Format
 
 ```
-1. ActionFolderProcessor poll fires
-2. Fetch messages from "Actions/VIP Sender" folder (withMailboxLock)
-3. For each message:
-   a. Extract sender from envelope From header -> normalize to lowercase bare address
-   b. Look up action type from ActionRegistry by folder path -> "vip"
-   c. Registry says: { ruleAction: 'skip', destination: defaultArchiveFolder }
-   d. Check for existing sender-only skip rule with same sender glob (idempotency)
-   e. If no existing rule: ConfigRepository.addRule({ match: { sender: addr }, action: { type: 'skip' }, name: 'VIP: sender@example.com', order: nextOrder() })
-   f. Move message from "Actions/VIP Sender" to defaultArchiveFolder
-   g. Log to ActivityLog with source='action-folder'
-4. Folder is now empty
+From: sentinel@mail-mgr.local
+To: sentinel@mail-mgr.local
+Subject: [mail-mgr sentinel] Do not delete
+Date: {RFC 2822 date}
+Message-ID: <sentinel-{uuid}@mail-mgr.local>
+X-Mail-Mgr-Sentinel: {uuid}
+X-Mail-Mgr-Version: 1
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+This message is a tracking sentinel planted by mail-mgr.
+It is used to detect folder renames and deletions.
+Do not delete this message. If you move it, mail-mgr will
+detect the folder rename and update its configuration.
 ```
 
-**Undo path: User moves message to `Actions/Undo VIP`**
+**Key design choices:**
+- `X-Mail-Mgr-Sentinel` custom header with a UUID -- this is what SEARCH looks for
+- Marked `\Seen` on APPEND so it doesn't show as unread
+- Human-readable body explaining its purpose (in case user sees it)
+- `Message-ID` uses a sentinel-prefixed UUID for uniqueness and identifiability
+- The UUID in the header matches the UUID in Message-ID for cross-referencing
+
+## Data Flow
+
+### Planting Flow (Startup + On Folder Creation)
 
 ```
-1-3a. Same as above
-   b. Registry says: { undoAction: 'skip', destination: defaultArchiveFolder }
-   c. Find existing sender-only skip rule for this sender
-   d. If found: ConfigRepository.deleteRule(rule.id)
-   e. Move message to defaultArchiveFolder (regardless of whether rule existed)
-   f. Log to ActivityLog
+1. Collect all tracked folders from config:
+   - review.folder
+   - review.defaultArchiveFolder
+   - review.trashFolder
+   - All unique rule action.folder values (where action.type === 'move' or 'review')
+   - actionFolders.prefix (plant in the prefix folder itself)
+
+2. For each folder:
+   a. Check SentinelStore -- does an active sentinel already exist for this folder?
+   b. YES: Skip (already planted)
+   c. NO: Generate UUID, build RFC 822 message, APPEND to folder with \Seen flag
+   d. Store Message-ID -> folder mapping in SentinelStore
+
+3. De-duplicate: Multiple rules targeting the same folder share ONE sentinel
 ```
 
-**Error path: No parseable From address**
+### Scanning Flow (Periodic, every 5 minutes)
 
 ```
-1-3a. From header missing or malformed
-   b. Log error with message details
-   c. Move message to INBOX (safe fallback)
-   d. Do NOT leave message in action folder
+1. Get all IMAP folders via listMailboxes()
+2. For each folder:
+   a. SEARCH for messages with header X-Mail-Mgr-Sentinel (existence check)
+   b. If found: FETCH the X-Mail-Mgr-Sentinel header value to get the UUID
+   c. Look up UUID in SentinelStore
+   d. Compare found folder path vs stored folder path
+
+3. Three outcomes per sentinel:
+   SAME FOLDER  -> Update last_seen_at, continue
+   DIFFERENT FOLDER -> RENAME DETECTED: trigger healing
+   NOT FOUND ANYWHERE -> DELETION or sentinel deleted: trigger re-plant or notify
 ```
 
-**Startup recovery path:**
+**Critical optimization:** Don't search every folder on every scan. Use a two-phase approach:
+1. First, search ONLY the folders where sentinels are expected (from SentinelStore)
+2. If any sentinel is missing from its expected folder, THEN do a broader search across all folders
+
+This keeps the common case (nothing changed) to N SEARCH commands where N is the number of tracked folders, rather than scanning every folder in the account.
+
+### Healing Flow (On Rename Detection)
 
 ```
-1. After IMAP connect, before starting normal monitoring
-2. For each action folder: fetch all messages
-3. Process each message through normal action folder pipeline
-4. Idempotency ensures no duplicate rules if crash was mid-processing
-5. Then start normal poll timer
+1. Sentinel found in folder "NewReceipts" but SentinelStore says "Receipts"
+2. SentinelHealer:
+   a. Look up all config references to "Receipts" via SentinelStore.config_key
+   b. Call ConfigRepository.updateFolderReferences("Receipts", "NewReceipts")
+      - This updates rules, review config, action folder config as needed
+   c. Update SentinelStore: folder_path = "NewReceipts"
+   d. Log activity: "Folder renamed: Receipts -> NewReceipts (auto-healed)"
+   e. FolderCache.refresh() to pick up new folder list
 ```
 
-## New Components Detail
+### Re-Plant Flow (On Sentinel Deletion)
 
-### ActionRegistry
+```
+1. Sentinel not found in expected folder OR anywhere
+2. Check: Does the expected folder still exist? (via status())
+   a. YES, folder exists but sentinel gone:
+      - User deleted the sentinel message
+      - Re-plant a new sentinel, update SentinelStore with new Message-ID
+      - Log: "Re-planted sentinel in {folder} (previous sentinel was deleted)"
+   b. NO, folder does not exist:
+      - Check all folders (broader search) -- maybe it was renamed AND sentinel deleted
+      - If still not found: folder is truly gone
+      - Mark sentinel as 'orphaned' in SentinelStore
+      - Send notification to INBOX (APPEND a notification message)
+      - Log: "Folder deleted: {folder} -- sentinel lost, notification sent"
+```
 
-A static registry mapping action type keys to their behavior. Use a plain object/Map, not a class hierarchy.
+### INBOX Notification Format (On Folder Deletion)
+
+```
+From: mail-mgr@localhost
+To: {user's email}
+Subject: [mail-mgr] Folder deleted: {folder_path}
+Date: {RFC 2822 date}
+Message-ID: <notification-{uuid}@mail-mgr.local>
+Content-Type: text/plain; charset=utf-8
+
+mail-mgr detected that the folder "{folder_path}" no longer exists.
+
+This folder was referenced by:
+- {list of config references}
+
+These references have been disabled. Please update your configuration
+to point to a new folder, or recreate the original folder.
+```
+
+## Integration with IMAP Connection Sharing
+
+The sentinel system shares the single ImapClient like everything else. Key considerations:
+
+### Connection Contention
+
+All IMAP operations go through the single ImapFlow connection. The sentinel scanner runs SEARCH commands that briefly lock the connection (via `withMailboxLock` or direct `search()` calls). This could block Monitor's `fetchNewMessages` or ActionFolderPoller's `status()` checks.
+
+**Mitigation:**
+- Sentinel scans run every 5 minutes (infrequent)
+- Each SEARCH is fast (header-only search, no body scanning)
+- Scanner yields between folders (process one folder at a time, release lock)
+- ImapFlow internally queues commands, so there's no deadlock risk -- just queuing delay
+
+### New ImapClient Methods Needed
 
 ```typescript
-interface ActionDefinition {
-  folderSuffix: string;           // e.g., "VIP Sender"
-  mode: 'create' | 'remove';     // create rule or remove rule
-  ruleActionType: 'skip' | 'delete'; // the rule action type to create/find
-  getDestination: (ctx: ActionContext) => string; // where to move the message after
-  namePrefix: string;             // e.g., "VIP" -> "VIP: sender@example.com"
+// Add to ImapClient class:
+
+/** Append a message to the specified folder. Returns the UID if available. */
+async append(folder: string, content: string | Buffer, flags?: string[]): Promise<{ uid?: number }> {
+  if (!this.flow) throw new Error('Not connected');
+  return await this.flow.append(folder, content, flags ?? []);
 }
 
-// Registry is a Map<string, ActionDefinition> keyed by action type id
-const DEFAULT_ACTIONS: Record<string, ActionDefinition> = {
-  vip: {
-    folderSuffix: 'VIP Sender',
-    mode: 'create',
-    ruleActionType: 'skip',
-    getDestination: (ctx) => ctx.defaultArchiveFolder,
-    namePrefix: 'VIP',
-  },
-  block: {
-    folderSuffix: 'Block Sender',
-    mode: 'create',
-    ruleActionType: 'delete',
-    getDestination: (ctx) => ctx.trashFolder,
-    namePrefix: 'Block',
-  },
-  undoVip: {
-    folderSuffix: 'Undo VIP',
-    mode: 'remove',
-    ruleActionType: 'skip',
-    getDestination: (ctx) => ctx.defaultArchiveFolder,
-    namePrefix: 'Undo VIP',
-  },
-  unblock: {
-    folderSuffix: 'Unblock Sender',
-    mode: 'remove',
-    ruleActionType: 'delete',
-    getDestination: (ctx) => 'INBOX',
-    namePrefix: 'Unblock',
-  },
-};
-```
+/** Search for messages matching criteria in the specified folder. Returns UIDs. */
+async search(folder: string, criteria: Record<string, unknown>): Promise<number[]> {
+  return this.withMailboxLock(folder, async (flow) => {
+    const results = await flow.search(criteria, { uid: true });
+    return results as number[];
+  });
+}
 
-This is extensible: adding `Actions/Route to Review` in a future milestone means adding one entry to the registry.
-
-### ActionFolderProcessor
-
-```typescript
-interface ActionFolderProcessorDeps {
-  imapClient: ImapClient;
-  configRepo: ConfigRepository;
-  activityLog: ActivityLog;
-  registry: ActionRegistry;
-  config: ActionFolderConfig;  // prefix, folder names, poll interval
-  trashFolder: string;
-  defaultArchiveFolder: string;
-  logger: pino.Logger;
+/** Delete messages by UID in the specified folder. */
+async deleteMessages(folder: string, uids: number[]): Promise<void> {
+  await this.withMailboxLock(folder, async (flow) => {
+    await flow.messageDelete(uids.join(','), { uid: true });
+  });
 }
 ```
 
-Key design decisions:
-- **Own poll timer** (not shared with MoveTracker). Default interval: 15 seconds for responsiveness. Configurable.
-- **Serialized processing** (same `processing` guard as Monitor). One poll at a time.
-- **Per-message error isolation** (same pattern as Monitor: try/catch per message, log error, continue to next).
-- **Folder-path-to-action lookup**: Build a Map from full folder path (e.g., `Actions/VIP Sender`) to ActionDefinition on construction. Rebuilt on config change.
-
-### Config Schema Addition
+### ImapFlowLike Interface Additions
 
 ```typescript
-const actionFolderConfigSchema = z.object({
-  enabled: z.boolean().default(true),
-  prefix: z.string().min(1).default('Actions'),
-  pollInterval: z.number().int().positive().default(15),  // seconds
-  folders: z.object({
-    vip: z.string().min(1).default('VIP Sender'),
-    block: z.string().min(1).default('Block Sender'),
-    undoVip: z.string().min(1).default('Undo VIP'),
-    unblock: z.string().min(1).default('Unblock Sender'),
-  }).default({}),
-});
-
-// Added to configSchema:
-export const configSchema = z.object({
-  imap: imapConfigSchema,
-  server: serverConfigSchema,
-  rules: z.array(ruleSchema).default([]),
-  review: reviewConfigSchema.default(reviewDefaults),
-  actionFolders: actionFolderConfigSchema.default({}),  // NEW
-});
+// Add to ImapFlowLike interface:
+append(path: string, content: string | Buffer, flags?: string[], idate?: Date): Promise<unknown>;
+search(criteria: Record<string, unknown>, options?: { uid?: boolean }): Promise<number[]>;
+messageDelete(range: string | number[], options?: { uid?: boolean }): Promise<boolean>;
 ```
 
-### ConfigRepository Addition: findSenderRule
+## Integration with ensureActionFolders
 
-The disposition routes already filter sender-only rules by action type. Action folder processing needs the same query but for a specific sender. Add to ConfigRepository:
+When action folders are created on startup, sentinels should be planted immediately after. The integration point is in `src/index.ts`:
+
+```
+Current flow:
+  ensureActionFolders() -> actionFolderPoller.scanAll() -> monitor.start()
+
+New flow:
+  ensureActionFolders() -> sentinelManager.plantAll() -> actionFolderPoller.scanAll() -> monitor.start()
+```
+
+`plantAll()` is idempotent -- it checks SentinelStore before planting. So it's safe to call on every startup. It plants sentinels in ALL tracked folders, not just action folders.
+
+## Integration with ConfigRepository for Folder Reference Updates
+
+### New Method: updateFolderReferences
 
 ```typescript
-findSenderRule(sender: string, actionType: string): Rule | undefined {
-  return this.config.rules.find(r =>
-    isSenderOnly(r) &&
-    r.enabled &&
-    r.action.type === actionType &&
-    r.match.sender?.toLowerCase() === sender.toLowerCase()
-  );
+// Add to ConfigRepository:
+async updateFolderReferences(oldPath: string, newPath: string): Promise<string[]> {
+  const changes: string[] = [];
+
+  // 1. Review folder
+  if (this.config.review.folder === oldPath) {
+    this.config.review.folder = newPath;
+    changes.push('review.folder');
+  }
+
+  // 2. Default archive folder
+  if (this.config.review.defaultArchiveFolder === oldPath) {
+    this.config.review.defaultArchiveFolder = newPath;
+    changes.push('review.defaultArchiveFolder');
+  }
+
+  // 3. Trash folder
+  if (this.config.review.trashFolder === oldPath) {
+    this.config.review.trashFolder = newPath;
+    changes.push('review.trashFolder');
+  }
+
+  // 4. Rule move/review targets
+  for (const rule of this.config.rules) {
+    if (rule.action.type === 'move' && rule.action.folder === oldPath) {
+      rule.action.folder = newPath;
+      changes.push(`rules[${rule.id}].action.folder`);
+    }
+    if (rule.action.type === 'review' && rule.action.folder === oldPath) {
+      rule.action.folder = newPath;
+      changes.push(`rules[${rule.id}].action.folder`);
+    }
+  }
+
+  // 5. Action folder prefix
+  if (this.config.actionFolders.prefix === oldPath) {
+    this.config.actionFolders.prefix = newPath;
+    changes.push('actionFolders.prefix');
+  }
+
+  if (changes.length > 0) {
+    this.persist();
+    // Notify listeners so running components pick up changes
+    this.notifyRulesChange();
+    // NOTE: Do NOT fire onReviewConfigChange or onActionFolderConfigChange
+    // because those trigger full rebuilds. The sentinel healer handles
+    // the update surgically -- only the path changed, not the structure.
+  }
+
+  return changes;
 }
 ```
 
-This reuses the `isSenderOnly` predicate from `dispositions.ts`. Extract `isSenderOnly` to a shared location (e.g., `src/rules/predicates.ts`) so both dispositions routes and ConfigRepository can import it without a circular dependency.
-
-### ActivityLog Source Extension
-
-The `logActivity` method currently types `source` as `'arrival' | 'sweep' | 'batch'`. Extend to include `'action-folder'`:
-
-```typescript
-logActivity(result: ActionResult, message: EmailMessage, rule: Rule | null,
-  source: 'arrival' | 'sweep' | 'batch' | 'action-folder' = 'arrival'): void
-```
-
-Also update `isSystemMove` to include `'action-folder'` in the source list, since action folder moves are system-initiated (the MoveTracker should not re-detect them as user moves).
-
-### MoveTracker Exclusion
-
-The MoveTracker watches INBOX + Review for user-initiated moves. Action folders introduce system-initiated moves *from* action folders. Two concerns:
-
-1. **Messages disappearing from action folders**: MoveTracker doesn't watch action folders, so this is not an issue by default. Do NOT add action folders to MoveTracker's scan list.
-2. **Messages appearing in INBOX** (from Unblock Sender) or archive folders (from VIP/Undo): These are system moves. The `isSystemMove` check already covers this as long as we log with `source='action-folder'` and include `'action-folder'` in the system source list.
+**Critical concern:** The existing config change listeners (`onReviewConfigChange`, `onActionFolderConfigChange`) tear down and rebuild entire pipelines. A sentinel-triggered rename should NOT trigger those full rebuilds. The `updateFolderReferences` method persists the change but only fires `notifyRulesChange` (lightweight) -- the running Sweeper, Monitor, etc. will pick up the new paths on their next cycle naturally since they read from config.
 
 ## Patterns to Follow
 
-### Pattern 1: Per-Message Error Isolation
-**What:** Wrap each message's processing in try/catch, log error, continue to next message.
-**When:** All message processing loops (Monitor, Sweep, ActionFolderProcessor).
-**Why:** One malformed message must not block processing of remaining messages.
-**Example:** Already implemented in Monitor.processNewMessages and ReviewSweeper.runSweep.
+### Pattern 1: Idempotent Planting
 
-### Pattern 2: Serialized Processing Guard
-**What:** Boolean `processing` flag that skips re-entrant calls.
-**When:** Any async processing triggered by timer/event that could overlap.
-**Example:** Monitor's `if (this.processing) return;` pattern.
+**What:** Every call to `plantAll()` checks SentinelStore before planting. If a sentinel already exists for a folder, skip it. If a sentinel exists but the folder no longer needs tracking, mark it orphaned.
 
-### Pattern 3: Getter Functions for Hot-Swappable Components
-**What:** Pass `() => component` getters to the web server, not direct references.
-**When:** Components that get rebuilt on config change (Monitor, Sweeper, BatchEngine, now ActionFolderProcessor).
-**Example:** `getActionFolderProcessor: () => actionFolderProcessor` in buildServer deps.
+**When:** Startup, after folder creation, after config changes.
 
-### Pattern 4: ConfigRepository as Single Source of Truth for Rules
-**What:** All rule mutations go through ConfigRepository (addRule, deleteRule, updateRule).
-**When:** Always. Action folder processing MUST use ConfigRepository, not direct config file writes.
-**Why:** ConfigRepository notifies listeners (Monitor.updateRules, Sweeper.updateRules, BatchEngine.updateRules). Bypassing it breaks rule propagation.
+**Why:** The system may restart, reconnect, or have config changes at any time. Planting must be safe to repeat.
 
-### Pattern 5: Startup Recovery Before Normal Loop
-**What:** Process any pending items before starting the periodic timer.
-**When:** ActionFolderProcessor.start() -- process existing messages in action folders, then begin polling.
-**Example:** Similar to Monitor.start() which runs processNewMessages on connect before relying on IDLE.
+### Pattern 2: Two-Phase Scan
+
+**What:** First check expected locations (fast path). Only broaden search if something is missing.
+
+**When:** Every scan cycle.
+
+**Why:** An account may have hundreds of folders. Searching them all when nothing has changed is wasteful. The fast path checks only N tracked folders where N is typically 5-15.
+
+### Pattern 3: Defensive Sentinel Identification
+
+**What:** Use both the custom header (`X-Mail-Mgr-Sentinel`) AND the Message-ID pattern (`sentinel-*@mail-mgr.local`) for identification. The header is for IMAP SEARCH (server-side). The Message-ID is for cross-referencing with the SQLite store.
+
+**When:** Scanning and healing.
+
+**Why:** Some IMAP servers may not support header search perfectly. Having two identification methods provides a fallback. Also prevents collision with user messages.
+
+### Pattern 4: Processing Guard (Same as ActionFolderPoller)
+
+**What:** `SentinelScanner` uses a `processing` boolean guard to prevent concurrent scans, identical to `ActionFolderPoller.scanAll()`.
+
+**When:** Scan timer fires while a previous scan is still running.
+
+**Why:** IMAP operations are slow. A 5-minute scan interval with many folders could overlap.
 
 ## Anti-Patterns to Avoid
 
-### Anti-Pattern 1: IDLE for Action Folders
-**What:** Trying to use IMAP IDLE to watch action folders for instant response.
-**Why bad:** ImapFlow's IDLE watches one mailbox at a time (currently INBOX). Switching mailboxes for IDLE breaks the Monitor's INBOX watching. Would require multiple IMAP connections.
-**Instead:** Poll action folders on a short interval (15s default). The user won't notice the difference between instant and 15-second response.
+### Anti-Pattern 1: Scanning Inside Monitor's Poll Loop
 
-### Anti-Pattern 2: Piggybacking on MoveTracker
-**What:** Adding action folders to MoveTracker's scan list and detecting "moves to action folders" as signals.
-**Why bad:** MoveTracker is designed for detecting user move patterns for rule proposals. Action folder processing is a fundamentally different pipeline -- it needs to read message content, create/remove rules, and move messages. MoveTracker would need massive refactoring to handle this.
-**Instead:** Dedicated ActionFolderProcessor with its own poll cycle.
+**What:** Adding sentinel search into the Monitor's `processNewMessages` or the IDLE cycle.
 
-### Anti-Pattern 3: Direct IMAP Folder Monitoring in Monitor Class
-**What:** Extending Monitor.processNewMessages to also check action folders.
-**Why bad:** Monitor is tightly coupled to INBOX UID tracking (lastUid, cursor persistence). Action folders have different semantics -- process ALL messages, not just "new since last UID". Monitor would need significant refactoring.
-**Instead:** Separate ActionFolderProcessor class with its own simpler logic: fetch all messages in folder, process, move out.
+**Why bad:** Monitor is latency-sensitive for mail delivery. Adding SEARCH commands for N folders would add seconds of latency to every mail check. Also, Monitor only watches INBOX -- sentinels are in arbitrary folders.
 
-### Anti-Pattern 4: Storing Action Folder State in SQLite
-**What:** Tracking which action folder messages have been processed via a database table.
-**Why bad:** Unnecessary complexity. The "state" of action folder processing is the folder itself -- if the folder is empty, processing is complete. No cursor or UID tracking needed.
-**Instead:** Every poll: fetch all messages in each action folder, process them, move them out. If folder is empty, the poll is a no-op.
+**Instead:** Dedicated timer with its own cadence.
 
-### Anti-Pattern 5: Creating a New IMAP Connection for Action Folders
-**What:** Separate ImapClient instance for action folder polling.
-**Why bad:** Doubles connection count to IMAP server, which may have connection limits. Adds complexity for connection lifecycle management.
-**Instead:** Share the existing ImapClient. Use `withMailboxLock` to temporarily access action folders (already proven with Sweep and BatchEngine).
+### Anti-Pattern 2: Firing Full Config Rebuild on Rename
 
-## Integration Points with Existing Code
+**What:** Calling `updateReviewConfig()` or `updateActionFolderConfig()` to propagate a rename.
 
-### Modifications Required
+**Why bad:** Those methods trigger `onReviewConfigChange` / `onActionFolderConfigChange` listeners which tear down and rebuild Sweeper, ActionFolderPoller, etc. A simple path rename doesn't require full reconstruction.
 
-| File | Change | Reason |
-|------|--------|--------|
-| `src/config/schema.ts` | Add `actionFolderConfigSchema`, add to `configSchema` | Config for action folder feature |
-| `src/config/repository.ts` | Add `findSenderRule()` method | Idempotent rule lookup for action processing |
-| `src/log/index.ts` | Extend `source` union type to include `'action-folder'`, update `isSystemMove` | Activity logging and MoveTracker exclusion |
-| `src/web/routes/dispositions.ts` | Extract `isSenderOnly` to shared location | Reuse in ConfigRepository without circular dep |
-| `src/index.ts` | Wire up ActionFolderProcessor, add startup recovery, add to config change handlers | Lifecycle management |
+**Instead:** Direct config mutation + persist + lightweight notification. Running components read paths from config on each cycle.
 
-### New Files Required
+### Anti-Pattern 3: One Sentinel Per Config Reference
 
-| File | Purpose |
-|------|---------|
-| `src/action-folders/registry.ts` | ActionDefinition type and default action registry |
-| `src/action-folders/processor.ts` | ActionFolderProcessor class (poll, process, move) |
-| `src/action-folders/index.ts` | Re-exports |
-| `src/rules/predicates.ts` | Extracted `isSenderOnly` and new `findSenderRule` |
+**What:** Planting separate sentinels for every config reference to the same folder (e.g., 5 rules targeting "Receipts" = 5 sentinels in "Receipts").
 
-### Files That Need No Changes
+**Why bad:** Wastes messages, makes scanning slower, and folder rename produces 5 identical healing operations.
 
-| File | Why |
-|------|-----|
-| `src/imap/client.ts` | `createMailbox`, `withMailboxLock`, `moveMessage` already exist |
-| `src/monitor/index.ts` | Action folders are a separate pipeline |
-| `src/tracking/index.ts` | MoveTracker doesn't watch action folders |
-| `src/sweep/index.ts` | Sweep is independent |
-| `src/batch/index.ts` | Batch is independent |
-| `src/web/routes/rules.ts` | Rules created via action folders appear automatically |
-| `src/web/routes/dispositions.ts` | Disposition views query rules -- action folder rules appear automatically |
+**Instead:** One sentinel per unique folder path. The SentinelStore tracks which config keys reference that folder.
 
-## Suggested Build Order
+### Anti-Pattern 4: Relying on UID Stability Across Sessions
 
-Build order respects dependencies -- each phase can be tested before moving to the next.
+**What:** Storing the UID of planted sentinels and using it to find them later.
 
-| Phase | What | Dependencies | Testable? |
-|-------|------|-------------|-----------|
-| 1 | Config schema (`actionFolderConfigSchema`) | None | Yes -- Zod validation tests |
-| 2 | Extract `isSenderOnly` to `src/rules/predicates.ts`, add `findSenderRule` | Existing rules | Yes -- unit tests against rule arrays |
-| 3 | ActionRegistry (types + default actions map) | Config schema (for folder names) | Yes -- pure data, unit testable |
-| 4 | Extend ActivityLog source type + `isSystemMove` | None | Yes -- existing test patterns |
-| 5 | Folder creation on startup (create Actions/* folders via ImapClient.createMailbox) | Config schema, ImapClient | Yes -- integration test with mock ImapClient |
-| 6 | ActionFolderProcessor core (poll, fetch, process single message, move) | Registry, predicates, ActivityLog, ConfigRepo, ImapClient | Yes -- integration tests with mock deps |
-| 7 | Startup recovery (process pending messages before starting poll) | Processor | Yes -- test with pre-populated action folders |
-| 8 | Wire into src/index.ts (lifecycle, config change handlers, getter for web server) | All above | Manual/integration testing |
-| 9 | Idempotency hardening + edge cases (no From header, duplicate rules, crash recovery) | Processor | Yes -- targeted unit tests |
+**Why bad:** UIDs can change on IMAP server compaction, migration, or when UIDVALIDITY changes. The sentinel could get a new UID.
 
-**Phase ordering rationale:** Config schema first because everything depends on it. Predicates next because the processor needs them. Registry is pure data. ActivityLog extension is a one-line change but needed before processor can log. Folder creation is a prerequisite for the processor (folders must exist). Processor is the core feature. Startup recovery is an extension of the processor. Wiring is last because it depends on everything. Idempotency is last because it hardens what already works.
+**Instead:** Use SEARCH by header on every scan. Message-ID is the stable identifier, not UID.
+
+## Build Order
+
+Based on dependency analysis, build in this order:
+
+### Phase 1: Foundation (no IMAP needed)
+
+1. **SentinelStore** -- SQLite table + CRUD. No external dependencies beyond `better-sqlite3`. Can be fully unit tested.
+2. **Sentinel message builder** -- Pure function that generates RFC 822 message string from UUID. No I/O, fully unit testable.
+
+### Phase 2: IMAP Capabilities
+
+3. **ImapClient additions** -- Add `append()`, `search()`, `messageDelete()` methods. Add to `ImapFlowLike` interface. Integration-testable with mock ImapFlow.
+
+### Phase 3: Planting
+
+4. **SentinelPlanter** -- Depends on ImapClient.append() and SentinelStore. Collects tracked folders from config, deduplicates, plants, records.
+
+### Phase 4: Scanning
+
+5. **SentinelScanner** -- Depends on ImapClient.search(), SentinelStore, and folder listing. Implements two-phase scan. Detects renames and deletions.
+
+### Phase 5: Healing
+
+6. **ConfigRepository.updateFolderReferences()** -- Surgical config update method.
+7. **SentinelHealer** -- Depends on Scanner output, ConfigRepository, ImapClient (for re-planting and notifications). Orchestrates the response to detected changes.
+
+### Phase 6: Integration
+
+8. **SentinelManager facade** -- Wires everything together, exposes `start()`/`stop()`/`plantAll()`.
+9. **Startup integration** -- Wire into `src/index.ts` lifecycle: plant on startup, start scanner, rebuild on IMAP reconnect, handle config changes.
+
+### Phase 7: Sweeper Guard
+
+10. **ReviewSweeper sentinel exclusion** -- Ensure sweeper skips sentinel messages in Review folder. Simplest approach: check if message has `X-Mail-Mgr-Sentinel` header before sweeping.
+
+### Phase 8: UI Cleanup
+
+11. **Remove folder rename card** from settings page -- The sentinel system replaces manual folder rename management.
 
 ## Scalability Considerations
 
-| Concern | Expected Load | Approach |
-|---------|--------------|----------|
-| Poll frequency | 4 folders every 15s | Each poll is 4 folder fetches. With 0 messages (typical), this is 4 lightweight IMAP STATUS or FETCH commands. Negligible. |
-| Messages in action folders | Usually 1-2 at a time | No batching needed. Sequential per-message processing is fine. |
-| Rule count growth | Rules accumulate over months | `findSenderRule` is O(n) over all rules. With hundreds of rules this is negligible. If it ever matters, add an index. |
-| IMAP connection sharing | Single connection, multiple consumers | `withMailboxLock` serializes access. Action folder polls are brief (fetch + move). Monitor IDLE is temporarily suspended during the lock but resumes immediately. 15s poll interval means at most a few seconds of lock time per cycle. |
+| Concern | 5 tracked folders | 50 tracked folders | 200+ tracked folders |
+|---------|-------------------|--------------------|----------------------|
+| Scan time (fast path) | ~1s (5 SEARCH) | ~10s (50 SEARCH) | ~40s (serialize, stagger) |
+| Sentinel messages | 5 messages total | 50 messages total | Consider batching scans |
+| IMAP contention | Negligible | Moderate (10s lock) | Must yield between folders |
+| SQLite queries | Trivial | Trivial | Still trivial (indexed) |
+
+For this personal-use single-instance app, even 50 tracked folders is unlikely. The two-phase scan optimization keeps the common case fast.
 
 ## Sources
 
-- Existing codebase: `src/monitor/index.ts`, `src/tracking/index.ts`, `src/sweep/index.ts`, `src/actions/index.ts`, `src/config/schema.ts`, `src/config/repository.ts`, `src/imap/client.ts`, `src/log/index.ts`, `src/web/routes/dispositions.ts`
-- PRD: `docs/prd-v0.6.md`
-- Project context: `.planning/PROJECT.md`
-- ImapFlow documentation: IDLE watches single mailbox, `mailboxCreate` for folder creation (HIGH confidence from codebase -- already used in `executeMove`)
+- [ImapFlow documentation](https://imapflow.com/docs/) -- APPEND, SEARCH, messageDelete APIs
+- [ImapFlow search guide](https://imapflow.com/docs/guides/searching/) -- Header search syntax: `{ header: { 'X-Custom': true } }`
+- [ImapFlow message operations](https://deepwiki.com/postalsys/imapflow/5-message-operations) -- append() signature: `append(path, content, flags, idate)`
+- Existing codebase: `src/imap/client.ts`, `src/action-folders/poller.ts`, `src/config/repository.ts`, `src/index.ts`
