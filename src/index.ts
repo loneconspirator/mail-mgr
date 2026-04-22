@@ -10,7 +10,7 @@ import { FolderCache } from './folders/index.js';
 import { BatchEngine } from './batch/index.js';
 import { MoveTracker } from './tracking/index.js';
 import { ensureActionFolders, ActionFolderPoller, ActionFolderProcessor } from './action-folders/index.js';
-import { SentinelStore, runSentinelSelfTest, collectTrackedFolders, reconcileSentinels } from './sentinel/index.js';
+import { SentinelStore, SentinelScanner, runSentinelSelfTest, collectTrackedFolders, reconcileSentinels } from './sentinel/index.js';
 import { SignalStore } from './tracking/signals.js';
 import { DestinationResolver } from './tracking/destinations.js';
 import { ProposalStore } from './tracking/proposals.js';
@@ -57,6 +57,7 @@ async function main(): Promise<void> {
 
   const sentinelStore = new SentinelStore(activityLog.getDb());
   let sentinelEnabled = false;
+  let sentinelScanner: SentinelScanner | undefined;
 
   // H1: Create ReviewSweeper (trash folder resolved after IMAP connect)
   let sweeper: ReviewSweeper | undefined = new ReviewSweeper({
@@ -170,6 +171,10 @@ async function main(): Promise<void> {
       actionFolderPoller.stop();
       actionFolderPoller = undefined;
     }
+    if (sentinelScanner) {
+      sentinelScanner.stop();
+      sentinelScanner = undefined;
+    }
     await monitor.stop();
 
     await imapClient.disconnect();
@@ -267,6 +272,17 @@ async function main(): Promise<void> {
       const sentinelResult = await reconcileSentinels(trackedImap, sentinelStore, newClient, logger);
       logger.info({ ...sentinelResult }, 'Sentinel reconciliation after IMAP reconnect');
     }
+
+    // Rebuild sentinel scanner with new client
+    const updatedConfigForScanner = configRepo.getConfig();
+    sentinelScanner = new SentinelScanner({
+      client: newClient,
+      sentinelStore,
+      scanIntervalMs: updatedConfigForScanner.sentinel.scanIntervalMs,
+      enabled: sentinelEnabled,
+      logger,
+    });
+    sentinelScanner.start();
   });
 
   // H5: Pass getter functions so routes always read the current instance
@@ -347,6 +363,16 @@ async function main(): Promise<void> {
     const sentinelResult = await reconcileSentinels(tracked, sentinelStore, imapClient, logger);
     logger.info({ ...sentinelResult }, 'Initial sentinel reconciliation complete');
   }
+
+  // Start sentinel scanner (D-09: after self-test, independent timer)
+  sentinelScanner = new SentinelScanner({
+    client: imapClient,
+    sentinelStore,
+    scanIntervalMs: config.sentinel.scanIntervalMs,
+    enabled: sentinelEnabled,
+    logger,
+  });
+  sentinelScanner.start();
 
   // D-05: Start monitor AFTER action folders are drained
   await monitor.start();
