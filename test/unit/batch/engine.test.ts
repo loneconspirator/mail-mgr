@@ -596,8 +596,8 @@ describe('BatchEngine INBOX mode', () => {
     const engine = new BatchEngine(deps);
     await engine.execute('INBOX');
 
-    // executeAction respects the rule's explicit folder; falls back to reviewFolder only when absent
-    expect(deps.client.moveMessage).toHaveBeenCalledWith(1, 'Newsletters', 'INBOX');
+    // review always routes to reviewFolder; action.folder is only used by sweep later
+    expect(deps.client.moveMessage).toHaveBeenCalledWith(1, 'Review', 'INBOX');
   });
 
   it('skip actions leave message in INBOX', async () => {
