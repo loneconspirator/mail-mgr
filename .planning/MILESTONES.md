@@ -1,5 +1,23 @@
 # Milestones
 
+## v0.7 Sentinel Message System (Shipped: 2026-04-23)
+
+**Phases completed:** 7 phases, 13 plans, 16 tasks
+
+**Key accomplishments:**
+
+- Pure-function RFC 2822 sentinel message builder with INBOX guard, header injection prevention, and purpose-specific body text
+- SQLite persistence layer for sentinel-to-folder mappings with full CRUD, migration, and barrel export
+- ImapClient extended with appendMessage, searchByHeader, deleteMessage methods via TDD for sentinel IMAP transport layer
+- RED phase
+- 1. [Rule 2 - Missing] Barrel export for lifecycle functions
+- 1. [Rule 2 - Missing] Restructured onActionFolderConfigChange to avoid early returns
+- TDD sentinel healer with rename auto-healing, sentinel replanting, and folder-loss notification via INBOX append with dedup tracking
+- Sentinel healer wired into both startup and IMAP reconnect SentinelScanner instantiations via onScanComplete callback
+- Removed manual folder rename UI card, API endpoint, and CSS -- ~400 lines of dead code eliminated after sentinel auto-healing made it unnecessary
+
+---
+
 ## v0.6 Action Folders (Shipped: 2026-04-22)
 
 **Phases completed:** 9 phases (17-25), 16/17 plans executed, 22 tasks

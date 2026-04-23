@@ -79,21 +79,12 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Folder rename card removed from settings page (superseded by sentinel auto-healing) — v0.7 Phase 32
 - ✓ Folder rename API endpoint removed — v0.7 Phase 32
 
+- ✓ Sentinel message format with unique headers planted in every tracked folder — v0.7
+- ✓ Message-ID based mapping stored alongside folder purpose — v0.7
+
 ### Active
 
-- Sentinel message format with unique headers planted in every tracked folder — partially validated v0.7 Phase 26 (format builder + SQLite store), Phase 27 (IMAP APPEND/SEARCH/DELETE operations + self-test), Phase 28 (lifecycle planting + cleanup on config changes)
-- Message-ID based mapping stored alongside folder purpose — partially validated v0.7 Phase 26, Phase 27 (IMAP operations layer complete), Phase 28 (reconciliation logic + startup wiring)
-
-## Current Milestone: v0.7 Sentinel Message System
-
-**Goal:** Use IMAP messages as persistent, relocatable tracking beacons to detect folder renames/deletions and automatically maintain all folder references.
-
-**Target features:**
-- Sentinel message core (format, planting, discovery, Message-ID storage)
-- Folder tracking integration (wire sentinels into action folders, rule targets, sweep targets)
-- Rename detection and auto-healing (periodic scan, reference update)
-- Failure detection and INBOX notification
-- Settings UI cleanup (remove folder rename card)
+(None — planning next milestone)
 
 ### Out of Scope
 
@@ -113,8 +104,8 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - **Mail client:** Any folder-based mail client (Mac Mail, Thunderbird, etc.)
 - **Database:** SQLite via better-sqlite3
 - **Web UI:** Vanilla HTML/CSS/JS SPA served by Fastify
-- **Testing:** Vitest with 700+ tests (unit + integration)
-- **Codebase:** ~10,000 LOC TypeScript across 50+ source files
+- **Testing:** Vitest with 759+ tests (unit + integration)
+- **Codebase:** ~13,500 LOC TypeScript across 55+ source files
 - **Architecture:** Monitor loop polls IMAP, evaluates rules, executes actions, logs activity. Sweep runs periodically on Review folder. BatchEngine applies rules retroactively with chunked execution. Web server exposes REST API for UI.
 - **Key insight:** Folder structure is primarily owned by the mail client/IMAP server. The system discovers what folders exist and uses them. Exception: Action Folders (v0.6) creates a dedicated `Actions/` hierarchy for drag-to-act functionality.
 - **Design assumption:** Users may have years of accumulated mail with inconsistent organization. The folder taxonomy works with what exists, not imposing a new structure.
@@ -150,6 +141,11 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 | "Skip" displayed as "Leave in Place" in UI | "Skip" was ambiguous — "Leave in Place" clearly communicates the email stays untouched. Backend/API/storage retains `skip` as the canonical value; only UI display text changed. | ✓ Good |
 | Disposition views are query-based filters, not separate storage | Views filter existing sender-only rules by action type — no new data model, no sync issues, zero storage overhead | ✓ Good |
 | Shared render functions for disposition view types | renderDispositionView (flat) and renderFolderGroupedView (accordion) handle all 4 views via parameters, eliminating duplication | ✓ Good |
+| Message-ID as persistent sentinel identifier | UIDs change with UIDVALIDITY; Message-ID is immutable and survives folder moves | ✓ Good |
+| Two-tier sentinel scan (fast-path then deep) | Fast-path checks expected folder first; deep scan across all folders only when sentinel missing — minimizes IMAP traffic | ✓ Good |
+| Auto-healing bypasses ConfigRepository listeners | Prevents full pipeline rebuilds on folder rename; surgical reference updates only | ✓ Good |
+| INBOX never gets a sentinel | INBOX cannot be renamed/deleted — sentinel provides zero value, would just confuse users | ✓ Good |
+| Sentinel auto-healing replaces manual folder rename UI | Auto-healing is superior — no user action needed, covers renames done in any mail client | ✓ Good |
 
 ## Evolution
 
@@ -169,4 +165,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-22 after Phase 32 completion (UI cleanup — removed folder rename card and API, superseded by sentinel auto-healing)*
+*Last updated: 2026-04-23 after v0.7 milestone (Sentinel Message System shipped — folder tracking beacons, rename detection, auto-healing)*
