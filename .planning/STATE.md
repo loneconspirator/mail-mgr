@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.7
-milestone_name: Sentinel Message System
-status: complete
-last_updated: "2026-04-23T22:56:21.251Z"
-last_activity: 2026-04-23
+milestone: v0.8
+milestone_name: Action Folder Safety Hardening
+status: planning
+last_updated: "2026-04-24T22:58:45.338Z"
+last_activity: 2026-04-24
 progress:
-  total_phases: 7
-  completed_phases: 7
-  total_plans: 13
-  completed_plans: 13
-  percent: 100
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -24,11 +24,11 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 
 ## Current Position
 
-Milestone: v0.7 Sentinel Message System — SHIPPED 2026-04-23
-Status: Complete
-Last activity: 2026-04-23
+Milestone: v0.8 Action Folder Safety Hardening — Active
+Status: Planning
+Last activity: 2026-04-24
 
-Progress: [██████████] 100% (13/13 plans, 7/7 phases)
+Progress: [░░░░░░░░░░] 0% (0/0 plans, 0/1 phases)
 
 ## Performance Metrics
 
@@ -61,9 +61,14 @@ Recent decisions affecting current work:
 1. **Prevent redundant proposed rules and handle rule ordering conflicts** — Block approval of rules that duplicate existing criteria; warn when shadowed by higher-priority rules with reorder option
 2. **Populate delivered-to field in proposed rules and modify form** — Include delivered-to as matcher in proposals, prepopulate in Modify modal
 
+### Roadmap Evolution
+
+- v0.8 milestone created: Action Folder Safety Hardening (incident-driven, 2026-04-24)
+- Phase 33 added: Action Folder Safety Hardening — sentinel-aware skip, circuit breaker, diagnostic logging
+
 ### Blockers/Concerns
 
-(None — milestone complete)
+(None)
 
 ### Quick Tasks Completed
 
@@ -75,5 +80,5 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-23
+Last session: 2026-04-24T22:58:45.334Z
 Last activity: 2026-04-23 — v0.7 milestone shipped, archived to milestones/
