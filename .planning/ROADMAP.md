@@ -128,17 +128,10 @@ Incident-driven hardening of the action-folder pipeline to prevent mass erroneou
 
 ### Phase 33: Action Folder Safety Hardening
 
-**Goal:** Prevent action-folder processor from creating mass erroneous rules and eliminate wasteful sentinel-only IMAP polling
+**Goal:** Fix processor bugs (pre-move logging, duplicate fall-through), add sentinel-aware polling skip, and diagnostic logging
 **Depends on:** v0.7 Sentinel Message System
-
-**Tasks:**
-1. Poller sentinel-aware skip — skip `fetchAllMessages` when `status.messages` equals expected sentinel count (1 per folder), avoiding unnecessary IMAP round-trips every 15 seconds
-2. Processor circuit breaker — halt and log alarm if a single scan cycle tries to create more than N rules (e.g. 5), preventing mass erroneous rule floods
-3. Diagnostic logging — log sender/subject for every message processed from action folders so root cause of phantom messages can be diagnosed
-
-**Plans:** TBD
-**Depends on:** Phase 0
-**Plans:** 0 plans
+**Plans:** 2 plans
 
 Plans:
-- [ ] TBD (run /gsd-plan-phase 1 to break down)
+- [ ] 33-01-PLAN.md — Fix processor bugs (D-05 post-move logging, D-06 duplicate early return) and add diagnostic logging (D-07)
+- [ ] 33-02-PLAN.md — Add sentinel-aware skip to poller (D-01 skip on messages=1, D-02 skip on messages=0)
