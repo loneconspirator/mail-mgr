@@ -35,7 +35,14 @@ export class ActionFolderPoller {
       for (const { path, actionType } of folders) {
         try {
           const { messages } = await this.deps.client.status(path);
-          if (messages === 0) continue;
+          if (messages === 0) {
+            this.deps.logger.debug({ folder: path }, 'Action folder empty (sentinel missing), skipping');
+            continue;
+          }
+          if (messages === 1) {
+            this.deps.logger.debug({ folder: path }, 'Action folder has only sentinel, skipping fetch');
+            continue;
+          }
 
           this.deps.logger.info({ folder: path, count: messages }, 'Processing action folder');
           const rawMessages = await this.deps.client.fetchAllMessages(path);
