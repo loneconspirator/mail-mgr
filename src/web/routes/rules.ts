@@ -52,6 +52,22 @@ export function registerRuleRoutes(app: FastifyInstance, deps: ServerDeps): void
     return reply.status(204).send();
   });
 
+  app.delete('/api/rules', async (request, reply) => {
+    const query = request.query as { namePrefix?: string };
+    if (!query.namePrefix || query.namePrefix.length < 2) {
+      return reply.status(400).send({ error: 'namePrefix query parameter required (min 2 chars)' });
+    }
+    const rules = deps.configRepo.getRules();
+    const toDelete = rules.filter(r => r.name?.startsWith(query.namePrefix!));
+    if (toDelete.length === 0) {
+      return reply.status(404).send({ error: 'No rules matched' });
+    }
+    for (const rule of toDelete) {
+      deps.configRepo.deleteRule(rule.id);
+    }
+    return { deleted: toDelete.length, names: toDelete.map(r => r.name) };
+  });
+
   app.put<{ Body: Array<{ id: string; order: number }> }>('/api/rules/reorder', async (request, reply) => {
     const pairs = request.body as Array<{ id: string; order: number }>;
     if (!Array.isArray(pairs)) {

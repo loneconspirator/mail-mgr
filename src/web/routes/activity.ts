@@ -28,6 +28,16 @@ export function registerActivityRoutes(app: FastifyInstance, deps: ServerDeps): 
     }));
   });
 
+  // DELETE /api/activity — purge entries by action and optional source
+  app.delete('/api/activity', async (request, reply) => {
+    const query = request.query as { action?: string; source?: string };
+    if (!query.action) {
+      return reply.status(400).send({ error: 'action query parameter required' });
+    }
+    const deleted = deps.activityLog.purgeByAction(query.action, query.source);
+    return { deleted };
+  });
+
   // GET /api/activity/recent-folders -- distinct folder destinations, most recent first
   app.get<{ Querystring: { limit?: string } }>('/api/activity/recent-folders', async (request) => {
     const query = request.query as { limit?: string };

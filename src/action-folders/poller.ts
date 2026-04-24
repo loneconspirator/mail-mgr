@@ -40,23 +40,31 @@ export class ActionFolderPoller {
           this.deps.logger.info({ folder: path, count: messages }, 'Processing action folder');
           const rawMessages = await this.deps.client.fetchAllMessages(path);
 
+          let sentinelCount = 0;
           for (const raw of rawMessages) {
             const msg = reviewMessageToEmailMessage(raw);
-            await this.deps.processor.processMessage(msg, actionType);
+            const result = await this.deps.processor.processMessage(msg, actionType);
+            if (result.ok && result.sender === 'sentinel') sentinelCount++;
           }
 
           // FOLD-02: Verify always-empty invariant
-          const recheck = await this.deps.client.status(path);
-          if (recheck.messages > 0) {
-            this.deps.logger.warn({ folder: path, remaining: recheck.messages }, 'Messages remain after processing, retrying');
-            const retryMessages = await this.deps.client.fetchAllMessages(path);
-            for (const raw of retryMessages) {
-              const msg = reviewMessageToEmailMessage(raw);
-              await this.deps.processor.processMessage(msg, actionType);
-            }
-            const finalCheck = await this.deps.client.status(path);
-            if (finalCheck.messages > 0) {
-              this.deps.logger.warn({ folder: path, remaining: finalCheck.messages }, 'Messages still remain after retry');
+          // Skip retry if every message was a sentinel — sentinels stay in the folder by design
+          if (sentinelCount === rawMessages.length) {
+            this.deps.logger.debug({ folder: path, sentinels: sentinelCount }, 'All messages are sentinels, skipping retry');
+          } else {
+            const recheck = await this.deps.client.status(path);
+            if (recheck.messages > 0) {
+              this.deps.logger.warn({ folder: path, remaining: recheck.messages }, 'Messages remain after processing, retrying');
+              const retryMessages = await this.deps.client.fetchAllMessages(path);
+              for (const raw of retryMessages) {
+                const msg = reviewMessageToEmailMessage(raw);
+                await this.deps.processor.processMessage(msg, actionType);
+              }
+              const finalCheck = await this.deps.client.status(path);
+              // Subtract expected sentinels from remaining count
+              if (finalCheck.messages > sentinelCount) {
+                this.deps.logger.warn({ folder: path, remaining: finalCheck.messages, sentinels: sentinelCount }, 'Non-sentinel messages still remain after retry');
+              }
             }
           }
         } catch (err) {

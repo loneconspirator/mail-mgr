@@ -188,6 +188,22 @@ export class ActivityLog {
   }
 
   /**
+   * Delete activity entries matching a specific action and source.
+   */
+  purgeByAction(action: string, source?: string): number {
+    if (source) {
+      const result = this.db.prepare(
+        'DELETE FROM activity WHERE action = ? AND source = ?',
+      ).run(action, source);
+      return result.changes;
+    }
+    const result = this.db.prepare(
+      'DELETE FROM activity WHERE action = ?',
+    ).run(action);
+    return result.changes;
+  }
+
+  /**
    * Start daily pruning. Also prunes immediately on call.
    */
   startAutoPrune(): void {
