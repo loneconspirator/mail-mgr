@@ -659,4 +659,194 @@ describe('ActionFolderProcessor', () => {
       expect(Number.isInteger(ruleInput.order)).toBe(true);
     });
   });
+
+  describe('D-05: post-move activity logging', () => {
+    it('buildActionResult accepts success parameter and returns matching value', async () => {
+      const msg = createMessage();
+      await processor.processMessage(msg, 'vip');
+
+      const logCall = (mockActivityLog.logActivity as ReturnType<typeof vi.fn>).mock.calls[0];
+      const actionResult: ActionResult = logCall[0];
+      expect(actionResult.success).toBe(true);
+    });
+
+    it('VIP create path: logActivity called after moveMessage (call order)', async () => {
+      const msg = createMessage();
+      await processor.processMessage(msg, 'vip');
+
+      const moveOrder = (mockClient.moveMessage as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
+      const logOrder = (mockActivityLog.logActivity as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
+      expect(moveOrder).toBeLessThan(logOrder);
+    });
+
+    it('Block create path: logActivity called after moveMessage (call order)', async () => {
+      const msg = createMessage();
+      await processor.processMessage(msg, 'block');
+
+      const moveOrder = (mockClient.moveMessage as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
+      const logOrder = (mockActivityLog.logActivity as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
+      expect(moveOrder).toBeLessThan(logOrder);
+    });
+
+    it('move failure: logActivity called with success false and error field', async () => {
+      (mockClient.moveMessage as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('IMAP error'));
+
+      const msg = createMessage();
+      const result = await processor.processMessage(msg, 'vip');
+
+      expect(result.ok).toBe(false);
+      // Activity should still be logged but with success: false
+      expect((mockActivityLog.logActivity as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false }),
+        msg,
+        expect.anything(),
+        'action-folder',
+      );
+    });
+
+    it('remove path: logActivity called after moveMessage (call order)', async () => {
+      const existingRule = makeRule({ id: 'vip-rule-1', action: { type: 'skip' } as Rule['action'] });
+      mockConfigRepo = createMockConfigRepo([existingRule]);
+      processor = new ActionFolderProcessor(mockConfigRepo, mockClient, mockActivityLog, mockLogger, 'INBOX', 'Trash');
+
+      const msg = createMessage();
+      await processor.processMessage(msg, 'undoVip');
+
+      const moveOrder = (mockClient.moveMessage as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
+      const logOrder = (mockActivityLog.logActivity as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
+      expect(moveOrder).toBeLessThan(logOrder);
+    });
+
+    it('conflict resolution: both removal and creation logActivity happen after moveMessage', async () => {
+      const blockRule = makeRule({
+        id: 'block-rule-1',
+        action: { type: 'delete' } as Rule['action'],
+      });
+      mockConfigRepo = createMockConfigRepo([blockRule]);
+      processor = new ActionFolderProcessor(mockConfigRepo, mockClient, mockActivityLog, mockLogger, 'INBOX', 'Trash');
+
+      const msg = createMessage();
+      await processor.processMessage(msg, 'vip');
+
+      const moveOrder = (mockClient.moveMessage as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
+      const logCalls = (mockActivityLog.logActivity as ReturnType<typeof vi.fn>).mock.invocationCallOrder;
+      expect(logCalls).toHaveLength(2);
+      expect(moveOrder).toBeLessThan(logCalls[0]);
+      expect(moveOrder).toBeLessThan(logCalls[1]);
+    });
+  });
+
+  describe('D-06: duplicate path early return', () => {
+    it('duplicate VIP: moveMessage called, logActivity after move, returns with ruleId', async () => {
+      const existingVip = makeRule({
+        id: 'existing-vip',
+        match: { sender: 'sender@example.com' } as Rule['match'],
+        action: { type: 'skip' } as Rule['action'],
+      });
+      mockConfigRepo = createMockConfigRepo([existingVip]);
+      processor = new ActionFolderProcessor(mockConfigRepo, mockClient, mockActivityLog, mockLogger, 'INBOX', 'Trash');
+
+      const msg = createMessage();
+      const result = await processor.processMessage(msg, 'vip');
+
+      expect(result).toMatchObject({ ok: true, ruleId: 'existing-vip' });
+      expect((mockConfigRepo.addRule as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+      expect((mockClient.moveMessage as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
+
+      // Verify call order: move before log
+      const moveOrder = (mockClient.moveMessage as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
+      const logOrder = (mockActivityLog.logActivity as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
+      expect(moveOrder).toBeLessThan(logOrder);
+    });
+
+    it('duplicate Block: moveMessage called, logActivity after move, returns with ruleId', async () => {
+      const existingBlock = makeRule({
+        id: 'existing-block',
+        match: { sender: 'sender@example.com' } as Rule['match'],
+        action: { type: 'delete' } as Rule['action'],
+      });
+      mockConfigRepo = createMockConfigRepo([existingBlock]);
+      processor = new ActionFolderProcessor(mockConfigRepo, mockClient, mockActivityLog, mockLogger, 'INBOX', 'Trash');
+
+      const msg = createMessage();
+      const result = await processor.processMessage(msg, 'block');
+
+      expect(result).toMatchObject({ ok: true, ruleId: 'existing-block' });
+      expect((mockConfigRepo.addRule as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+      expect((mockClient.moveMessage as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
+
+      const moveOrder = (mockClient.moveMessage as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
+      const logOrder = (mockActivityLog.logActivity as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0];
+      expect(moveOrder).toBeLessThan(logOrder);
+    });
+
+    it('duplicate move failure: logActivity with success false', async () => {
+      const existingVip = makeRule({
+        id: 'existing-vip',
+        match: { sender: 'sender@example.com' } as Rule['match'],
+        action: { type: 'skip' } as Rule['action'],
+      });
+      mockConfigRepo = createMockConfigRepo([existingVip]);
+      processor = new ActionFolderProcessor(mockConfigRepo, mockClient, mockActivityLog, mockLogger, 'INBOX', 'Trash');
+      (mockClient.moveMessage as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('IMAP error'));
+
+      const msg = createMessage();
+      const result = await processor.processMessage(msg, 'vip');
+
+      expect(result.ok).toBe(false);
+      expect((mockActivityLog.logActivity as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
+        expect.objectContaining({ success: false }),
+        msg,
+        expect.objectContaining({ id: 'existing-vip' }),
+        'action-folder',
+      );
+    });
+  });
+
+  describe('D-07: diagnostic logging', () => {
+    it('logs diagnostic info with uid, messageId, sender, subject, actionType, folder', async () => {
+      const msg = createMessage({
+        uid: 42,
+        messageId: '<diag@example.com>',
+        subject: 'Diagnostic Test',
+      });
+      await processor.processMessage(msg, 'vip');
+
+      expect((mockLogger.info as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          uid: 42,
+          messageId: '<diag@example.com>',
+          sender: 'sender@example.com',
+          subject: 'Diagnostic Test',
+          actionType: 'vip',
+          folder: 'Actions/VIP Sender',
+        }),
+        'Processing action folder message',
+      );
+    });
+
+    it('diagnostic log NOT emitted for sentinel messages', async () => {
+      const msg = createMessage({
+        headers: new Map([['x-mail-mgr-sentinel', '<test-id@mail-manager.sentinel>']]),
+      });
+      await processor.processMessage(msg, 'vip');
+
+      const infoCalls = (mockLogger.info as ReturnType<typeof vi.fn>).mock.calls;
+      const diagCall = infoCalls.find(
+        (call: unknown[]) => call[1] === 'Processing action folder message',
+      );
+      expect(diagCall).toBeUndefined();
+    });
+
+    it('diagnostic log NOT emitted for unparseable sender', async () => {
+      const msg = createMessage({ from: { name: '', address: '' } });
+      await processor.processMessage(msg, 'vip');
+
+      const infoCalls = (mockLogger.info as ReturnType<typeof vi.fn>).mock.calls;
+      const diagCall = infoCalls.find(
+        (call: unknown[]) => call[1] === 'Processing action folder message',
+      );
+      expect(diagCall).toBeUndefined();
+    });
+  });
 });

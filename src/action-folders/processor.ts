@@ -20,6 +20,12 @@ export function extractSender(message: EmailMessage): string | null {
   return raw.toLowerCase().trim();
 }
 
+interface PendingActivity {
+  action: string;
+  ruleId: string;
+  rule: Rule;
+}
+
 export class ActionFolderProcessor {
   constructor(
     private readonly configRepo: ConfigRepository,
@@ -31,7 +37,7 @@ export class ActionFolderProcessor {
   ) {}
 
   async processMessage(message: EmailMessage, actionType: ActionType): Promise<ProcessResult> {
-    // Per D-07: guard before sender extraction
+    // Sentinel guard -- returns before diagnostic log (D-07)
     if (isSentinel(message.headers)) {
       this.logger.debug({ uid: message.uid }, 'Skipping sentinel message');
       return { ok: true, action: actionType, sender: 'sentinel' };
@@ -47,8 +53,19 @@ export class ActionFolderProcessor {
       return { ok: false, action: actionType, error: 'Unparseable From address' };
     }
 
+    // D-07: Diagnostic logging -- after sender extraction, before business logic
+    this.logger.info({
+      uid: message.uid,
+      messageId: message.messageId,
+      sender,
+      subject: message.subject,
+      actionType,
+      folder: sourceFolder,
+    }, 'Processing action folder message');
+
     const rules = this.configRepo.getRules();
     const destination = this.resolveDestination(actionDef.destination);
+    const pendingActivities: PendingActivity[] = [];
     let createdRule: Rule | undefined;
 
     if (actionDef.operation === 'create') {
@@ -58,16 +75,41 @@ export class ActionFolderProcessor {
 
       if (conflict) {
         this.configRepo.deleteRule(conflict.id);
-        const removalResult = this.buildActionResult(message, `remove-${conflict.action.type}`, conflict.id, destination);
-        this.activityLog.logActivity(removalResult, message, conflict, 'action-folder');
+        pendingActivities.push({
+          action: `remove-${conflict.action.type}`,
+          ruleId: conflict.id,
+          rule: conflict,
+        });
       }
 
       // Check for existing same-type rule (idempotency per D-01, D-03)
+      // D-06: duplicate path has its own move + log + return
       const duplicate = findSenderRule(sender, actionDef.ruleAction, rules);
       if (duplicate) {
         this.logger.debug({ sender, actionType }, 'Rule already exists for sender, skipping creation');
-        const dupResult = this.buildActionResult(message, `duplicate-${actionDef.ruleAction}`, duplicate.id, destination);
+
+        // D-06: Handle any pending conflict activities before duplicate return
+        try {
+          await this.client.moveMessage(message.uid, destination, sourceFolder);
+        } catch (err) {
+          this.logger.error({ uid: message.uid, err }, 'Failed to move duplicate message');
+          // Log pending conflict activities with failure
+          for (const pending of pendingActivities) {
+            const result = this.buildActionResult(message, pending.action, pending.ruleId, destination, false);
+            this.activityLog.logActivity(result, message, pending.rule, 'action-folder');
+          }
+          const dupResult = this.buildActionResult(message, `duplicate-${actionDef.ruleAction}`, duplicate.id, destination, false);
+          this.activityLog.logActivity(dupResult, message, duplicate, 'action-folder');
+          return { ok: false, action: actionType, error: 'Message move failed' };
+        }
+        // Log pending conflict activities with success
+        for (const pending of pendingActivities) {
+          const result = this.buildActionResult(message, pending.action, pending.ruleId, destination, true);
+          this.activityLog.logActivity(result, message, pending.rule, 'action-folder');
+        }
+        const dupResult = this.buildActionResult(message, `duplicate-${actionDef.ruleAction}`, duplicate.id, destination, true);
         this.activityLog.logActivity(dupResult, message, duplicate, 'action-folder');
+        return { ok: true, action: actionType, sender, ruleId: duplicate.id };
       } else {
         // Create the new rule
         const label = actionType === 'vip' ? 'VIP' : 'Block';
@@ -79,27 +121,44 @@ export class ActionFolderProcessor {
           order: this.configRepo.nextOrder(),
         });
 
-        const createResult = this.buildActionResult(message, actionDef.ruleAction, createdRule.id, destination);
-        this.activityLog.logActivity(createResult, message, createdRule, 'action-folder');
+        pendingActivities.push({
+          action: actionDef.ruleAction,
+          ruleId: createdRule.id,
+          rule: createdRule,
+        });
       }
     } else {
       // Remove operation
       const existing = findSenderRule(sender, actionDef.ruleAction, rules);
       if (existing) {
         this.configRepo.deleteRule(existing.id);
-        const removeResult = this.buildActionResult(message, `remove-${existing.action.type}`, existing.id, destination);
-        this.activityLog.logActivity(removeResult, message, existing, 'action-folder');
+        pendingActivities.push({
+          action: `remove-${existing.action.type}`,
+          ruleId: existing.id,
+          rule: existing,
+        });
       } else {
         this.logger.info({ sender, actionType }, 'No matching rule found for undo, moving message to destination');
       }
     }
 
-    // Move message (do NOT roll back rule changes on failure)
+    // D-05: Move message THEN log activities (not before)
     try {
       await this.client.moveMessage(message.uid, destination, sourceFolder);
     } catch (err) {
       this.logger.error({ uid: message.uid, err }, 'Failed to move message after action folder processing');
+      // Log pending activities with success: false
+      for (const pending of pendingActivities) {
+        const result = this.buildActionResult(message, pending.action, pending.ruleId, destination, false);
+        this.activityLog.logActivity(result, message, pending.rule, 'action-folder');
+      }
       return { ok: false, action: actionType, error: 'Message move failed' };
+    }
+
+    // Log all pending activities with success: true (after successful move)
+    for (const pending of pendingActivities) {
+      const result = this.buildActionResult(message, pending.action, pending.ruleId, destination, true);
+      this.activityLog.logActivity(result, message, pending.rule, 'action-folder');
     }
 
     return { ok: true, action: actionType, sender, ruleId: createdRule?.id };
@@ -120,9 +179,10 @@ export class ActionFolderProcessor {
     action: string,
     ruleId: string,
     folder: string,
+    success: boolean = true,
   ): ActionResult {
     return {
-      success: true,
+      success,
       messageUid: message.uid,
       messageId: message.messageId,
       action,
