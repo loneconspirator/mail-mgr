@@ -127,13 +127,76 @@ describe('ActionFolderPoller', () => {
   });
 
   describe('scanAll - fetch and process', () => {
-    it('does NOT fetchAllMessages for empty folders', async () => {
+    it('does NOT fetchAllMessages for empty folders and logs sentinel missing', async () => {
       const deps = createDeps();
       const poller = new ActionFolderPoller(deps);
 
       await poller.scanAll();
 
       expect(deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
+      // Should log debug with sentinel missing/empty message
+      const debugMock = deps.logger.debug as ReturnType<typeof vi.fn>;
+      expect(debugMock).toHaveBeenCalledWith(
+        expect.objectContaining({ folder: expect.any(String) }),
+        expect.stringContaining('sentinel missing'),
+      );
+    });
+
+    it('does NOT fetchAllMessages when folder has exactly 1 message (sentinel only)', async () => {
+      const deps = createDeps();
+      (deps.client.status as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip - sentinel only
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // block
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // undoVip
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }); // unblock
+      const poller = new ActionFolderPoller(deps);
+
+      await poller.scanAll();
+
+      expect(deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
+      const debugMock = deps.logger.debug as ReturnType<typeof vi.fn>;
+      expect(debugMock).toHaveBeenCalledWith(
+        expect.objectContaining({ folder: 'Actions/VIP Sender' }),
+        expect.stringContaining('only sentinel'),
+      );
+    });
+
+    it('calls fetchAllMessages when folder has 2 messages', async () => {
+      const deps = createDeps();
+      (deps.client.status as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({ messages: 2, unseen: 0 }) // vip
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // block
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // undoVip
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // unblock
+        .mockResolvedValue({ messages: 0, unseen: 0 }); // re-checks
+      const msgs = [makeReviewMessage(1), makeReviewMessage(2)];
+      (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(msgs);
+      const poller = new ActionFolderPoller(deps);
+
+      await poller.scanAll();
+
+      expect(deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).toHaveBeenCalledWith('Actions/VIP Sender');
+    });
+
+    it('skips sentinel-only folder but processes folder with real messages', async () => {
+      const deps = createDeps();
+      (deps.client.status as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip - sentinel only, skip
+        .mockResolvedValueOnce({ messages: 3, unseen: 0 }) // block - has real messages
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // undoVip
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // unblock
+        .mockResolvedValue({ messages: 0, unseen: 0 }); // re-checks
+      const msgs = [makeReviewMessage(1), makeReviewMessage(2), makeReviewMessage(3)];
+      (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(msgs);
+      const poller = new ActionFolderPoller(deps);
+
+      await poller.scanAll();
+
+      // Only block folder should have fetchAllMessages called
+      const fetchMock = deps.client.fetchAllMessages as ReturnType<typeof vi.fn>;
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock).toHaveBeenCalledWith('Actions/Block Sender');
+      expect(fetchMock).not.toHaveBeenCalledWith('Actions/VIP Sender');
     });
 
     it('calls fetchAllMessages for folders with messages > 0', async () => {
@@ -155,20 +218,21 @@ describe('ActionFolderPoller', () => {
 
     it('converts ReviewMessage via reviewMessageToEmailMessage and calls processor.processMessage', async () => {
       const deps = createDeps();
-      const msg = makeReviewMessage(5);
+      const msg1 = makeReviewMessage(5);
+      const msg2 = makeReviewMessage(6);
       (deps.client.status as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip
+        .mockResolvedValueOnce({ messages: 2, unseen: 0 }) // vip - 2 messages so it won't be skipped
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // block
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // undoVip
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // unblock
         .mockResolvedValue({ messages: 0, unseen: 0 }); // re-checks
-      (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([msg]);
+      (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([msg1, msg2]);
       const poller = new ActionFolderPoller(deps);
 
       await poller.scanAll();
 
       const processMock = deps.processor.processMessage as ReturnType<typeof vi.fn>;
-      expect(processMock).toHaveBeenCalledTimes(1);
+      expect(processMock).toHaveBeenCalledTimes(2);
       // The converted EmailMessage should have the same uid
       expect(processMock).toHaveBeenCalledWith(
         expect.objectContaining({ uid: 5, messageId: '<test-5@example.com>' }),
@@ -180,21 +244,21 @@ describe('ActionFolderPoller', () => {
       const deps = createDeps();
       // Call order: vip initial -> vip re-check -> block initial -> block re-check -> undoVip -> unblock
       (deps.client.status as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip initial
-        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // vip re-check
-        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // block initial
-        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // block re-check
+        .mockResolvedValueOnce({ messages: 2, unseen: 0 }) // vip initial (2 = sentinel + real)
+        .mockResolvedValueOnce({ messages: 2, unseen: 0 }) // block initial (2 = sentinel + real)
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // undoVip
-        .mockResolvedValueOnce({ messages: 0, unseen: 0 }); // unblock
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // unblock
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // vip re-check
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }); // block re-check
       (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce([makeReviewMessage(1)])
-        .mockResolvedValueOnce([makeReviewMessage(2)]);
+        .mockResolvedValueOnce([makeReviewMessage(1), makeReviewMessage(10)])
+        .mockResolvedValueOnce([makeReviewMessage(2), makeReviewMessage(20)]);
       const poller = new ActionFolderPoller(deps);
 
       await poller.scanAll();
 
       const processMock = deps.processor.processMessage as ReturnType<typeof vi.fn>;
-      expect(processMock).toHaveBeenCalledTimes(2);
+      expect(processMock).toHaveBeenCalledTimes(4);
       expect(processMock).toHaveBeenCalledWith(expect.objectContaining({ uid: 1 }), 'vip');
       expect(processMock).toHaveBeenCalledWith(expect.objectContaining({ uid: 2 }), 'block');
     });
@@ -204,12 +268,12 @@ describe('ActionFolderPoller', () => {
     it('does a STATUS re-check after processing a non-empty folder', async () => {
       const deps = createDeps();
       (deps.client.status as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip initial
+        .mockResolvedValueOnce({ messages: 2, unseen: 0 }) // vip initial (sentinel + real)
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // block
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // undoVip
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // unblock
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }); // vip re-check
-      (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([makeReviewMessage(1)]);
+      (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([makeReviewMessage(1), makeReviewMessage(2)]);
       const poller = new ActionFolderPoller(deps);
 
       await poller.scanAll();
@@ -222,14 +286,14 @@ describe('ActionFolderPoller', () => {
     it('retries once if messages remain after first processing pass', async () => {
       const deps = createDeps();
       (deps.client.status as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip initial
+        .mockResolvedValueOnce({ messages: 2, unseen: 0 }) // vip initial (sentinel + real)
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // block
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // undoVip
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // unblock
-        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip re-check: still has messages
+        .mockResolvedValueOnce({ messages: 2, unseen: 0 }) // vip re-check: still has messages
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }); // vip final check after retry
       (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce([makeReviewMessage(1)])  // first pass
+        .mockResolvedValueOnce([makeReviewMessage(1), makeReviewMessage(10)])  // first pass
         .mockResolvedValueOnce([makeReviewMessage(2)]); // retry pass
       const poller = new ActionFolderPoller(deps);
 
@@ -237,22 +301,22 @@ describe('ActionFolderPoller', () => {
 
       // fetchAllMessages called twice for VIP folder (original + retry)
       expect(deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(2);
-      // processMessage called twice
-      expect(deps.processor.processMessage as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(2);
+      // processMessage called 3 times (2 first pass + 1 retry)
+      expect(deps.processor.processMessage as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(3);
     });
 
     it('logs a warning if messages still remain after retry', async () => {
       const deps = createDeps();
-      // Call order: vip initial -> vip re-check -> vip final -> block -> undoVip -> unblock
+      // Call order: vip initial -> block -> undoVip -> unblock -> vip re-check -> vip final
       (deps.client.status as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip initial
-        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip re-check: still has messages
-        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip final check: STILL has messages
+        .mockResolvedValueOnce({ messages: 2, unseen: 0 }) // vip initial (sentinel + real)
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // block
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // undoVip
-        .mockResolvedValueOnce({ messages: 0, unseen: 0 }); // unblock
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // unblock
+        .mockResolvedValueOnce({ messages: 2, unseen: 0 }) // vip re-check: still has messages
+        .mockResolvedValueOnce({ messages: 2, unseen: 0 }); // vip final check: STILL has messages
       (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>)
-        .mockResolvedValue([makeReviewMessage(1)]);
+        .mockResolvedValue([makeReviewMessage(1), makeReviewMessage(2)]);
       const poller = new ActionFolderPoller(deps);
 
       await poller.scanAll();
@@ -269,12 +333,12 @@ describe('ActionFolderPoller', () => {
     it('does not retry if re-check shows 0 messages', async () => {
       const deps = createDeps();
       (deps.client.status as ReturnType<typeof vi.fn>)
-        .mockResolvedValueOnce({ messages: 1, unseen: 0 }) // vip initial
+        .mockResolvedValueOnce({ messages: 2, unseen: 0 }) // vip initial (sentinel + real)
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // block
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // undoVip
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // unblock
         .mockResolvedValueOnce({ messages: 0, unseen: 0 }); // vip re-check: all clear
-      (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([makeReviewMessage(1)]);
+      (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([makeReviewMessage(1), makeReviewMessage(2)]);
       const poller = new ActionFolderPoller(deps);
 
       await poller.scanAll();
@@ -357,11 +421,11 @@ describe('ActionFolderPoller', () => {
       const deps = createDeps();
       (deps.client.status as ReturnType<typeof vi.fn>)
         .mockRejectedValueOnce(new Error('IMAP error on vip'))  // vip fails
-        .mockResolvedValueOnce({ messages: 1, unseen: 0 })       // block has message
+        .mockResolvedValueOnce({ messages: 2, unseen: 0 })       // block has messages (sentinel + real)
         .mockResolvedValueOnce({ messages: 0, unseen: 0 })       // undoVip
         .mockResolvedValueOnce({ messages: 0, unseen: 0 })       // unblock
         .mockResolvedValue({ messages: 0, unseen: 0 });          // re-checks
-      (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([makeReviewMessage(1)]);
+      (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([makeReviewMessage(1), makeReviewMessage(2)]);
       const poller = new ActionFolderPoller(deps);
 
       // Should not throw
