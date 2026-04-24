@@ -82,6 +82,11 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Sentinel message format with unique headers planted in every tracked folder — v0.7
 - ✓ Message-ID based mapping stored alongside folder purpose — v0.7
 
+- ✓ Action folder activity logging after move success, not before (prevents false-positive success entries) — v0.8 Phase 33
+- ✓ Duplicate detection path early return with own move+log+return (no fall-through to create) — v0.8 Phase 33
+- ✓ Sentinel-aware poller skip (skip fetchAllMessages when messages ≤ 1, eliminating wasteful IMAP round-trips) — v0.8 Phase 33
+- ✓ Diagnostic logging for action folder processor (sender, subject, messageId, uid per message) — v0.8 Phase 33
+
 ### Active
 
 (None — planning next milestone)
@@ -165,4 +170,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-23 after v0.7 milestone (Sentinel Message System shipped — folder tracking beacons, rename detection, auto-healing)*
+*Last updated: 2026-04-24 after v0.8 Phase 33 (Action Folder Safety Hardening — post-move logging, duplicate early return, sentinel-aware poller skip, diagnostic logging)*
