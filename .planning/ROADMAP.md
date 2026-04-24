@@ -130,8 +130,8 @@ Incident-driven hardening of the action-folder pipeline to prevent mass erroneou
 
 **Goal:** Fix processor bugs (pre-move logging, duplicate fall-through), add sentinel-aware polling skip, and diagnostic logging
 **Depends on:** v0.7 Sentinel Message System
-**Plans:** 2 plans
+**Plans:** 2/2 plans complete
 
 Plans:
-- [ ] 33-01-PLAN.md — Fix processor bugs (D-05 post-move logging, D-06 duplicate early return) and add diagnostic logging (D-07)
-- [ ] 33-02-PLAN.md — Add sentinel-aware skip to poller (D-01 skip on messages=1, D-02 skip on messages=0)
+- [x] 33-01-PLAN.md — Fix processor bugs (D-05 post-move logging, D-06 duplicate early return) and add diagnostic logging (D-07)
+- [x] 33-02-PLAN.md — Add sentinel-aware skip to poller (D-01 skip on messages=1, D-02 skip on messages=0)
