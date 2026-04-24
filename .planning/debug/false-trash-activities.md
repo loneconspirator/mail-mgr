@@ -1,5 +1,5 @@
 ---
-status: diagnosed
+status: resolved
 trigger: "Activities page showing 'trashed' for ALL processed messages, but messages are NOT actually being trashed"
 created: 2026-04-23T00:00:00Z
 updated: 2026-04-23T01:00:00Z
@@ -144,6 +144,6 @@ started: v0.7 release
 ## Resolution
 
 root_cause: The action-folder processor has two interacting bugs causing an activity log flood: (1) Activity is logged with success=true BEFORE the moveMessage call, with no correction on move failure. If moveMessage fails, the message stays in the Block action folder and gets reprocessed every 15-second poll cycle. (2) The duplicate-detection path (processor.ts:66-70) has no early return -- it always falls through to the move operation, but the activity log entry is already committed. Combined with the FOLD-02 retry (which reprocesses remaining messages within the same cycle), a single stuck message generates 2+ duplicate-delete entries per poll tick (every 15s), rapidly flooding the activity table and drowning out legitimate arrival/sweep entries.
-fix:
-verification:
-files_changed: []
+fix: Poller now tracks sentinel count and skips FOLD-02 retry when all messages are sentinels. Added cleanup APIs for purging flood artifacts.
+verification: 5 smoke tests pass (test/unit/smoke-pipeline.test.ts)
+files_changed: [src/action-folders/poller.ts, src/log/index.ts, src/web/routes/activity.ts, src/web/routes/rules.ts, test/unit/smoke-pipeline.test.ts]
