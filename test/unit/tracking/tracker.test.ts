@@ -15,6 +15,15 @@ function createMockDeps(overrides: Partial<MoveTrackerDeps> = {}): MoveTrackerDe
         };
         return fn(flow);
       }),
+      withMailboxSwitch: vi.fn(async (_folder: string, fn: (flow: unknown) => Promise<unknown>) => {
+        const flow = {
+          mailbox: { uidValidity: 100 },
+          fetch: async function* () {
+            // empty by default
+          },
+        };
+        return fn(flow);
+      }),
     } as unknown as MoveTrackerDeps['client'],
     activityLog: (() => {
       const stateStore = new Map<string, string>();
@@ -40,36 +49,36 @@ function createMockDeps(overrides: Partial<MoveTrackerDeps> = {}): MoveTrackerDe
   };
 }
 
-/** Helper: make withMailboxLock return specific messages for specific folders. */
+/** Helper: make withMailboxLock/withMailboxSwitch return specific messages for specific folders. */
 function setupFolderMessages(
   deps: MoveTrackerDeps,
   folderData: Record<string, Array<{ uid: number; messageId: string; sender?: string; subject?: string; flags?: Set<string> }>>,
   uidValidity: number = 100,
 ): void {
-  (deps.client as { withMailboxLock: ReturnType<typeof vi.fn> }).withMailboxLock.mockImplementation(
-    async (folder: string, fn: (flow: unknown) => Promise<unknown>) => {
-      const messages = folderData[folder] ?? [];
-      const flow = {
-        mailbox: { uidValidity },
-        fetch: async function* () {
-          for (const msg of messages) {
-            yield {
-              uid: msg.uid,
-              envelope: {
-                messageId: msg.messageId,
-                from: [{ address: msg.sender ?? 'test@example.com' }],
-                to: [{ address: 'me@example.com' }],
-                cc: [],
-                subject: msg.subject ?? 'Test Subject',
-              },
-              flags: msg.flags ?? new Set<string>(),
-            };
-          }
-        },
-      };
-      return fn(flow);
-    },
-  );
+  const impl = async (folder: string, fn: (flow: unknown) => Promise<unknown>) => {
+    const messages = folderData[folder] ?? [];
+    const flow = {
+      mailbox: { uidValidity },
+      fetch: async function* () {
+        for (const msg of messages) {
+          yield {
+            uid: msg.uid,
+            envelope: {
+              messageId: msg.messageId,
+              from: [{ address: msg.sender ?? 'test@example.com' }],
+              to: [{ address: 'me@example.com' }],
+              cc: [],
+              subject: msg.subject ?? 'Test Subject',
+            },
+            flags: msg.flags ?? new Set<string>(),
+          };
+        }
+      },
+    };
+    return fn(flow);
+  };
+  (deps.client as { withMailboxLock: ReturnType<typeof vi.fn> }).withMailboxLock.mockImplementation(impl);
+  (deps.client as { withMailboxSwitch: ReturnType<typeof vi.fn> }).withMailboxSwitch.mockImplementation(impl);
 }
 
 describe('MoveTracker', () => {

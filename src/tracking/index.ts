@@ -312,7 +312,10 @@ export class MoveTracker {
   private async fetchFolderState(
     folder: string,
   ): Promise<{ messages: Map<number, TrackedMessage>; uidValidity: number }> {
-    return this.deps.client.withMailboxLock(folder, async (flow: ImapFlowLike) => {
+    const lock = folder === this.deps.inboxFolder
+      ? this.deps.client.withMailboxLock.bind(this.deps.client)
+      : this.deps.client.withMailboxSwitch.bind(this.deps.client);
+    return lock(folder, async (flow: ImapFlowLike) => {
       const mailboxInfo = (flow as unknown as { mailbox?: { uidValidity?: number } }).mailbox;
       // ImapFlow returns BigInt for uidValidity — coerce to Number for JSON serialization
       const uidValidity = Number(mailboxInfo?.uidValidity ?? 0);
