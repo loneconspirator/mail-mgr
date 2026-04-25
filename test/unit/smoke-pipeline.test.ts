@@ -169,8 +169,8 @@ describe('Smoke: sentinel-only action folders do not flood activity log', () => 
 
     await poller.scanAll();
 
-    // fetchAllMessages should be called only ONCE (no FOLD-02 retry)
-    expect((mockClient.fetchAllMessages as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
+    // fetchAllMessages should NOT be called — sentinel-only folder skipped at status check
+    expect((mockClient.fetchAllMessages as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(0);
   });
 
   it('multiple poll cycles with sentinel-only folder produce zero cumulative activity entries', async () => {
@@ -224,15 +224,15 @@ describe('Smoke: action folder processes real messages correctly', () => {
 
     const msg = makeRealMessage(1, 'spammer@evil.com');
 
-    // Only block folder has a message
+    // Only block folder has messages (real msg + sentinel = 2, so it won't be skipped)
     (mockClient.status as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({ messages: 0, unseen: 0 })  // vip
-      .mockResolvedValueOnce({ messages: 1, unseen: 0 })  // block
+      .mockResolvedValueOnce({ messages: 2, unseen: 0 })  // block — sentinel + real msg
       .mockResolvedValueOnce({ messages: 0, unseen: 0 })  // undoVip
       .mockResolvedValueOnce({ messages: 0, unseen: 0 })  // unblock
       .mockResolvedValue({ messages: 0, unseen: 0 });
     (mockClient.fetchAllMessages as ReturnType<typeof vi.fn>)
-      .mockResolvedValue([msg]);
+      .mockResolvedValue([makeSentinelMessage(), msg]);
 
     const poller = new ActionFolderPoller({
       client: mockClient,
