@@ -1,3 +1,15 @@
+/**
+ * MOD-0014 — ConfigRepository
+ *
+ * Spec: specs/modules/mod-0014-config-repository.md
+ * Architecture: specs/architecture.md#configuration--state
+ *
+ * Manages the YAML configuration file. Provides CRUD operations for rules and
+ * update operations for IMAP, review, and action-folder config sections.
+ * Maintains change listeners that notify subsystems on configuration changes,
+ * triggering hot-reloads without restart.
+ */
+
 import crypto from 'node:crypto';
 import { loadConfig, saveConfig } from './loader.js';
 import { ruleSchema, imapConfigSchema, reviewConfigSchema, actionFolderConfigSchema } from './schema.js';
