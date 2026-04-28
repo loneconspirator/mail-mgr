@@ -46,8 +46,8 @@ This architecture covers the mail-mgr application itself. Out of scope:
 
 | Module | Responsibility |
 |--------|---------------|
-| **ActionFolderPoller** | Polls four IMAP action folders (VIP, Block, Undo-VIP, Unblock) on a timer (default 15s) for messages the user has dragged in. |
-| **ActionFolderProcessor** | Processes action folder messages: creates or removes rules, handles conflicts and duplicates idempotently, moves the message to its final destination. |
+| **ActionFolderPoller** | Polls four IMAP action folders (VIP, Block, Undo-VIP, Unblock) on a timer (default 15s) for messages the user has dragged in. See IX-007. |
+| **ActionFolderProcessor** | Processes action folder messages: creates or removes rules, handles conflicts and duplicates idempotently, moves the message to its final destination. See IX-008. |
 
 ### Configuration & State
 

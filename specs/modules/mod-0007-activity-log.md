@@ -3,7 +3,7 @@ id: MOD-0007
 title: ActivityLog
 interface-schema: src/log/index.ts
 unit-test-path: test/unit/log/
-integrations: [IX-002, IX-003, IX-006]
+integrations: [IX-002, IX-003, IX-006, IX-008]
 invariants-enforced: []
 architecture-section: architecture.md#configuration--state
 ---

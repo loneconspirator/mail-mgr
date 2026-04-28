@@ -3,7 +3,7 @@ id: MOD-0002
 title: ImapClient
 interface-schema: src/imap/client.ts
 unit-test-path: test/unit/imap/
-integrations: [IX-001, IX-002, IX-003, IX-006]
+integrations: [IX-001, IX-002, IX-003, IX-006, IX-007, IX-008]
 invariants-enforced: []
 architecture-section: architecture.md#imap--infrastructure
 ---

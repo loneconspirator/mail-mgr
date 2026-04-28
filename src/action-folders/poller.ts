@@ -1,3 +1,13 @@
+/**
+ * MOD-0017 — ActionFolderPoller
+ *
+ * Polls the four IMAP action folders (VIP, Block, Undo-VIP, Unblock) on a
+ * fixed timer, detects user-dragged messages, and dispatches each one to
+ * ActionFolderProcessor.
+ *
+ * Spec: specs/modules/mod-0017-action-folder-poller.md
+ * Integration: IX-007 (specs/integrations/ix-007-action-folder-polling-and-dispatch.md)
+ */
 import type { ImapClient } from '../imap/client.js';
 import type { ConfigRepository } from '../config/repository.js';
 import type { ActionFolderProcessor } from './processor.js';

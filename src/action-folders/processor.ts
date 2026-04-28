@@ -1,3 +1,15 @@
+/**
+ * MOD-0018 — ActionFolderProcessor
+ *
+ * Processes a single message dispatched from an action folder: extracts the
+ * sender, mutates the rule set per the ActionType, moves the message to its
+ * final destination, and writes activity log entries.
+ *
+ * Spec: specs/modules/mod-0018-action-folder-processor.md
+ * Integrations:
+ *   IX-007 (entry point) — specs/integrations/ix-007-action-folder-polling-and-dispatch.md
+ *   IX-008 (rule mutation + recovery) — specs/integrations/ix-008-action-folder-rule-mutation-and-recovery.md
+ */
 import type { ConfigRepository } from '../config/repository.js';
 import type { ImapClient } from '../imap/client.js';
 import type { ActivityLog } from '../log/index.js';
