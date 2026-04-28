@@ -1,7 +1,7 @@
 ---
 id: IX-008
 title: Action folder rule mutation and message recovery
-integration-test: null
+integration-test: test/acceptance/uc_002_action_folder_drag_creates_or_removes_rule.test.ts
 modules: [MOD-0002, MOD-0003, MOD-0007, MOD-0014, MOD-0018]
 starting-states: []
 use-cases: [UC-002]

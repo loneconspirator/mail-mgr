@@ -10,9 +10,45 @@
  * for the "future message bypasses review" phase.
  *
  * Integrations exercised:
+ *   IX-001 — arrival detection / rule evaluation (Phase 3 of main flow)
  *   IX-007 — action folder polling and message dispatch
  *   IX-008 — action folder rule mutation and recovery
- *   IX-001 — arrival detection / rule evaluation (Phase 3 of main flow)
+ *
+ * IX-007 named-interaction coverage (mapped to it() blocks below):
+ *   IX-007.1 — manual scanAll() stands in for the timer tick; the single-flight
+ *              guard is exercised in test/unit/action-folders/poller.test.ts
+ *              ("scanAll - overlap guard").
+ *   IX-007.2 — every test runs with enabled=true; the disabled path is covered
+ *              by the unit suite ("skips processing if config.enabled is false").
+ *   IX-007.3 — main flow + UC-002.a + UC-002.b + UC-002.c collectively touch
+ *              all four resolved folder paths (vip / block / undoVip / unblock).
+ *   IX-007.4 — every test: untouched folders sit at count==1 (sentinel only)
+ *              and are skipped; the touched folder reaches count>1.
+ *   IX-007.5 — every test that appends/drags a message: poller fetches and
+ *              dispatches it to the processor with the resolved actionType.
+ *   IX-007.6 — sentinels live in every action folder for the full run; the
+ *              processor's sentinel guard fires for every dispatched message
+ *              (see IX-008.1).
+ *   IX-007.7 — recheck-after-process happens on every non-empty folder; the
+ *              warn+retry branch is covered by the unit suite ("retries once
+ *              if messages remain after first processing pass").
+ *   IX-007.8 — per-folder error isolation is covered by the unit suite
+ *              ("continues to next folder when one folder errors").
+ *
+ * IX-008 named-interaction coverage:
+ *   IX-008.1  — every test: sentinels remain in their folders and are not
+ *               misinterpreted as user actions.
+ *   IX-008.2  — main flow (parsed sender) + UC-002.f (unparseable recovery).
+ *   IX-008.3  — every test resolves an actionType through ACTION_REGISTRY.
+ *   IX-008.4  — UC-002.d (existing Block rule replaced by VIP create).
+ *   IX-008.5  — main flow (skip rule) + UC-002.a (delete rule).
+ *   IX-008.6  — UC-002.b + UC-002.c (matching rule removed) + UC-002.g
+ *               (no matching rule, still clears folder).
+ *   IX-008.7  — UC-002.e (multi-field rule preserved).
+ *   IX-008.8  — main flow (destination=INBOX) + UC-002.a (destination=trash).
+ *   IX-008.9  — every test: dragged message leaves the action folder.
+ *   IX-008.10 — main flow + UC-002.a + UC-002.d assert ActivityLog entries
+ *               with source='action-folder'.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
@@ -304,7 +340,7 @@ describe('UC-002: Drag into action folder creates/removes a sender rule', () => 
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
 
-  it('main flow: VIP drag creates a skip rule, message returns to INBOX, future mail bypasses review', async () => {
+  it('main flow [IX-007.1, IX-007.2, IX-007.3, IX-007.4, IX-007.5, IX-007.6, IX-007.7, IX-008.1, IX-008.2, IX-008.3, IX-008.5, IX-008.8, IX-008.9, IX-008.10]: VIP drag creates a skip rule, message returns to INBOX, future mail bypasses review', async () => {
     const { configRepo, activityLog, monitor, poller } = app;
     const SENDER = 'priority@example.com';
 
@@ -385,7 +421,7 @@ describe('UC-002: Drag into action folder creates/removes a sender rule', () => 
     expect(await listMailboxMessages(VIP_FOLDER)).toHaveLength(1);
   }, 120_000);
 
-  it('UC-002.a: Block drag creates a delete rule and message lands in trash', async () => {
+  it('UC-002.a [IX-007.5, IX-008.5, IX-008.8, IX-008.9, IX-008.10]: Block drag creates a delete rule and message lands in trash', async () => {
     const { configRepo, activityLog, poller } = app;
     const SENDER = 'spam@example.com';
 
@@ -414,7 +450,7 @@ describe('UC-002: Drag into action folder creates/removes a sender rule', () => 
     });
   }, 60_000);
 
-  it('UC-002.b: Undo-VIP drag removes the existing skip rule', async () => {
+  it('UC-002.b [IX-007.5, IX-008.6, IX-008.9]: Undo-VIP drag removes the existing skip rule', async () => {
     const { configRepo, poller } = app;
     const SENDER = 'priority@example.com';
 
@@ -435,7 +471,7 @@ describe('UC-002: Drag into action folder creates/removes a sender rule', () => 
     expect(await listMailboxMessages(UNDO_VIP_FOLDER)).toHaveLength(1); // sentinel
   }, 60_000);
 
-  it('UC-002.c: Unblock drag removes the existing delete rule', async () => {
+  it('UC-002.c [IX-007.5, IX-008.6, IX-008.9]: Unblock drag removes the existing delete rule', async () => {
     const { configRepo, poller } = app;
     const SENDER = 'blocked@example.com';
 
@@ -456,7 +492,7 @@ describe('UC-002: Drag into action folder creates/removes a sender rule', () => 
     expect(await listMailboxMessages(UNBLOCK_FOLDER)).toHaveLength(1);
   }, 60_000);
 
-  it('UC-002.d: VIP drag with existing Block rule swaps the rule (delete then create)', async () => {
+  it('UC-002.d [IX-007.5, IX-008.4, IX-008.5, IX-008.9, IX-008.10]: VIP drag with existing Block rule swaps the rule (delete then create)', async () => {
     const { configRepo, activityLog, poller } = app;
     const SENDER = 'flipflop@example.com';
 
@@ -495,7 +531,7 @@ describe('UC-002: Drag into action folder creates/removes a sender rule', () => 
     expect(creation!.success).toBe(1);
   }, 60_000);
 
-  it('UC-002.e: multi-field rule for the same sender is preserved', async () => {
+  it('UC-002.e [IX-007.5, IX-008.5, IX-008.7, IX-008.9]: multi-field rule for the same sender is preserved', async () => {
     const { configRepo, poller } = app;
     const SENDER = 'priority@example.com';
 
@@ -527,7 +563,7 @@ describe('UC-002: Drag into action folder creates/removes a sender rule', () => 
     expect(skipRule!.order).toBeGreaterThan(multiField.order);
   }, 60_000);
 
-  it('UC-002.f: unparseable From address is recovered to INBOX without rule mutation', async () => {
+  it('UC-002.f [IX-007.5, IX-008.2, IX-008.9]: unparseable From address is recovered to INBOX without rule mutation', async () => {
     const { configRepo, poller } = app;
 
     const rulesBefore = configRepo.getRules().length;
@@ -552,7 +588,7 @@ describe('UC-002: Drag into action folder creates/removes a sender rule', () => 
     expect(await listMailboxMessages(VIP_FOLDER)).toHaveLength(1);
   }, 60_000);
 
-  it('UC-002.g: remove operation with no matching rule still clears the folder', async () => {
+  it('UC-002.g [IX-007.5, IX-008.6, IX-008.9]: remove operation with no matching rule still clears the folder', async () => {
     const { configRepo, poller } = app;
     const SENDER = 'unknown@example.com';
 
