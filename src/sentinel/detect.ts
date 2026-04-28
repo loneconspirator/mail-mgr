@@ -1,3 +1,7 @@
+/**
+ * MOD-0003 SentinelDetector — public surface.
+ * See specs/modules/mod-0003-sentinel-detector.md for the spec.
+ */
 import { parseHeaderLines } from '../imap/messages.js';
 
 /** Lowercase header name for sentinel detection. Matches parseHeaderLines() output. */
