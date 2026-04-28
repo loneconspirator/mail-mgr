@@ -6,7 +6,7 @@ enforcement:
     ref: src/imap/client.ts#withMailboxSwitch
   - type: fault-injection-test
     ref: test/integration/fm-001-scheduled-scan-strands-idle.test.ts
-modules: [MOD-0002, MOD-0016, MOD-0017, MOD-0018]
+modules: [MOD-0002, MOD-0009, MOD-0016, MOD-0017, MOD-0018]
 ---
 
 ## Statement
@@ -32,5 +32,3 @@ This was discovered after a production incident in which rules stopped firing be
 ## Known violation modes
 
 - **FM-001** — Scheduled folder scan leaves IMAP IDLE on non-inbox folder.
-</content>
-</invoke>

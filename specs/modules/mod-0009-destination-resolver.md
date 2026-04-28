@@ -4,7 +4,7 @@ title: DestinationResolver
 interface-schema: src/tracking/destinations.ts
 unit-test-path: test/unit/tracking/
 integrations: [IX-003]
-invariants-enforced: []
+invariants-enforced: [INV-001]
 architecture-section: architecture.md#user-behavior-learning
 ---
 

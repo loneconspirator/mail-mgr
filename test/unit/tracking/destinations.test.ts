@@ -4,18 +4,20 @@ import type { DestinationResolverDeps } from '../../../src/tracking/destinations
 
 /** Helper to build a mock flow that returns messages for specific folders. */
 function createMockDeps(folderMessages: Record<string, string[]>): DestinationResolverDeps {
+  const fetchImpl = async (folder: string, fn: (flow: unknown) => Promise<unknown>) => {
+    const messages = folderMessages[folder] ?? [];
+    const flow = {
+      fetch: async function* (_range: string, _query: Record<string, unknown>) {
+        for (const messageId of messages) {
+          yield { uid: Math.floor(Math.random() * 10000), envelope: { messageId } };
+        }
+      },
+    };
+    return fn(flow);
+  };
   const mockClient = {
-    withMailboxLock: vi.fn(async (folder: string, fn: (flow: unknown) => Promise<unknown>) => {
-      const messages = folderMessages[folder] ?? [];
-      const flow = {
-        fetch: async function* (_range: string, _query: Record<string, unknown>) {
-          for (const messageId of messages) {
-            yield { uid: Math.floor(Math.random() * 10000), envelope: { messageId } };
-          }
-        },
-      };
-      return fn(flow);
-    }),
+    withMailboxLock: vi.fn(fetchImpl),
+    withMailboxSwitch: vi.fn(fetchImpl),
   };
 
   const mockActivityLog = {
@@ -87,8 +89,8 @@ describe('DestinationResolver', () => {
       await resolver.resolveFast('<msg-4@test.com>', 'INBOX');
 
       // Archive should only be searched once even though it appears in both recent and common
-      const lockCalls = (deps.client as { withMailboxLock: ReturnType<typeof vi.fn> }).withMailboxLock.mock.calls;
-      const archiveCalls = lockCalls.filter((c: unknown[]) => c[0] === 'Archive');
+      const switchCalls = (deps.client as { withMailboxSwitch: ReturnType<typeof vi.fn> }).withMailboxSwitch.mock.calls;
+      const archiveCalls = switchCalls.filter((c: unknown[]) => c[0] === 'Archive');
       expect(archiveCalls).toHaveLength(1);
     });
 
@@ -102,8 +104,8 @@ describe('DestinationResolver', () => {
       const resolver = new DestinationResolver(deps);
       await resolver.resolveFast('<msg-5@test.com>', 'INBOX');
 
-      const lockCalls = (deps.client as { withMailboxLock: ReturnType<typeof vi.fn> }).withMailboxLock.mock.calls;
-      const inboxCalls = lockCalls.filter((c: unknown[]) => c[0] === 'INBOX');
+      const switchCalls = (deps.client as { withMailboxSwitch: ReturnType<typeof vi.fn> }).withMailboxSwitch.mock.calls;
+      const inboxCalls = switchCalls.filter((c: unknown[]) => c[0] === 'INBOX');
       expect(inboxCalls).toHaveLength(0);
     });
   });
@@ -165,8 +167,8 @@ describe('DestinationResolver', () => {
       resolver.enqueueDeepScan('<msg-9@test.com>', 'INBOX');
       const results = await resolver.runDeepScan();
 
-      const lockCalls = (deps.client as { withMailboxLock: ReturnType<typeof vi.fn> }).withMailboxLock.mock.calls;
-      const inboxCalls = lockCalls.filter((c: unknown[]) => c[0] === 'INBOX');
+      const switchCalls = (deps.client as { withMailboxSwitch: ReturnType<typeof vi.fn> }).withMailboxSwitch.mock.calls;
+      const inboxCalls = switchCalls.filter((c: unknown[]) => c[0] === 'INBOX');
       expect(inboxCalls).toHaveLength(0);
       expect(results.size).toBe(0);
     });

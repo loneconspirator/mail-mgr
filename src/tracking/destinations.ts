@@ -149,8 +149,11 @@ export class DestinationResolver {
    * for better performance on large folders. Currently iterates envelopes.
    */
   private async searchFolderForMessage(folder: string, messageId: string): Promise<boolean> {
+    // INV-001: callers (resolveFast/runDeepScan) only pass non-INBOX folders —
+    // sourceFolder is excluded from candidates — so withMailboxSwitch is required
+    // to restore INBOX + IDLE after each per-folder fetch.
     try {
-      return await this.deps.client.withMailboxLock(folder, async (flow: ImapFlowLike) => {
+      return await this.deps.client.withMailboxSwitch(folder, async (flow: ImapFlowLike) => {
         for await (const msg of flow.fetch('1:*', { uid: true, envelope: true }, { uid: true })) {
           const envelope = (msg as { envelope?: { messageId?: string } }).envelope;
           if (envelope?.messageId === messageId) {
