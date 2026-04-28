@@ -5,6 +5,8 @@ import type { ProposalKey } from '../shared/types.js';
 /**
  * Processes move signals into proposal upserts for pattern detection.
  * Runs in real-time after each signal is logged by MoveTracker.
+ *
+ * Spec: MOD-0010 (specs/modules/mod-0010-pattern-detector.md)
  */
 export class PatternDetector {
   constructor(private proposalStore: ProposalStore) {}
