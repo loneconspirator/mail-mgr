@@ -1,3 +1,13 @@
+/**
+ * MOD-0009 DestinationResolver — interface schema.
+ *
+ * Locates where a moved message ended up using a two-tier resolution strategy.
+ * Fast-pass searches recent and common folders; deep-scan searches all selectable
+ * mailboxes by Message-ID on a slower timer for moves the fast-pass couldn't resolve.
+ *
+ * See specs/modules/mod-0009-destination-resolver.md for the spec and IX-003 for
+ * the move-detection integration.
+ */
 import type { ImapClient, ImapFlowLike } from '../imap/index.js';
 import type { ActivityLog } from '../log/index.js';
 import type pino from 'pino';
