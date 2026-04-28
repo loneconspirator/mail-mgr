@@ -15,7 +15,7 @@ SQLite persistence for detected move patterns presented as rule proposals. Track
 ## Interface Summary
 
 - `upsertProposal(key, destination, signalId)` — Create or update a proposal for the given sender/source/destination combination. Handles match/contradict counting, dominant destination recalculation, and dismissed proposal resurfacing.
-- `getProposals()` — List all proposals (all statuses).
+- `getProposals()` — List active proposals (excludes approved and dismissed) sorted by strength (matching − contradicting) DESC, then last_signal_at DESC.
 - `getById(id)` — Look up a proposal by ID.
 - `getExampleSubjects(sender, envelopeRecipient, sourceFolder, limit?)` — Get example message subjects from SignalStore for display in the web UI.
 - `approveProposal(id, ruleId)` — Mark a proposal as approved with a reference to the created rule ID.
