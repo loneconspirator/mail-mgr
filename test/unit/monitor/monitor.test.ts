@@ -69,7 +69,7 @@ function makeMockFlow(): ImapFlowLike {
     connect: vi.fn().mockResolvedValue(undefined),
     logout: vi.fn().mockResolvedValue(undefined),
     mailboxOpen: vi.fn().mockResolvedValue(undefined),
-    messageMove: vi.fn().mockResolvedValue(undefined),
+    messageMove: vi.fn().mockResolvedValue({ path: 'INBOX', destination: 'Archive', uidMap: new Map() }),
     mailboxCreate: vi.fn().mockResolvedValue(undefined),
     fetch: vi.fn().mockReturnValue({ [Symbol.asyncIterator]: () => ({ next: () => Promise.resolve({ done: true, value: undefined }) }) }),
     noop: vi.fn().mockResolvedValue(undefined),
@@ -190,7 +190,7 @@ describe('Monitor', () => {
     (flow.messageMove as ReturnType<typeof vi.fn>)
       .mockRejectedValueOnce(new Error('Move failed'))
       .mockRejectedValueOnce(new Error('Still failed'))
-      .mockResolvedValue(undefined);
+      .mockResolvedValue({ path: 'INBOX', destination: 'Archive', uidMap: new Map() });
     (flow.mailboxCreate as ReturnType<typeof vi.fn>)
       .mockRejectedValueOnce(new Error('Cannot create'));
 

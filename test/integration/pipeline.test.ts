@@ -8,7 +8,7 @@ import { ImapClient } from '../../src/imap/client.js';
 import type { ImapFlowLike } from '../../src/imap/client.js';
 import { Monitor } from '../../src/monitor/index.js';
 import { ActivityLog } from '../../src/log/index.js';
-import type { Config, Rule } from '../../src/config/schema.js';
+import { configSchema, type Config, type Rule } from '../../src/config/schema.js';
 import {
   sendTestEmail,
   waitForProcessed,
@@ -46,11 +46,14 @@ function makeRule(overrides?: Partial<Rule>): Rule {
 }
 
 function makeConfig(rules: Rule[]): Config {
-  return {
+  // Parse through the schema so all default-bearing fields (review,
+  // actionFolders, sentinel, etc.) get populated. Constructing the object
+  // literal directly invites bitrot every time the schema grows.
+  return configSchema.parse({
     imap: TEST_IMAP_CONFIG,
     server: { port: 3000, host: '0.0.0.0' },
     rules,
-  };
+  });
 }
 
 describe('Full Pipeline Integration', () => {

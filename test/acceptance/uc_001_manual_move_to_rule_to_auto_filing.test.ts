@@ -516,10 +516,352 @@ describe('UC-001: Manual move → proposed rule → auto-filing', () => {
     expect(flags.has('\\Seen')).toBe(true);
   }, 120_000);
 
-  // Sub-variants declared in UC-001 — placeholders so the validator can find
-  // them in this file and operators have a clear hook for follow-up work.
-  it.todo('UC-001.a: user move detected via deep scan (fast-pass miss)');
-  it.todo('UC-001.b: approval blocked by shadow conflict, then resolved with insertBefore');
-  it.todo('UC-001.c: rule action is `review`, ReviewSweeper files after readMaxAgeDays');
-  it.todo('UC-001.d: multiple moves strengthen proposal to "Strong" before approval');
+  it('UC-001.d: multiple moves strengthen proposal to "Strong" before approval', async () => {
+    const { activityLog, proposalStore, monitor, moveTracker, app: server } = app;
+
+    // 5 messages → strength=5 → "Strong" label per src/web/routes/proposed-rules.ts
+    // (spec says 4, but the strength threshold for "Strong" in code is >4).
+    const SUBJECTS = [
+      'Weekly Digest #42',
+      'Weekly Digest #43',
+      'Weekly Digest #44',
+      'Weekly Digest #45',
+      'Weekly Digest #46',
+    ];
+
+    // Send all 5 messages first so they're all in INBOX.
+    for (const subject of SUBJECTS) {
+      await sendTestEmail({ from: SENDER, to: 'user@localhost', subject, body: 'issue' });
+    }
+    await new Promise((r) => setTimeout(r, 500));
+    await monitor.processNewMessages();
+
+    const inboxUids = await listMailboxMessages('INBOX');
+    expect(inboxUids).toHaveLength(5);
+
+    // Seed Newsletters in recent-folders so fast-pass resolution succeeds for each.
+    activityLog
+      .getDb()
+      .prepare(
+        `INSERT INTO activity (message_uid, action, folder, success, source)
+         VALUES (0, 'move', ?, 1, 'sweep')`,
+      )
+      .run(DESTINATION);
+
+    // Stop monitor so it doesn't fight MoveTracker for the INBOX lock.
+    await monitor.stop();
+
+    // Baseline scan: snapshot INBOX with all 5 messages.
+    await moveTracker.runScanForTest();
+
+    // User moves each message manually. Run two scans after each move so
+    // MoveTracker's two-scan confirmation window fires per move and the
+    // PatternDetector increments matchingCount each time. The 500ms pauses
+    // let the shared ImapClient settle between the user-side ImapFlow
+    // operations and the MoveTracker scans (otherwise IDLE recycling races
+    // with the scan's mailbox lock and the scan silently no-ops).
+    for (const uid of inboxUids) {
+      await userMovesMessage('INBOX', DESTINATION, uid);
+      await new Promise((r) => setTimeout(r, 500));
+      await moveTracker.runScanForTest();
+      await new Promise((r) => setTimeout(r, 500));
+      await moveTracker.runScanForTest();
+      await new Promise((r) => setTimeout(r, 500));
+    }
+
+    expect(await listMailboxMessages('INBOX')).toHaveLength(0);
+    expect(await listMailboxMessages(DESTINATION)).toHaveLength(5);
+
+    const proposals = proposalStore.getProposals();
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0]).toMatchObject({
+      sender: SENDER,
+      destinationFolder: DESTINATION,
+      matchingCount: 5,
+      contradictingCount: 0,
+      status: 'active',
+    });
+
+    // The card surfaced to the UI labels the proposal "Strong".
+    const listResp = await server.inject({ method: 'GET', url: '/api/proposed-rules' });
+    expect(listResp.statusCode).toBe(200);
+    const cards = listResp.json() as ProposedRuleCard[];
+    expect(cards).toHaveLength(1);
+    expect(cards[0].matchingCount).toBe(5);
+    expect(cards[0].strengthLabel).toMatch(/strong/i);
+  }, 180_000);
+
+  it('UC-001.b: approval blocked by shadow conflict, then resolved with insertBefore', async () => {
+    const { configRepo, activityLog, proposalStore, monitor, moveTracker, app: server } = app;
+
+    // Phases 1+2 with no rules — produce the digest@example.com proposal.
+    await sendTestEmail({
+      from: SENDER,
+      to: 'user@localhost',
+      subject: 'Weekly Digest #42',
+      body: 'first issue',
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    await monitor.processNewMessages();
+
+    const inbox = await listMailboxMessages('INBOX');
+    const firstUid = inbox[0];
+
+    activityLog
+      .getDb()
+      .prepare(
+        `INSERT INTO activity (message_uid, action, folder, success, source)
+         VALUES (0, 'move', ?, 1, 'sweep')`,
+      )
+      .run(DESTINATION);
+
+    await monitor.stop();
+    await moveTracker.runScanForTest();
+    await userMovesMessage('INBOX', DESTINATION, firstUid);
+    await new Promise((r) => setTimeout(r, 500));
+    await moveTracker.runScanForTest();
+    await new Promise((r) => setTimeout(r, 500));
+    await moveTracker.runScanForTest();
+
+    const proposals = proposalStore.getProposals();
+    expect(proposals).toHaveLength(1);
+    const proposalId = proposals[0].id;
+
+    // Now add a broader pre-existing rule that shadows this proposal's sender.
+    // (Per spec UC-001.b: "an existing rule with a broader sender pattern
+    // already matches this sender at higher priority.")
+    const broadRule = configRepo.addRule({
+      name: 'Broad example.com',
+      match: { sender: '*@example.com' },
+      action: { type: 'move', folder: 'Misc' },
+      enabled: true,
+      order: configRepo.nextOrder(),
+    });
+
+    // First approval attempt: blocked by shadow conflict (409).
+    const blocked = await server.inject({
+      method: 'POST',
+      url: `/api/proposed-rules/${proposalId}/approve`,
+    });
+    expect(blocked.statusCode).toBe(409);
+    const blockedBody = blocked.json() as { error: string; conflict: { type: string; rule: { id: string } } };
+    expect(blockedBody.conflict.type).toBe('shadow');
+    expect(blockedBody.conflict.rule.id).toBe(broadRule.id);
+
+    // Proposal should remain active; no rule was created.
+    expect(proposalStore.getById(proposalId)?.status).toBe('active');
+    expect(configRepo.getRules()).toHaveLength(1);
+
+    // Retry with insertBefore=broadRule.id — places new rule above and bumps
+    // the conflicting rule's order by 1. (Capture original order BEFORE the
+    // call: configRepo.getRules() returns live references that are mutated
+    // by reorderRules.)
+    const broadOrderBefore = broadRule.order;
+    const ok = await server.inject({
+      method: 'POST',
+      url: `/api/proposed-rules/${proposalId}/approve?insertBefore=${broadRule.id}`,
+    });
+    expect(ok.statusCode).toBe(200);
+    const newRule = ok.json() as { id: string; order: number };
+
+    const rulesAfter = configRepo.getRules();
+    expect(rulesAfter).toHaveLength(2);
+    // Broad rule got bumped up by 1; new rule is in the freed slot.
+    const broadAfter = rulesAfter.find((r) => r.id === broadRule.id)!;
+    const newAfter = rulesAfter.find((r) => r.id === newRule.id)!;
+    expect(broadAfter.order).toBe(broadOrderBefore + 1);
+    expect(newAfter).toBeDefined();
+
+    expect(proposalStore.getById(proposalId)?.status).toBe('approved');
+  }, 120_000);
+
+  it('UC-001.a: user move detected via deep scan (fast-pass miss)', async () => {
+    const { proposalStore, monitor, moveTracker, imapClient } = app;
+
+    // Use a destination folder that is NOT in COMMON_FOLDERS and is NOT in
+    // the activity log's recent folders list. That forces resolveFast() to
+    // return null and the message lands in pendingDeepScan.
+    const DEEP_DEST = 'CustomArchive';
+    await imapClient.createMailbox(DEEP_DEST).catch(() => {});
+
+    await sendTestEmail({
+      from: SENDER,
+      to: 'user@localhost',
+      subject: 'Weekly Digest #42',
+      body: 'first issue',
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    await monitor.processNewMessages();
+
+    const inbox = await listMailboxMessages('INBOX');
+    const firstUid = inbox[0];
+
+    // Note: deliberately NOT seeding a recent-folder activity entry for
+    // DEEP_DEST. The fast pass should fail.
+
+    await monitor.stop();
+    await moveTracker.runScanForTest();
+    await userMovesMessage('INBOX', DEEP_DEST, firstUid);
+    await new Promise((r) => setTimeout(r, 500));
+    await moveTracker.runScanForTest();
+    await new Promise((r) => setTimeout(r, 500));
+    await moveTracker.runScanForTest();
+
+    // Sanity: the user move actually moved the message.
+    expect(await listMailboxMessages('INBOX')).toHaveLength(0);
+    expect(await listMailboxMessages(DEEP_DEST)).toHaveLength(1);
+
+    // Fast pass must have missed → no proposal yet.
+    expect(proposalStore.getProposals()).toHaveLength(0);
+    expect(moveTracker.getState().pendingDeepScan).toBe(1);
+
+    // Deep scan resolves the destination by listing all folders.
+    const result = await moveTracker.triggerDeepScan();
+    expect(result.resolved).toBe(1);
+
+    const proposals = proposalStore.getProposals();
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0]).toMatchObject({
+      sender: SENDER,
+      destinationFolder: DEEP_DEST,
+      sourceFolder: 'INBOX',
+      matchingCount: 1,
+      status: 'active',
+    });
+
+    await emptyAndDeleteFolder(DEEP_DEST);
+  }, 120_000);
+
+  it('UC-001.c: rule action is `review`, ReviewSweeper files after readMaxAgeDays', async () => {
+    const { configRepo, activityLog, proposalStore, monitor, moveTracker, imapClient, app: server } = app;
+    const REVIEW_FOLDER = configRepo.getReviewConfig().folder;
+
+    // Phases 1+2: produce a proposal exactly like the main flow.
+    await sendTestEmail({
+      from: SENDER,
+      to: 'user@localhost',
+      subject: 'Weekly Digest #42',
+      body: 'first issue',
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    await monitor.processNewMessages();
+    const firstUid = (await listMailboxMessages('INBOX'))[0];
+
+    activityLog
+      .getDb()
+      .prepare(
+        `INSERT INTO activity (message_uid, action, folder, success, source)
+         VALUES (0, 'move', ?, 1, 'sweep')`,
+      )
+      .run(DESTINATION);
+
+    await monitor.stop();
+    await moveTracker.runScanForTest();
+    await userMovesMessage('INBOX', DESTINATION, firstUid);
+    await moveTracker.runScanForTest();
+    await moveTracker.runScanForTest();
+
+    const proposals = proposalStore.getProposals();
+    expect(proposals).toHaveLength(1);
+    const proposalId = proposals[0].id;
+
+    // Phase 3 alt: approve as `review` action (asReview=true).
+    const approveResp = await server.inject({
+      method: 'POST',
+      url: `/api/proposed-rules/${proposalId}/approve?asReview=true`,
+    });
+    expect(approveResp.statusCode).toBe(200);
+    const newRule = approveResp.json() as { id: string; action: { type: string; folder?: string } };
+    expect(newRule.action.type).toBe('review');
+    expect(newRule.action.folder).toBe(DESTINATION);
+
+    await monitor.start();
+
+    // Phase 4 alt: arrival lands the message in Review (not Newsletters yet).
+    await sendTestEmail({
+      from: SENDER,
+      to: 'user@localhost',
+      subject: 'Weekly Digest #43',
+      body: 'second issue',
+    });
+    await new Promise((r) => setTimeout(r, 500));
+    await monitor.processNewMessages();
+
+    await waitForProcessed(activityLog, {
+      timeout: 10_000,
+      predicate: (e) =>
+        e.rule_id === newRule.id &&
+        e.action === 'review' &&
+        e.folder === REVIEW_FOLDER &&
+        e.success === 1,
+    });
+    expect(await listMailboxMessages(REVIEW_FOLDER)).toHaveLength(1);
+    expect(await listMailboxMessages(DESTINATION)).toHaveLength(1); // only the user-move from phase 2
+
+    // Stop monitor before mutating Review folder so it doesn't pick up our
+    // backdated message via IDLE.
+    await monitor.stop();
+
+    // Phase 4-bis: simulate the message having sat in Review long enough for
+    // sweep eligibility. ReviewSweeper uses `internalDate`; rather than wait
+    // 7 days, replace the message with a backdated APPEND. The sender + subject
+    // are preserved so the rule still matches during sweep.
+    const reviewUidBefore = (await listMailboxMessages(REVIEW_FOLDER))[0];
+    const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
+    const raw =
+      `From: ${SENDER}\r\n` +
+      `To: user@localhost\r\n` +
+      `Subject: Weekly Digest #43\r\n` +
+      `Message-ID: <backdated-43@example.com>\r\n` +
+      `\r\n` +
+      `second issue\r\n`;
+
+    // Delete the live message and append a backdated copy (with \Seen set —
+    // spec phase 5: user has read it).
+    await (async () => {
+      const c = new ImapFlow({
+        host: HOST,
+        port: IMAP_PORT,
+        secure: false,
+        auth: { user: 'user', pass: 'pass' },
+        logger: false,
+        doSTARTTLS: false,
+      });
+      await c.connect();
+      const lock = await c.getMailboxLock(REVIEW_FOLDER);
+      try {
+        await c.messageDelete([reviewUidBefore], { uid: true });
+        await c.append(REVIEW_FOLDER, raw, ['\\Seen'], eightDaysAgo);
+      } finally {
+        lock.release();
+      }
+      await c.logout().catch(() => {});
+    })();
+
+    // Phase 4-ter: ReviewSweeper picks up the backdated, seen message,
+    // re-evaluates rules (still our `review` rule), and moves to Newsletters.
+    const sweeper = new ReviewSweeper({
+      client: imapClient,
+      activityLog,
+      rules: configRepo.getRules(),
+      reviewConfig: configRepo.getReviewConfig(),
+      trashFolder: configRepo.getReviewConfig().trashFolder,
+      logger: silentLogger,
+    });
+    await sweeper.runSweep();
+
+    const sweepEntry = await waitForProcessed(activityLog, {
+      timeout: 5_000,
+      predicate: (e) =>
+        e.action === 'move' &&
+        e.folder === DESTINATION &&
+        e.source === 'sweep' &&
+        e.success === 1,
+    });
+    expect(sweepEntry.rule_id).toBe(newRule.id);
+
+    // Review is now empty, Newsletters has both messages.
+    expect(await listMailboxMessages(REVIEW_FOLDER)).toHaveLength(0);
+    expect(await listMailboxMessages(DESTINATION)).toHaveLength(2);
+  }, 180_000);
 });

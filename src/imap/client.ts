@@ -170,7 +170,13 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
 
   async moveMessage(uid: number, destination: string, sourceFolder: string = 'INBOX'): Promise<void> {
     await this.withMailboxLock(sourceFolder, async (flow) => {
-      await flow.messageMove([uid], destination, { uid: true });
+      // ImapFlow returns falsy (not a thrown error) when the destination
+      // mailbox doesn't exist or no UIDs matched. Treat that as failure so
+      // executeAction's retry path (auto-create folder + retry) actually fires.
+      const result = await flow.messageMove([uid], destination, { uid: true });
+      if (!result) {
+        throw new Error(`MOVE uid=${uid} to "${destination}" returned no result (destination missing or uid not found)`);
+      }
     });
   }
 

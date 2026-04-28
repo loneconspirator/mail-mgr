@@ -1,9 +1,9 @@
 import net from 'node:net';
-import { createTransport } from 'nodemailer';
 import { ImapFlow } from 'imapflow';
 import type { ActivityEntry } from '../../src/log/index.js';
 
-const SMTP_PORT = 3025;
+export { sendTestEmail } from '../../scripts/dev-env/smtp.js';
+
 const IMAP_PORT = 3143;
 const HOST = 'localhost';
 
@@ -45,32 +45,6 @@ export const TEST_IMAP_CONFIG = {
   idleTimeout: 300_000,
   pollInterval: 60_000,
 };
-
-/**
- * Send a test email to GreenMail via SMTP.
- */
-export async function sendTestEmail(opts: {
-  from: string;
-  to: string;
-  subject: string;
-  body: string;
-}): Promise<void> {
-  const transport = createTransport({
-    host: HOST,
-    port: SMTP_PORT,
-    secure: false,
-    tls: { rejectUnauthorized: false },
-  });
-
-  await transport.sendMail({
-    from: opts.from,
-    to: opts.to,
-    subject: opts.subject,
-    text: opts.body,
-  });
-
-  transport.close();
-}
 
 /**
  * Poll the activity log until a matching entry appears or timeout.
