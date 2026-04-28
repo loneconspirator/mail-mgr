@@ -1,3 +1,8 @@
+/**
+ * MOD-0007 ActivityLog — SQLite-backed persistence for all system actions and
+ * key-value state. See specs/modules/mod-0007-activity-log.md for the spec
+ * that owns this interface.
+ */
 import path from 'node:path';
 import Database from 'better-sqlite3';
 import type { ActionResult } from '../actions/index.js';
