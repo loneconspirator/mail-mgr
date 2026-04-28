@@ -1,3 +1,10 @@
+/**
+ * MOD-0015 WebServer — Fastify HTTP server serving the SPA frontend and REST API.
+ *
+ * See specs/modules/mod-0015-web-server.md for the module spec, IX-005 for the
+ * proposal approval interaction this server participates in, and architecture.md
+ * (#web-interface) for the architectural role.
+ */
 import path from 'node:path';
 import Fastify from 'fastify';
 import fastifyStatic from '@fastify/static';
