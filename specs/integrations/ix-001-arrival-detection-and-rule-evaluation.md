@@ -2,10 +2,10 @@
 id: IX-001
 title: IMAP arrival detection and rule evaluation
 integration-test: null
-modules: []
+modules: [MOD-0001, MOD-0002, MOD-0003, MOD-0004, MOD-0005]
 starting-states: []
 use-cases: [UC-001]
-architecture-section: architecture.md#message-processing-arrival-flow
+architecture-section: architecture.md#integration-chains
 ---
 
 ## Participants
