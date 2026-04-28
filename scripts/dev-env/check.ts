@@ -2,7 +2,7 @@
  * Dev environment smoke checks.
  * Hits API endpoints and verifies expected state from seed data.
  *
- * Usage: npx tsx .claude/skills/dev-environment/check.ts
+ * Usage: npx tsx scripts/dev-env/check.ts
  *
  * Expects the dev app to be running on localhost:3001
  */

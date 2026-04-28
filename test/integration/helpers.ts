@@ -1,3 +1,4 @@
+import net from 'node:net';
 import { createTransport } from 'nodemailer';
 import { ImapFlow } from 'imapflow';
 import type { ActivityEntry } from '../../src/log/index.js';
@@ -5,6 +6,36 @@ import type { ActivityEntry } from '../../src/log/index.js';
 const SMTP_PORT = 3025;
 const IMAP_PORT = 3143;
 const HOST = 'localhost';
+
+/**
+ * Verify GreenMail is reachable on the IMAP port. Throws a clear, actionable
+ * error if not — without this, every helper below fails in a way that takes
+ * 10–40 seconds to surface and points at the wrong layer.
+ *
+ * Call from a beforeAll() in any test file that needs GreenMail.
+ */
+export async function assertGreenMailRunning(timeoutMs = 1000): Promise<void> {
+  const reachable = await new Promise<boolean>((resolve) => {
+    const socket = new net.Socket();
+    const done = (ok: boolean) => {
+      socket.destroy();
+      resolve(ok);
+    };
+    socket.setTimeout(timeoutMs);
+    socket.once('connect', () => done(true));
+    socket.once('timeout', () => done(false));
+    socket.once('error', () => done(false));
+    socket.connect(IMAP_PORT, HOST);
+  });
+
+  if (!reachable) {
+    throw new Error(
+      `GreenMail is not reachable on ${HOST}:${IMAP_PORT}. ` +
+        `Start it with: scripts/dev-env/start.sh ` +
+        `(or: docker compose -f docker-compose.test.yaml up -d)`,
+    );
+  }
+}
 
 export const TEST_IMAP_CONFIG = {
   host: HOST,

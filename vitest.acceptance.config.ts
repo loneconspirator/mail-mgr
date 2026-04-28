@@ -2,10 +2,10 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    include: ['test/integration/**/*.test.ts'],
-    exclude: ['test/acceptance/**'],
+    include: ['test/acceptance/**/*.test.ts'],
     globals: true,
-    testTimeout: 30_000,
+    testTimeout: 180_000,
+    hookTimeout: 60_000,
     globalSetup: ['./test/integration/global-setup.ts'],
   },
 });

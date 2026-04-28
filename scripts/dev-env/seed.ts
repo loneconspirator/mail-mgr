@@ -2,7 +2,7 @@
  * Dev environment seed script.
  * Reads seed-data.yml and populates GreenMail (via SMTP) and SQLite (direct inserts).
  *
- * Usage: npx tsx .claude/skills/dev-environment/seed.ts
+ * Usage: npx tsx scripts/dev-env/seed.ts
  *
  * Expects:
  *   - GreenMail running on localhost:3025 (SMTP) and localhost:3143 (IMAP)
