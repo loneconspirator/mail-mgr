@@ -1,3 +1,13 @@
+/**
+ * MOD-0013 ConflictChecker — interface schema.
+ *
+ * Spec: specs/modules/mod-0013-conflict-checker.md
+ *
+ * Detects conflicts between a proposed rule and existing rules before approval.
+ * Surfaces two conflict types:
+ *  - exact: identical sender (+ optional deliveredTo) would create a duplicate
+ *  - shadow: a broader existing rule at higher priority would catch the same messages
+ */
 import picomatch from 'picomatch';
 import type { Rule } from '../config/schema.js';
 import type { ProposalConflict } from '../shared/types.js';
