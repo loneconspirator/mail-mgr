@@ -1,3 +1,7 @@
+/**
+ * MOD-0004 — RuleEvaluator
+ * See specs/modules/mod-0004-rule-evaluator.md for the spec of record.
+ */
 import type { Rule } from '../config/index.js';
 import type { EmailMessage } from '../imap/index.js';
 import { matchRule } from './matcher.js';
