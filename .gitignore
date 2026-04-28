@@ -5,6 +5,7 @@ data/
 .env
 *.tsbuildinfo
 .ralph/
+.claude/scheduled_tasks.lock
 
 # ── GSD baseline (auto-generated) ──
 .gsd
