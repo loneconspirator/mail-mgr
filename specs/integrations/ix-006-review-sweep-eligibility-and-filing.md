@@ -1,11 +1,11 @@
 ---
 id: IX-006
 title: Review sweep eligibility and age-based filing
-integration-test: null
-modules: []
+integration-test: test/integration/sweep.test.ts
+modules: [MOD-0002, MOD-0003, MOD-0004, MOD-0005, MOD-0007, MOD-0016]
 starting-states: []
 use-cases: [UC-001]
-architecture-section: architecture.md#message-processing-review-sweep-flow
+architecture-section: architecture.md#uc-001c-variant-review-sweep-delayed-filing
 ---
 
 ## Participants
