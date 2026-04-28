@@ -1,3 +1,12 @@
+/**
+ * MOD-0006 — ActionExecutor
+ *
+ * Executes the matched rule's action against a message (move, review, skip, delete).
+ * Auto-creates destination folders that don't exist yet.
+ *
+ * Spec: specs/modules/mod-0006-action-executor.md
+ * Integration: IX-002 (specs/integrations/ix-002-action-execution-and-activity-logging.md)
+ */
 import type { Rule } from '../config/index.js';
 import type { ImapClient, EmailMessage } from '../imap/index.js';
 
