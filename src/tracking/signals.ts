@@ -1,3 +1,9 @@
+/**
+ * MOD-0011 SignalStore — see specs/modules/mod-0011-signal-store.md
+ *
+ * SQLite persistence for raw user-move signals. Source of truth for the
+ * SignalStore module's public interface.
+ */
 import type Database from 'better-sqlite3';
 
 export interface MoveSignalInput {
