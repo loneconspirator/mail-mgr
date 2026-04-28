@@ -1,3 +1,13 @@
+/**
+ * MOD-0001 Monitor — interface schema.
+ *
+ * Public surface for the arrival processing pipeline. See
+ * specs/modules/mod-0001-monitor.md for the canonical interface contract,
+ * dependencies, and notes. Architecture lives at
+ * specs/architecture.md#core-processing. Participates in IX-001 (arrival
+ * detection and rule evaluation) and IX-002 (action execution and activity
+ * logging).
+ */
 import pino from 'pino';
 import type { Config, Rule } from '../config/index.js';
 import { ImapClient } from '../imap/index.js';
