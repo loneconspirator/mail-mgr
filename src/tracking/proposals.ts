@@ -1,3 +1,7 @@
+/**
+ * MOD-0012 ProposalStore — interface schema.
+ * See specs/modules/mod-0012-proposal-store.md.
+ */
 import type Database from 'better-sqlite3';
 import type { ProposedRule, ProposalKey, ExampleMessage } from '../shared/types.js';
 
