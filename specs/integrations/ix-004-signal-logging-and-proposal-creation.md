@@ -2,10 +2,10 @@
 id: IX-004
 title: Signal logging and proposal creation/update
 integration-test: null
-modules: []
+modules: [MOD-0010, MOD-0011, MOD-0012]
 starting-states: []
 use-cases: [UC-001]
-architecture-section: architecture.md#message-processing-user-move-detection--proposal-flow
+architecture-section: architecture.md#uc-001-manual-move--proposed-rule--auto-filing
 ---
 
 ## Participants
