@@ -1,3 +1,11 @@
+/**
+ * MOD-0002 ImapClient — interface schema.
+ *
+ * Public surface for the IMAP abstraction layer. See
+ * specs/modules/mod-0002-imap-client.md for the canonical interface contract,
+ * dependencies, and notes. Architecture lives at
+ * specs/architecture.md#imap--infrastructure.
+ */
 import { EventEmitter } from 'events';
 import type { ImapConfig } from '../config/index.js';
 import { parseHeaderLines, classifyVisibility } from './messages.js';
