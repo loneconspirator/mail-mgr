@@ -14,8 +14,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import Database from 'better-sqlite3';
-import { sendTestEmail } from '../../../test/integration/helpers.js';
-import { runMigrations } from '../../../src/log/migrations.js';
+import { sendTestEmail } from './smtp.js';
+import { runMigrations } from '../../src/log/migrations.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_PATH = process.env.DATA_PATH ?? '/tmp/mail-mgr-dev';
