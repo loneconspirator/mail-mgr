@@ -3,6 +3,9 @@ import type { Rule } from '../config/index.js';
 import type { EmailMessage } from '../imap/index.js';
 
 /**
+ * MOD-0005 RuleMatcher — interface schema.
+ * Spec: specs/modules/mod-0005-rule-matcher.md
+ *
  * Test whether a single rule matches a message.
  * All specified match fields must match (AND logic).
  * Fields: sender, recipient (To+CC), subject, deliveredTo (envelope),
