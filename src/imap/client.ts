@@ -177,7 +177,7 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   }
 
   async moveMessage(uid: number, destination: string, sourceFolder: string = 'INBOX'): Promise<void> {
-    await this.withMailboxLock(sourceFolder, async (flow) => {
+    const work = async (flow: ImapFlowLike): Promise<void> => {
       // ImapFlow returns falsy (not a thrown error) when the destination
       // mailbox doesn't exist or no UIDs matched. Treat that as failure so
       // executeAction's retry path (auto-create folder + retry) actually fires.
@@ -185,7 +185,14 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
       if (!result) {
         throw new Error(`MOVE uid=${uid} to "${destination}" returned no result (destination missing or uid not found)`);
       }
-    });
+    };
+    // Non-INBOX source folders go through withMailboxSwitch so INBOX + IDLE
+    // are restored on both success and error paths (INV-001 / FM-001).
+    if (sourceFolder === 'INBOX') {
+      await this.withMailboxLock(sourceFolder, work);
+    } else {
+      await this.withMailboxSwitch(sourceFolder, work);
+    }
   }
 
   /** List all mailboxes with path and flags. */
@@ -309,7 +316,7 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   }
 
   async fetchAllMessages(folder: string): Promise<ReviewMessage[]> {
-    return this.withMailboxLock(folder, async () => {
+    const work = async (): Promise<ReviewMessage[]> => {
       const query: Record<string, unknown> = {
         uid: true,
         flags: true,
@@ -322,7 +329,13 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
       }
       const raw = await this.fetchMessagesRaw('1:*', query);
       return raw.map((r) => this.parseRawToReviewMessage(r));
-    });
+    };
+    // Non-INBOX folders go through withMailboxSwitch so INBOX + IDLE are
+    // restored on both success and error paths (INV-001 / FM-001). INBOX
+    // can stay on withMailboxLock since the post-op restore is a no-op.
+    return folder === 'INBOX'
+      ? this.withMailboxLock(folder, work)
+      : this.withMailboxSwitch(folder, work);
   }
 
   private parseRawToReviewMessage(raw: unknown): ReviewMessage {

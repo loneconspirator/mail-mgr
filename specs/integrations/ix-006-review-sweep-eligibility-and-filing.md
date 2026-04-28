@@ -94,4 +94,4 @@ sequenceDiagram
 
 ## Failure Handling
 
-None defined yet.
+- **FM-001** — The sweep tick must not strand IDLE on the review folder. ReviewSweeper performs its folder work via `MOD-0002.withMailboxSwitch`, which is responsible for re-selecting INBOX and re-arming IDLE in its `finally` block. INV-001 captures the underlying property.

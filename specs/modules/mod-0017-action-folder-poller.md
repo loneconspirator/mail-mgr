@@ -4,7 +4,7 @@ title: ActionFolderPoller
 interface-schema: src/action-folders/poller.ts
 unit-test-path: test/unit/action-folders/poller.test.ts
 integrations: [IX-007]
-invariants-enforced: []
+invariants-enforced: [INV-001]
 architecture-section: architecture.md#action-folders
 ---
 

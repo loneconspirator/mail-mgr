@@ -82,7 +82,7 @@ sequenceDiagram
 
 ## Failure Handling
 
-- **FM-001** — Each per-folder scan in IX-007.4–IX-007.7 must not strand the shared IMAP connection on an action folder. The observable contract — INBOX selected and `newMail` events still firing after a tick — is captured by INV-001, and is exercised end-to-end against the real ActionFolderPoller (success path and forced-error path) by `test/integration/fm-001-scheduled-scan-strands-idle.test.ts`. Note: STATUS calls (IX-007.4) do not change the selected mailbox; FETCH calls (IX-007.5, IX-007.7) currently flow through `MOD-0002.fetchAllMessages`, which uses `MOD-0002.withMailboxLock` — that helper releases the imapflow lock but does NOT itself re-select INBOX or re-arm IDLE, so INV-001 is upheld by the surrounding wiring (and verified by the fault-injection test) rather than by the helper alone. INV-001's `enforcement` notes `withMailboxSwitch` as the canonical helper for non-INBOX folder ops; converging the poller's FETCH path onto that helper is a known follow-up.
+- **FM-001** — Each per-folder scan in IX-007.4–IX-007.7 must not strand the shared IMAP connection on an action folder. The observable contract — INBOX selected and `newMail` events still firing after a tick — is captured by INV-001 and exercised end-to-end against the real ActionFolderPoller (success path and forced-error path) by `test/integration/fm-001-scheduled-scan-strands-idle.test.ts`. STATUS calls (IX-007.4) do not change the selected mailbox; FETCH calls (IX-007.5, IX-007.7) flow through `MOD-0002.fetchAllMessages`, which routes non-INBOX folders through `MOD-0002.withMailboxSwitch` so INBOX and the IDLE/poll loop are restored on both success and error paths.
 
 ## Notes
 

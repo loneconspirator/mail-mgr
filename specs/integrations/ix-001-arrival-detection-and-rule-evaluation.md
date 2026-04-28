@@ -77,4 +77,4 @@ sequenceDiagram
 
 ## Failure Handling
 
-None defined yet.
+- **FM-001** — A scheduled folder scan elsewhere in the system (e.g. IX-006, IX-007) leaves the shared IMAP connection on a non-INBOX folder, silently breaking IX-001.1 until the connection is reset. INV-001 binds every consumer of MOD-0002 to restore INBOX + IDLE before relinquishing the connection.

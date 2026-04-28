@@ -4,7 +4,7 @@ title: ReviewSweeper
 interface-schema: src/sweep/index.ts
 unit-test-path: test/unit/sweep/
 integrations: [IX-006]
-invariants-enforced: []
+invariants-enforced: [INV-001]
 architecture-section: architecture.md#core-processing
 ---
 
