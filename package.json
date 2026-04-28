@@ -9,7 +9,8 @@
     "build": "tsc && node esbuild.mjs",
     "build:frontend": "node esbuild.mjs",
     "start": "node --env-file=.env dist/index.js",
-    "test": "vitest run",
+    "test": "npm run test:unit && npm run test:integration && npm run test:acceptance",
+    "test:unit": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:acceptance": "vitest run --config vitest.acceptance.config.ts",
     "test:watch": "vitest"
