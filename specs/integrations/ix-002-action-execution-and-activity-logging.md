@@ -2,10 +2,10 @@
 id: IX-002
 title: Rule-matched action execution and activity logging
 integration-test: null
-modules: []
+modules: [MOD-0001, MOD-0002, MOD-0006, MOD-0007]
 starting-states: []
 use-cases: [UC-001]
-architecture-section: architecture.md#message-processing-arrival-flow
+architecture-section: architecture.md#uc-001-manual-move--proposed-rule--auto-filing
 ---
 
 ## Participants
