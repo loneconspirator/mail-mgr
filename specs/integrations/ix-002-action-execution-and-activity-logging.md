@@ -4,7 +4,7 @@ title: Rule-matched action execution and activity logging
 integration-test: null
 modules: [MOD-0001, MOD-0002, MOD-0006, MOD-0007]
 starting-states: []
-use-cases: [UC-001]
+use-cases: [UC-001, UC-002]
 architecture-section: architecture.md#uc-001-manual-move--proposed-rule--auto-filing
 ---
 

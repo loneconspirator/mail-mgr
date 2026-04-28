@@ -4,7 +4,7 @@ title: IMAP arrival detection and rule evaluation
 integration-test: null
 modules: [MOD-0001, MOD-0002, MOD-0003, MOD-0004, MOD-0005]
 starting-states: []
-use-cases: [UC-001]
+use-cases: [UC-001, UC-002]
 architecture-section: architecture.md#integration-chains
 ---
 

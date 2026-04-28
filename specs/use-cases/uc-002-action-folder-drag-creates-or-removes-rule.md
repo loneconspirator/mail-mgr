@@ -1,9 +1,9 @@
 ---
 id: UC-002
 title: Dragging a message into an action folder creates or removes a sender rule
-acceptance-test: null
+acceptance-test: test/acceptance/uc_002_action_folder_drag_creates_or_removes_rule.test.ts
 starting-states: []
-integrations: [IX-007, IX-008]
+integrations: [IX-001, IX-002, IX-007, IX-008]
 ---
 
 ## Actors
