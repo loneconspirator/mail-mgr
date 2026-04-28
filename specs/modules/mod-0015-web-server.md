@@ -3,7 +3,7 @@ id: MOD-0015
 title: WebServer
 interface-schema: src/web/server.ts
 unit-test-path: test/unit/web/
-integrations: [IX-005]
+integrations: [IX-005, IX-009, IX-010, IX-011, IX-012]
 invariants-enforced: []
 architecture-section: architecture.md#web-interface
 ---

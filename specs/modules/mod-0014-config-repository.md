@@ -3,7 +3,7 @@ id: MOD-0014
 title: ConfigRepository
 interface-schema: src/config/repository.ts
 unit-test-path: test/unit/config/
-integrations: [IX-005, IX-007, IX-008]
+integrations: [IX-005, IX-007, IX-008, IX-011]
 invariants-enforced: []
 architecture-section: architecture.md#configuration--state
 ---

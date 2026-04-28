@@ -3,7 +3,7 @@ id: MOD-0016
 title: ReviewSweeper
 interface-schema: src/sweep/index.ts
 unit-test-path: test/unit/sweep/
-integrations: [IX-006]
+integrations: [IX-006, IX-009, IX-010]
 invariants-enforced: [INV-001]
 architecture-section: architecture.md#core-processing
 ---

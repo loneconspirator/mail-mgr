@@ -3,7 +3,7 @@ id: MOD-0012
 title: ProposalStore
 interface-schema: src/tracking/proposals.ts
 unit-test-path: test/unit/tracking/
-integrations: [IX-004, IX-005]
+integrations: [IX-004, IX-005, IX-012]
 invariants-enforced: []
 architecture-section: architecture.md#user-behavior-learning
 ---

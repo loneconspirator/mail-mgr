@@ -3,7 +3,7 @@ id: MOD-0010
 title: PatternDetector
 interface-schema: src/tracking/detector.ts
 unit-test-path: test/unit/tracking/
-integrations: [IX-004]
+integrations: [IX-004, IX-012]
 invariants-enforced: []
 architecture-section: architecture.md#user-behavior-learning
 ---

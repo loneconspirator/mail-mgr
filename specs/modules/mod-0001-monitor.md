@@ -3,7 +3,7 @@ id: MOD-0001
 title: Monitor
 interface-schema: src/monitor/index.ts
 unit-test-path: test/unit/monitor/
-integrations: [IX-001, IX-002]
+integrations: [IX-001, IX-002, IX-011]
 invariants-enforced: []
 architecture-section: architecture.md#core-processing
 ---
