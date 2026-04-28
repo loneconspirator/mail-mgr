@@ -154,13 +154,21 @@ export class DestinationResolver {
     // to restore INBOX + IDLE after each per-folder fetch.
     try {
       return await this.deps.client.withMailboxSwitch(folder, async (flow: ImapFlowLike) => {
+        let found = false;
+        // Drain the FETCH stream fully even after a match. Breaking out early
+        // abandons ImapFlow's fetch generator mid-stream — the FETCH command
+        // stays in-flight at the IMAP protocol level, and the next command
+        // (SELECT INBOX in withMailboxSwitch's finally) pipelines into the
+        // unfinished response, which servers like GreenMail respond to by
+        // closing the TCP connection.
         for await (const msg of flow.fetch('1:*', { uid: true, envelope: true }, { uid: true })) {
+          if (found) continue;
           const envelope = (msg as { envelope?: { messageId?: string } }).envelope;
           if (envelope?.messageId === messageId) {
-            return true;
+            found = true;
           }
         }
-        return false;
+        return found;
       });
     } catch (err) {
       this.deps.logger?.debug({ folder, messageId, error: err }, 'Failed to search folder');
