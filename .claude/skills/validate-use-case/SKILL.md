@@ -55,6 +55,7 @@ The script performs these checks (and emits structured JSON):
 | `UC-ACCEPTANCE-TEST-UNSET` (warning) | `acceptance-test:` is null/empty — fine while a use case is new, but should be filled before the use case is considered "live". |
 | `UC-ACCEPTANCE-TEST-MISSING` (error) | `acceptance-test:` points to a file that does not exist. |
 | `UC-ACCEPTANCE-TEST-NOT-LINKED-BACK` (error) | The acceptance test file does not contain the use case ID anywhere. |
+| `UC-ACCEPTANCE-TEST-NOT-IMPLEMENTED` (error) | The use case ID appears in the acceptance test only inside a stubbed declaration (`it.todo`, `it.skip`, `xit`, etc.) — there is no real test body. |
 | `UC-INTEGRATION-MISSING` (error) | `integrations:` lists an `IX-###` that has no spec file. |
 | `UC-INTEGRATION-NOT-LINKED-BACK` (error) | A listed integration's `use-cases:` frontmatter does not include this UC. |
 | `UC-NO-NUMBERED-STEPS` (warning) | The body has no numbered list — main flow can't be checked. |
@@ -62,6 +63,7 @@ The script performs these checks (and emits structured JSON):
 | `UC-STEP-DANGLING-INTERACTION-REF` (error) | A step cites `IX-###.N` but no listed integration declares that sub-ID. |
 | `UC-STEP-NO-INTERACTION-REFS` (info) | No step cites any IX reference inline — the step-to-interaction mapping has to be inferred from prose. |
 | `UC-SUBVARIANT-NOT-IN-TEST` (error) | A sub-variant ID like `UC-001.a` does not appear anywhere in the acceptance test source. |
+| `UC-SUBVARIANT-NOT-IMPLEMENTED` (error) | A sub-variant ID appears in the acceptance test only inside a stubbed declaration (`it.todo`, `it.skip`, `xit`, etc.) or only in comments — no real test exercises it. |
 | `UC-SUBVARIANTS-WITHOUT-TEST` (warning) | The use case declares sub-variants but has no `acceptance-test`. |
 
 Exit codes: `0` (no errors), `1` (one or more errors), `2` (script failure / argument error).

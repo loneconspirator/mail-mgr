@@ -157,6 +157,55 @@ function readIfExists(repoRoot: string, p: string): string | null {
   return fs.existsSync(full) ? fs.readFileSync(full, 'utf8') : null;
 }
 
+// A real (implemented) test declaration: it/test/describe/bench possibly
+// chained with .each/.concurrent/.sequential/.only — but NOT .todo or .skip.
+// Also matches the .only variants because those are still implemented bodies.
+const REAL_TEST_DECL_RE =
+  /\b(?:it|test|describe|bench)(?:\s*\.\s*(?:each|concurrent|sequential|only)\s*(?:\([^)]*\))?)*\s*\(/;
+
+// A stubbed test declaration: an it/test/describe variant that is explicitly
+// not implemented — .todo / .skip, or the legacy x-prefixed forms.
+const STUB_TEST_DECL_RE =
+  /\b(?:(?:it|test|describe)\s*\.\s*(?:todo|skip|skipIf|runIf)|xit|xtest|xdescribe)\s*\(/;
+
+/**
+ * Classify how a use-case ID (or sub-variant ID) is referenced in a test
+ * source file:
+ *   'implemented' — at least one real `it(...)` / `describe(...)` / etc.
+ *                   declaration on a line that mentions the ID.
+ *   'stub-only'   — the ID is mentioned only on lines that hold a stubbed
+ *                   declaration (it.todo / it.skip / xit / ...). Comments
+ *                   alone don't count as a stub — but a comment-only mention
+ *                   means there's no test at all.
+ *   'comment-only' — the ID appears only in comments / strings, with no
+ *                    test declaration of any kind on those lines.
+ *   'absent'       — the ID is not present anywhere in the file.
+ */
+type TestRefKind = 'implemented' | 'stub-only' | 'comment-only' | 'absent';
+
+function classifyTestReference(testSrc: string, id: string): TestRefKind {
+  const lines = testSrc.split(/\r?\n/);
+  let anyMatch = false;
+  let anyImplemented = false;
+  let anyStub = false;
+  for (const line of lines) {
+    if (!line.includes(id)) continue;
+    anyMatch = true;
+    const isStub = STUB_TEST_DECL_RE.test(line);
+    if (isStub) {
+      anyStub = true;
+      continue;
+    }
+    if (REAL_TEST_DECL_RE.test(line)) {
+      anyImplemented = true;
+    }
+  }
+  if (!anyMatch) return 'absent';
+  if (anyImplemented) return 'implemented';
+  if (anyStub) return 'stub-only';
+  return 'comment-only';
+}
+
 interface Args {
   target: string;
   specsRoot: string;
@@ -245,6 +294,13 @@ function run(args: Args): { ok: boolean; report: object } {
         severity: 'error',
         message: `${ucId} is not referenced anywhere in its acceptance test ${acceptanceTest}`,
         detail: 'The acceptance test must mention the use case ID (in describe/it titles or a comment) so reviewers can trace the link from test to spec.',
+      });
+    } else if (classifyTestReference(testSrc, ucId) === 'stub-only') {
+      findings.push({
+        id: 'UC-ACCEPTANCE-TEST-NOT-IMPLEMENTED',
+        severity: 'error',
+        message: `${ucId} is referenced in ${acceptanceTest} but only inside a stubbed/skipped test (it.todo, it.skip, xit, etc.)`,
+        detail: 'The use case has a test declaration but no actual implementation. Replace the it.todo/it.skip/xit with a real test body that exercises the flow.',
       });
     }
   }
@@ -338,12 +394,27 @@ function run(args: Args): { ok: boolean; report: object } {
   if (typeof acceptanceTest === 'string' && acceptanceTest && fileExists(args.repoRoot, acceptanceTest)) {
     const testSrc = readIfExists(args.repoRoot, acceptanceTest) ?? '';
     for (const sv of subVariants) {
-      if (!testSrc.includes(sv)) {
+      const kind = classifyTestReference(testSrc, sv);
+      if (kind === 'absent') {
         findings.push({
           id: 'UC-SUBVARIANT-NOT-IN-TEST',
           severity: 'error',
           message: `${ucId} sub-variant ${sv} is not referenced in acceptance test ${acceptanceTest}`,
           detail: 'Each sub-variant should appear in the name or description of at least one test case so reviewers can confirm it is exercised.',
+        });
+      } else if (kind === 'stub-only') {
+        findings.push({
+          id: 'UC-SUBVARIANT-NOT-IMPLEMENTED',
+          severity: 'error',
+          message: `${ucId} sub-variant ${sv} appears in ${acceptanceTest} but only inside a stubbed/skipped test (it.todo, it.skip, xit, etc.)`,
+          detail: 'The sub-variant has a placeholder test declaration but no implementation. Replace the it.todo/it.skip/xit with a real test body that exercises the variant.',
+        });
+      } else if (kind === 'comment-only') {
+        findings.push({
+          id: 'UC-SUBVARIANT-NOT-IMPLEMENTED',
+          severity: 'error',
+          message: `${ucId} sub-variant ${sv} is mentioned in ${acceptanceTest} but only in comments — no test declaration exercises it`,
+          detail: 'Add an it(...) / describe(...) / test(...) block whose name or body references the sub-variant ID and exercises its scenario.',
         });
       }
     }
