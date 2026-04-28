@@ -5,7 +5,7 @@ integration-test: null
 modules: [MOD-0002, MOD-0007, MOD-0008, MOD-0009]
 starting-states: []
 use-cases: [UC-001]
-architecture-section: architecture.md#message-processing-user-move-detection--proposal-flow
+architecture-section: architecture.md#uc-001-manual-move--proposed-rule--auto-filing
 ---
 
 ## Participants
