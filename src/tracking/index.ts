@@ -46,6 +46,8 @@ interface FolderSnapshot {
 }
 
 /**
+ * MoveTracker — implements MOD-0008 (see specs/modules/mod-0008-move-tracker.md).
+ *
  * Detects user-initiated moves by comparing UID snapshots across scans.
  * System moves (from Monitor/Sweep/Batch) are excluded via activity log cross-reference.
  * Two-scan confirmation prevents race conditions with concurrent processes.
