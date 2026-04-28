@@ -2,10 +2,10 @@
 id: IX-005
 title: Proposal approval with conflict checking and rule creation
 integration-test: null
-modules: []
+modules: [MOD-0012, MOD-0013, MOD-0014, MOD-0015]
 starting-states: []
 use-cases: [UC-001]
-architecture-section: architecture.md#message-processing-proposal-approval-flow
+architecture-section: architecture.md#uc-001-manual-move--proposed-rule--auto-filing
 ---
 
 ## Participants
