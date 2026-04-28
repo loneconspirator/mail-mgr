@@ -1,3 +1,7 @@
+/**
+ * MOD-0016 ReviewSweeper — interface schema.
+ * See specs/modules/mod-0016-review-sweeper.md for the spec.
+ */
 import type { ImapClient, ReviewMessage } from '../imap/index.js';
 import { isSentinel } from '../sentinel/index.js';
 import { reviewMessageToEmailMessage } from '../imap/index.js';
