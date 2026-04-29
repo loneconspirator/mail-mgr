@@ -72,6 +72,8 @@ Read the JSON. Each finding has `id`, `severity`, `message`, and often a `detail
 
 ### Step 2 — Run the acceptance test, if it is wired up
 
+**Skip this entire step if the caller passed `--skip-tests`** (the `/validate` orchestrator does this so it can run the whole test suite once in parallel instead of one-file-at-a-time per validator). When skipping, note in the report that the acceptance test run was deferred to the orchestrator's full-suite run.
+
 If the report's `acceptanceTest` field is non-null and the script reported the file exists, run it. Use the project's vitest runner targeted at that file specifically. Example:
 
 ```bash

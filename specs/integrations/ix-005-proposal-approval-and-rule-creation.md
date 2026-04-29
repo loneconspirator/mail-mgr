@@ -1,7 +1,7 @@
 ---
 id: IX-005
 title: Proposal approval with conflict checking and rule creation
-integration-test: null
+integration-test: test/integration/ix-005-proposal-approval-and-rule-creation.test.ts
 modules: [MOD-0012, MOD-0013, MOD-0014, MOD-0015]
 starting-states: []
 use-cases: [UC-001]

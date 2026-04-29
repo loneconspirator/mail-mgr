@@ -21,8 +21,9 @@
  *   UC-004.b       — Concurrent dry-run while executing returns 409.
  *   UC-004.c       — Source folder is the Review folder (sweep semantics).
  *   UC-004.d       — Generic mode (non-INBOX, non-Review) source folder.
- *   UC-004.e       — Per-message error during execute (it.todo — needs
- *                    IMAP-level fault injection).
+ *   UC-004.e       — Per-message error during execute (moveMessage fault
+ *                    injection — run completes, errors logged, others
+ *                    proceed).
  *   UC-004.f       — Sentinels are skipped silently in both phases.
  *   UC-004.g       — Rule changes between dry-run and execute take effect.
  */
@@ -666,9 +667,73 @@ describe('UC-004: User retroactively files an existing folder via dry-run previe
     expect((await listMailboxMessages(TRIAGE)).length).toBe(1);
   }, 120_000);
 
-  it.todo(
-    'UC-004.e: per-message error during execute does not abort the run — needs IMAP-level fault injection',
-  );
+  it('UC-004.e: per-message error during execute does not abort the run', async () => {
+    const { configRepo, activityLog, imapClient, app: server } = app;
+
+    configRepo.addRule(
+      ruleInput({
+        name: 'Triage move',
+        match: { sender: '*@notify.example.com' },
+        action: { type: 'move', folder: NOTIFICATIONS },
+        order: configRepo.nextOrder(),
+      }),
+    );
+
+    // Five candidate messages in TRIAGE (generic mode → moveMessage path
+    // with per-message try/catch).
+    for (let i = 0; i < 5; i++) {
+      await appendRaw(TRIAGE, {
+        sender: `n${i}@notify.example.com`,
+        subject: `Notify ${i}`,
+        messageId: `uc004e-${i}@example.com`,
+      });
+    }
+
+    // Inject a fault: the first moveMessage call throws (simulates the spec's
+    // "destination folder was deleted server-side after dry-run" scenario).
+    // Subsequent calls hit the real implementation and succeed.
+    const realMove = imapClient.moveMessage.bind(imapClient);
+    let failed = false;
+    (imapClient as { moveMessage: typeof imapClient.moveMessage }).moveMessage = async (
+      uid: number,
+      destination: string,
+      sourceFolder?: string,
+    ) => {
+      if (!failed) {
+        failed = true;
+        throw new Error('Mailbox does not exist (injected fault)');
+      }
+      return realMove(uid, destination, sourceFolder);
+    };
+
+    try {
+      const execResp = await postJson(server, '/api/batch/execute', { sourceFolder: TRIAGE });
+      expect(execResp.statusCode).toBe(200);
+
+      const final = await pollUntilStatus(server, (s) => s.status === 'completed', 30_000);
+      expect(final.processed).toBe(5);
+      expect(final.errors).toBe(1);
+      expect(final.moved).toBe(4);
+      expect(final.skipped).toBe(0);
+    } finally {
+      // Restore the real move method so afterEach teardown isn't booby-trapped.
+      (imapClient as { moveMessage: typeof imapClient.moveMessage }).moveMessage = realMove;
+    }
+
+    // Four messages moved; one stayed in TRIAGE.
+    expect((await listMailboxMessages(NOTIFICATIONS)).length).toBe(4);
+    expect((await listMailboxMessages(TRIAGE)).length).toBe(1);
+
+    // Activity log has the failure entry with success=0 and the error string.
+    const batchEntries = activityLog
+      .getRecentActivity(100)
+      .filter((e) => e.source === 'batch');
+    const failures = batchEntries.filter((e) => e.success === 0);
+    expect(failures).toHaveLength(1);
+    expect(failures[0].error).toContain('injected fault');
+    const successes = batchEntries.filter((e) => e.action === 'move' && e.success === 1);
+    expect(successes).toHaveLength(4);
+  }, 120_000);
 
   it('UC-004.f: sentinel messages are skipped silently in dry-run and execute', async () => {
     const { configRepo, app: server } = app;

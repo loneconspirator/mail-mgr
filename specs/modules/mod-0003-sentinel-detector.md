@@ -3,7 +3,7 @@ id: MOD-0003
 title: SentinelDetector
 interface-schema: src/sentinel/detect.ts
 unit-test-path: test/unit/sentinel/
-integrations: [IX-001, IX-006, IX-007, IX-008]
+integrations: [IX-001, IX-006, IX-007, IX-008, IX-009, IX-010]
 invariants-enforced: []
 architecture-section: architecture.md#imap--infrastructure
 ---

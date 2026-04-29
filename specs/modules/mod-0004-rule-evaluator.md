@@ -3,7 +3,7 @@ id: MOD-0004
 title: RuleEvaluator
 interface-schema: src/rules/evaluator.ts
 unit-test-path: test/unit/rules/
-integrations: [IX-001, IX-006]
+integrations: [IX-001, IX-006, IX-009, IX-010]
 invariants-enforced: []
 architecture-section: architecture.md#core-processing
 ---

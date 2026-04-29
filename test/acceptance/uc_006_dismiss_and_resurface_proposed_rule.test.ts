@@ -9,8 +9,7 @@
  * SignalStore, PatternDetector, ProposalStore, ConfigRepository, Fastify
  * server). The journey is driven by real user-side IMAP moves; MoveTracker
  * scan pairs feed signals through the Resolver→SignalStore→PatternDetector
- * chain into ProposalStore. Variants UC-006.a..e are exercised; UC-006.f is
- * intentionally deferred (see it.todo at bottom of file).
+ * chain into ProposalStore. All variants UC-006.a..f are exercised.
  *
  * Integrations exercised:
  *   IX-003 user-move detection / destination resolution
@@ -653,5 +652,78 @@ describe('UC-006: Dismiss and resurface proposed rule', () => {
     expect(res.statusCode).toBe(404);
   }, 30_000);
 
-  it.todo('UC-006.f: Modify path — better covered by integration of POST /modify + POST /rules + POST /mark-approved');
+  it('UC-006.f: Modify path returns pre-fill, then POST /rules + mark-approved flips status to approved with rule_id', async () => {
+    const { activityLog, configRepo, proposalStore, app: server } = app;
+
+    // Bootstrap row required by PatternDetector to elevate signals into a
+    // proposal — same pattern as the other UC-006 variants in this file.
+    activityLog.getDb().prepare(
+      `INSERT INTO activity (message_uid, action, folder, success, source)
+       VALUES (0, 'move', ?, 1, 'sweep')`,
+    ).run(DESTINATION);
+
+    // Get a proposal organically into the store via 2 user moves.
+    const inboxUids = await batchPrepareInbox(app, ['Pre #1', 'Pre #2']);
+    for (const uid of inboxUids) {
+      await userMoveAndScan(app, 'INBOX', DESTINATION, uid);
+    }
+    const proposals = proposalStore.getProposals();
+    expect(proposals).toHaveLength(1);
+    const p1 = proposals[0];
+
+    // Step 1: POST /modify returns the pre-fill payload.
+    const modifyResp = await server.inject({
+      method: 'POST',
+      url: `/api/proposed-rules/${p1.id}/modify`,
+    });
+    expect(modifyResp.statusCode).toBe(200);
+    const prefill = modifyResp.json() as {
+      proposalId: number;
+      sender: string;
+      envelopeRecipient: string | null;
+      destinationFolder: string;
+      sourceFolder: string;
+    };
+    expect(prefill).toMatchObject({
+      proposalId: p1.id,
+      sender: SENDER,
+      destinationFolder: DESTINATION,
+      sourceFolder: 'INBOX',
+    });
+
+    // The proposal must remain 'active' — Modify alone changes nothing.
+    expect(proposalStore.getById(p1.id)?.status).toBe('active');
+
+    // Step 2: user adds a subject filter and submits via POST /api/rules.
+    const createResp = await server.inject({
+      method: 'POST',
+      url: '/api/rules',
+      payload: {
+        name: 'Newsletter weekly',
+        match: { sender: prefill.sender, subject: '*weekly*' },
+        action: { type: 'move', folder: prefill.destinationFolder },
+        enabled: true,
+        order: 0,
+      },
+    });
+    expect(createResp.statusCode).toBe(201);
+    const newRule = createResp.json() as { id: string };
+    expect(newRule.id).toBeTruthy();
+    expect(configRepo.getRules()).toHaveLength(1);
+
+    // Step 3: frontend calls mark-approved with the new rule's id.
+    const markResp = await server.inject({
+      method: 'POST',
+      url: `/api/proposed-rules/${p1.id}/mark-approved`,
+      payload: { ruleId: newRule.id },
+      headers: { 'content-type': 'application/json' },
+    });
+    expect(markResp.statusCode).toBe(204);
+
+    // Proposal flipped to approved with the new rule id; no dismissal touched.
+    const after = proposalStore.getById(p1.id);
+    expect(after?.status).toBe('approved');
+    expect(after?.approvedRuleId).toBe(newRule.id);
+    expect(after?.dismissedAt).toBeNull();
+  }, 180_000);
 });

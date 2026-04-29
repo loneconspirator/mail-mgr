@@ -3,7 +3,7 @@ id: MOD-0006
 title: ActionExecutor
 interface-schema: src/actions/index.ts
 unit-test-path: test/unit/actions/
-integrations: [IX-002]
+integrations: [IX-002, IX-010]
 invariants-enforced: []
 architecture-section: architecture.md#core-processing
 ---

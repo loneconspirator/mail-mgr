@@ -73,6 +73,8 @@ Read the JSON. Each finding has `id`, `severity`, `message`, and often a `detail
 
 ### Step 2 — Run the module's unit tests, if the path resolves
 
+**Skip this entire step if the caller passed `--skip-tests`** (the `/validate` orchestrator does this so it can run the whole test suite once in parallel instead of one-file-at-a-time per validator). When skipping, note in the report that the unit-test run was deferred to the orchestrator's full-suite run.
+
 If `unit-test-path` is set and resolves, run vitest scoped to that directory or file:
 
 ```bash

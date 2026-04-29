@@ -56,6 +56,7 @@ const CRITICAL = 'Critical';
 const P0_ALERTS = 'P0 Alerts';
 const RESCUE = 'Rescue';
 const TRASH = 'Trash';
+const TRIAGE_005G = 'Triage005g';
 
 const silentLogger = pino({ level: 'silent' });
 
@@ -247,7 +248,7 @@ describe('UC-005: Direct rule editing via web UI', () => {
   beforeEach(async () => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'uc-005-'));
     await clearMailboxes();
-    for (const f of [CRITICAL, P0_ALERTS, RESCUE, TRASH]) {
+    for (const f of [CRITICAL, P0_ALERTS, RESCUE, TRASH, TRIAGE_005G]) {
       await emptyAndDeleteFolder(f);
     }
     app = await bringUpApp(tmpDir);
@@ -255,7 +256,7 @@ describe('UC-005: Direct rule editing via web UI', () => {
 
   afterEach(async () => {
     await app?.teardown();
-    for (const f of [CRITICAL, P0_ALERTS, RESCUE, TRASH]) {
+    for (const f of [CRITICAL, P0_ALERTS, RESCUE, TRASH, TRIAGE_005G]) {
       await emptyAndDeleteFolder(f);
     }
     await clearMailboxes();
@@ -691,5 +692,120 @@ describe('UC-005: Direct rule editing via web UI', () => {
     expect(rules[0].order).toBe(originalOrder + 50);
   });
 
-  it.todo('UC-005.g: hot-reload during running batch — covered by UC-004.g acceptance test');
+  it('UC-005.g: edit during running batch — prior chunk processed under old rule, next chunk under new', async () => {
+    const { configRepo, app: server, monitor, imapClient } = app;
+
+    // Stop the live monitor so it can't race the batch over INBOX/TRIAGE.
+    await monitor.stop();
+    await imapClient.createMailbox(TRIAGE_005G).catch(() => {});
+
+    // Append 60 messages directly to TRIAGE_005G (generic mode, bypasses
+    // arrival pipeline). All match `*@hotreload.example.com`.
+    const TOTAL = 60;
+    const client = new ImapFlow({
+      host: HOST,
+      port: IMAP_PORT,
+      secure: false,
+      auth: { user: 'user', pass: 'pass' },
+      logger: false,
+      doSTARTTLS: false,
+    });
+    await client.connect();
+    try {
+      for (let i = 0; i < TOTAL; i++) {
+        const raw =
+          [
+            `From: m${i}@hotreload.example.com`,
+            'To: user@localhost',
+            `Subject: hot ${i}`,
+            `Message-ID: <uc005g-${i}@example.com>`,
+          ].join('\r\n') + '\r\n\r\nbody\r\n';
+        await client.append(TRIAGE_005G, raw, [], new Date());
+      }
+    } finally {
+      await client.logout().catch(() => {});
+    }
+
+    const initial = configRepo.addRule({
+      name: 'Hot reload move',
+      match: { sender: '*@hotreload.example.com' },
+      action: { type: 'move', folder: P0_ALERTS },
+      enabled: true,
+      order: configRepo.nextOrder(),
+    });
+
+    // Kick off execute (fire-and-forget — route returns immediately).
+    const execResp = await server.inject({
+      method: 'POST',
+      url: '/api/batch/execute',
+      payload: { sourceFolder: TRIAGE_005G },
+      headers: { 'content-type': 'application/json' },
+    });
+    expect(execResp.statusCode).toBe(200);
+
+    // Let the first 25-message chunk start, then swap the rule mid-run.
+    // The setImmediate yield between chunks is the observation point at
+    // which BatchEngine.updateRules() takes effect for the next chunk.
+    // Poll until at least the first chunk has processed under the old rule.
+    const start = Date.now();
+    let preSwapState: { processed: number; moved: number } | null = null;
+    while (Date.now() - start < 10_000) {
+      const r = await server.inject({ method: 'GET', url: '/api/batch/status' });
+      const s = r.json() as { status: string; processed: number; moved: number };
+      if (s.status !== 'executing') {
+        await new Promise((res) => setTimeout(res, 25));
+        continue;
+      }
+      if (s.processed >= 25) {
+        preSwapState = { processed: s.processed, moved: s.moved };
+        break;
+      }
+      await new Promise((res) => setTimeout(res, 25));
+    }
+    expect(preSwapState, 'first chunk must observe old rule before swap').not.toBeNull();
+    // Old rule was move → first chunk's processed messages all moved.
+    expect(preSwapState!.moved).toBe(preSwapState!.processed);
+
+    // Hot-swap to skip while the engine is mid-run.
+    expect(configRepo.deleteRule(initial.id)).toBe(true);
+    configRepo.addRule({
+      name: 'Hot reload skip',
+      match: { sender: '*@hotreload.example.com' },
+      action: { type: 'skip' },
+      enabled: true,
+      order: configRepo.nextOrder(),
+    });
+
+    // Drain to completion.
+    const finalStart = Date.now();
+    let final: { status: string; processed: number; moved: number; skipped: number } | null = null;
+    while (Date.now() - finalStart < 30_000) {
+      const r = await server.inject({ method: 'GET', url: '/api/batch/status' });
+      final = r.json() as typeof final;
+      if (final!.status === 'completed') break;
+      await new Promise((res) => setTimeout(res, 100));
+    }
+    expect(final?.status).toBe('completed');
+    expect(final!.processed).toBe(TOTAL);
+
+    // Some messages moved (under old rule, before swap) and some were skipped
+    // (under new rule, after swap). Both groups must be non-empty: we proved
+    // at least one chunk was processed pre-swap, and the swap lands before
+    // the final chunk because TOTAL=60 spans 3 chunks (25/25/10) with yields
+    // between each.
+    expect(final!.moved).toBeGreaterThan(0);
+    expect(final!.skipped).toBeGreaterThan(0);
+    expect(final!.moved + final!.skipped).toBe(TOTAL);
+
+    // Per spec: messages already evaluated in the prior chunk are unaffected,
+    // so moved >= preSwapState.moved (the pre-swap chunk's moves all stuck).
+    expect(final!.moved).toBeGreaterThanOrEqual(preSwapState!.moved);
+
+    // The moved messages physically landed in P0_ALERTS; the skipped ones
+    // remained in TRIAGE_005G.
+    const movedFolder = await listMailboxMessages(P0_ALERTS);
+    const triageRemaining = await listMailboxMessages(TRIAGE_005G);
+    expect(movedFolder.length).toBe(final!.moved);
+    expect(triageRemaining.length).toBe(final!.skipped);
+  }, 120_000);
 });

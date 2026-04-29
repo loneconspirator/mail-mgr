@@ -4,7 +4,7 @@ title: User move detection and destination resolution
 integration-test: null
 modules: [MOD-0002, MOD-0007, MOD-0008, MOD-0009]
 starting-states: []
-use-cases: [UC-001]
+use-cases: [UC-001, UC-006]
 architecture-section: architecture.md#uc-001-manual-move--proposed-rule--auto-filing
 ---
 

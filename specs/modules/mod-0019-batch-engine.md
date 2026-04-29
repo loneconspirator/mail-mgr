@@ -3,7 +3,7 @@ id: MOD-0019
 title: BatchEngine
 interface-schema: src/batch/index.ts
 unit-test-path: test/unit/batch/
-integrations: [IX-009, IX-010]
+integrations: [IX-009, IX-010, IX-011]
 invariants-enforced: [INV-001]
 architecture-section: architecture.md#core-processing
 ---
