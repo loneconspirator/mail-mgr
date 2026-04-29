@@ -191,6 +191,11 @@ export class BatchEngine {
         const chunk = messages.slice(i, i + CHUNK_SIZE);
 
         for (const raw of chunk) {
+          if (this.cancelRequested) {
+            this.state.status = 'cancelled';
+            this.state.cancelled = true;
+            break;
+          }
           // Per D-10: guard in execute loop
           if (isSentinel(raw.headers)) {
             continue;

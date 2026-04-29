@@ -2,7 +2,7 @@
 id: FM-001
 title: Scheduled folder scan leaves IMAP IDLE on non-inbox folder
 fault-injection-test: test/integration/fm-001-scheduled-scan-strands-idle.test.ts
-integrations: [IX-001, IX-006, IX-007]
+integrations: [IX-001, IX-006, IX-007, IX-010]
 invariants-protected: [INV-001]
 ---
 

@@ -344,12 +344,14 @@ describe('UC-001: Manual move → proposed rule → auto-filing', () => {
     // Reset GreenMail state so we don't inherit messages from previous runs.
     await clearMailboxes();
     await emptyAndDeleteFolder(DESTINATION);
+    await emptyAndDeleteFolder('Review');
     app = await bringUpApp(tmpDir);
   });
 
   afterEach(async () => {
     await app?.teardown();
     await emptyAndDeleteFolder(DESTINATION);
+    await emptyAndDeleteFolder('Review');
     await clearMailboxes();
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });

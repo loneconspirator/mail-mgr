@@ -4,7 +4,7 @@ title: ActionFolderProcessor
 interface-schema: src/action-folders/processor.ts
 unit-test-path: test/unit/action-folders/processor.test.ts
 integrations: [IX-007, IX-008]
-invariants-enforced: []
+invariants-enforced: [INV-001]
 architecture-section: architecture.md#action-folders
 ---
 
