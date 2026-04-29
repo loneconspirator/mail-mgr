@@ -21,8 +21,8 @@ architecture-section: architecture.md#core-processing
 
 ## Named Interactions
 
-- **IX-010.1** — User submits `POST /api/batch/execute` with `{ sourceFolder }`. WebServer validates, calls `BatchEngine.execute(sourceFolder)` *without awaiting*, and returns `{ status: 'started' }` immediately.
-- **IX-010.2** — BatchEngine guards against concurrent runs by rejecting with `"Batch already running"` when `running === true`. Because `execute()` is `async`, the rejection surfaces only on the returned promise — not synchronously — so the route's fire-and-forget `.catch` logs the error and the second client still sees `200 { status: "started" }`. There is no HTTP 409 path; clients detect the in-flight run via `GET /api/batch/status`.
+- **IX-010.1** — User submits `POST /api/batch/execute` with `{ sourceFolder }`. WebServer validates, then calls `BatchEngine.isRunning()` synchronously. If `false`, it invokes `BatchEngine.execute(sourceFolder)` *without awaiting* and returns `{ status: 'started' }` immediately. The route's `.catch` on the returned promise logs unexpected execution failures.
+- **IX-010.2** — Concurrent-run guard is two-layered. Primary: WebServer checks `engine.isRunning()` synchronously and returns HTTP 409 `{ error: "Batch already running" }` before spawning fire-and-forget. Secondary: BatchEngine itself rejects with `"Batch already running"` if its async entry observes `running === true` (race-window safety net for non-route callers); that rejection lands on the route's `.catch` and is logged. Clients receiving 409 should poll `GET /api/batch/status` to track the in-flight run.
 - **IX-010.3** — BatchEngine resets state to `executing`, clears `cancelRequested`, fetches all messages from the source folder, and selects a processing mode (inbox / review / generic — same rules as IX-009).
 - **IX-010.4** — Messages are processed in chunks of 25. Between chunks, BatchEngine yields with `setImmediate` so the event loop can service `GET /api/batch/status` polls and `POST /api/batch/cancel` requests.
 - **IX-010.5** — Before starting each chunk, BatchEngine checks `cancelRequested`. If set, it transitions `state.status = 'cancelled'`, sets `state.cancelled = true`, and breaks out of the loop. The current chunk completes — cancel is cooperative, not preemptive.
@@ -108,7 +108,7 @@ sequenceDiagram
 
 ## Failure Handling
 
-- **Concurrent run** — see IX-010.2. The second `execute` rejects with `"Batch already running"`; the route's `.catch` logs it. The HTTP response is still `200 { status: "started" }` because the rejection is asynchronous.
+- **Concurrent run** — see IX-010.2. The route's synchronous `engine.isRunning()` check returns 409 `{ error: "Batch already running" }`. The in-flight run is undisturbed.
 - **IMAP fetch failure (outer)** — caught, `state.status = 'error'`, `state.completedAt` set, `BatchResult` returned with the partial counters; the fire-and-forget `.catch` in WebServer logs the error.
 - **Per-message IMAP failure** — caught in the inner loop; counted as `errors`; logged to ActivityLog with `success: false` and the error string. Run continues.
 - **FM-001 risk** — BatchEngine performs many IMAP MOVE operations on a non-INBOX folder. Each `moveMessage` call goes through MOD-0002, which is responsible for INBOX restoration on completion (see INV-001). BatchEngine itself does not select folders — it relies on `moveMessage`'s own folder handling — so the IDLE-stranding risk is bounded to MOD-0002's contract.

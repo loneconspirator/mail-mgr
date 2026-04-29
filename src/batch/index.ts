@@ -326,6 +326,14 @@ export class BatchEngine {
     }
   }
 
+  /** Synchronous concurrency check. True between execute()/dryRun() entry
+   * and the finally that releases `running`. WebServer uses this to reject
+   * a concurrent execute with HTTP 409 *before* spawning the fire-and-forget
+   * call, since the engine's own async throw cannot reach the route. */
+  isRunning(): boolean {
+    return this.running;
+  }
+
   /** Return a copy of the current batch state. */
   getState(): BatchState {
     return {

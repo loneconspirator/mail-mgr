@@ -33,10 +33,12 @@ export function registerBatchRoutes(app: FastifyInstance, deps: ServerDeps): voi
       return reply.status(400).send({ error: parsed.error.issues.map(i => i.message).join(', ') });
     }
     const engine = deps.getBatchEngine();
-    // Fire-and-forget: engine.execute is async, so concurrent-run errors
-    // surface as a rejected promise (logged here) rather than a synchronous
-    // throw the route can map to HTTP 409. Status reflects only that the
-    // request was accepted; clients poll GET /api/batch/status for outcome.
+    // Synchronous concurrency check before spawning fire-and-forget. The
+    // engine's own async throw cannot reach this route (the rejection lands
+    // on the .catch below), so we must reject conflicts here.
+    if (engine.isRunning()) {
+      return reply.status(409).send({ error: 'Batch already running' });
+    }
     engine.execute(parsed.data.sourceFolder).catch((err: unknown) => {
       app.log.error({ err }, 'Batch execution failed');
     });

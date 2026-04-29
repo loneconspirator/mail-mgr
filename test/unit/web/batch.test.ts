@@ -11,6 +11,7 @@ function makeMockEngine() {
     cancel: vi.fn(),
     getState: vi.fn(),
     updateRules: vi.fn(),
+    isRunning: vi.fn().mockReturnValue(false),
   };
 }
 
@@ -91,12 +92,12 @@ describe('POST /api/batch/execute', () => {
     expect(mockEngine.execute).toHaveBeenCalledWith('INBOX');
   });
 
-  it('returns 200 { status: "started" } even when engine.execute rejects with "Batch already running"', async () => {
-    // engine.execute is async; concurrent-run errors surface as a rejected
-    // promise that the route's fire-and-forget .catch logs. There is no
-    // synchronous throw the route can map to HTTP 409, so the client always
-    // sees 200. Clients detect the in-flight run via GET /api/batch/status.
-    mockEngine.execute.mockRejectedValue(new Error('Batch already running'));
+  it('returns 409 when engine.isRunning() is true and does not invoke execute', async () => {
+    // The route checks isRunning() synchronously before fire-and-forget so
+    // it can return a real 409. The engine's own async-throw guard only
+    // protects non-route callers (its rejection lands on the route's .catch
+    // and is logged).
+    mockEngine.isRunning.mockReturnValue(true);
 
     const res = await app.inject({
       method: 'POST',
@@ -104,8 +105,9 @@ describe('POST /api/batch/execute', () => {
       payload: { sourceFolder: 'INBOX' },
     });
 
-    expect(res.statusCode).toBe(200);
-    expect(JSON.parse(res.payload)).toEqual({ status: 'started' });
+    expect(res.statusCode).toBe(409);
+    expect(JSON.parse(res.payload)).toEqual({ error: 'Batch already running' });
+    expect(mockEngine.execute).not.toHaveBeenCalled();
   });
 
   it('returns 400 for empty sourceFolder', async () => {

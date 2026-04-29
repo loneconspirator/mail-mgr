@@ -217,17 +217,18 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
     });
   });
 
-  describe('IX-010.2: concurrent execute — synchronous fire-and-forget contract', () => {
-    it('IX-010.2: a second execute while one is in flight returns synchronously and the engine rejects internally with "Batch already running"', async () => {
+  describe('IX-010.2: concurrent execute — 409 when already running', () => {
+    it('IX-010.2: a second execute while one is in flight returns HTTP 409 and does not disturb the in-flight run', async () => {
       const { app, engine, client } = buildHarness();
       let resolveFetch!: (v: ReviewMessage[]) => void;
       (client.fetchAllMessages as ReturnType<typeof vi.fn>).mockImplementation(
         () => new Promise<ReviewMessage[]>((resolve) => { resolveFetch = resolve; }),
       );
 
-      // Direct engine call exposes the synchronous-portion guard that the
-      // route's .catch swallows. Spec sub-ID IX-010.2 documents both halves:
-      // (a) engine throws synchronously, (b) HTTP response is fire-and-forget.
+      // Two-layered guard:
+      //   (a) the route's synchronous engine.isRunning() check returns 409.
+      //   (b) the engine's own async throw protects non-route callers; that
+      //       rejection is observable when execute() is called directly.
       const inFlight = engine.execute('TestFolder');
       await expect(engine.execute('TestFolder')).rejects.toThrow('Batch already running');
 
@@ -236,12 +237,12 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         url: '/api/batch/execute',
         payload: { sourceFolder: 'TestFolder' },
       });
-      // The route catches the rejection and still returns 200 (the user sees
-      // "started"); the in-flight run is undisturbed.
-      expect([200, 409]).toContain(second.statusCode);
+      expect(second.statusCode).toBe(409);
+      expect(second.json()).toEqual({ error: 'Batch already running' });
 
       resolveFetch([]);
-      await inFlight;
+      const result = await inFlight;
+      expect(result.status).toBe('completed');
       await app.close();
     });
   });
