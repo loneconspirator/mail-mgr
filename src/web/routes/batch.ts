@@ -33,19 +33,14 @@ export function registerBatchRoutes(app: FastifyInstance, deps: ServerDeps): voi
       return reply.status(400).send({ error: parsed.error.issues.map(i => i.message).join(', ') });
     }
     const engine = deps.getBatchEngine();
-    try {
-      // Fire and forget — batch runs server-side
-      engine.execute(parsed.data.sourceFolder).catch((err: unknown) => {
-        app.log.error({ err }, 'Batch execution failed');
-      });
-      return { status: 'started' };
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      if (message === 'Batch already running') {
-        return reply.status(409).send({ error: message });
-      }
-      return reply.status(500).send({ error: message });
-    }
+    // Fire-and-forget: engine.execute is async, so concurrent-run errors
+    // surface as a rejected promise (logged here) rather than a synchronous
+    // throw the route can map to HTTP 409. Status reflects only that the
+    // request was accepted; clients poll GET /api/batch/status for outcome.
+    engine.execute(parsed.data.sourceFolder).catch((err: unknown) => {
+      app.log.error({ err }, 'Batch execution failed');
+    });
+    return { status: 'started' };
   });
 
   // POST /api/batch/cancel

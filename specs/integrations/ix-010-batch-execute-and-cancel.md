@@ -22,7 +22,7 @@ architecture-section: architecture.md#core-processing
 ## Named Interactions
 
 - **IX-010.1** — User submits `POST /api/batch/execute` with `{ sourceFolder }`. WebServer validates, calls `BatchEngine.execute(sourceFolder)` *without awaiting*, and returns `{ status: 'started' }` immediately.
-- **IX-010.2** — BatchEngine guards against concurrent runs (throws `"Batch already running"` if `running === true`); WebServer maps that to HTTP 409 only in the synchronous portion. The fire-and-forget `.catch` logs unhandled errors but cannot reach the client.
+- **IX-010.2** — BatchEngine guards against concurrent runs by rejecting with `"Batch already running"` when `running === true`. Because `execute()` is `async`, the rejection surfaces only on the returned promise — not synchronously — so the route's fire-and-forget `.catch` logs the error and the second client still sees `200 { status: "started" }`. There is no HTTP 409 path; clients detect the in-flight run via `GET /api/batch/status`.
 - **IX-010.3** — BatchEngine resets state to `executing`, clears `cancelRequested`, fetches all messages from the source folder, and selects a processing mode (inbox / review / generic — same rules as IX-009).
 - **IX-010.4** — Messages are processed in chunks of 25. Between chunks, BatchEngine yields with `setImmediate` so the event loop can service `GET /api/batch/status` polls and `POST /api/batch/cancel` requests.
 - **IX-010.5** — Before starting each chunk, BatchEngine checks `cancelRequested`. If set, it transitions `state.status = 'cancelled'`, sets `state.cancelled = true`, and breaks out of the loop. The current chunk completes — cancel is cooperative, not preemptive.
@@ -35,7 +35,7 @@ architecture-section: architecture.md#core-processing
     - **generic mode, no match** → `state.skipped++`.
     - **generic mode, match** → resolve destination via `resolveDestination`, perform `client.moveMessage` directly (or count as skipped if destination is the special "Skip" sentinel), log to ActivityLog with the appropriate result shape.
 - **IX-010.7** — Per-message errors are caught locally: `state.errors++`, log entry written with `success: false`, the loop continues. A per-message error never aborts the run.
-- **IX-010.8** — After the last chunk (or on cooperative cancel), BatchEngine sets `state.status` to `'completed'` (if not already `'cancelled'` or `'error'`), records `state.completedAt`, releases `running`, and returns a `BatchResult` summary.
+- **IX-010.8** — After the last chunk (or on cooperative cancel), BatchEngine sets `state.status` to `'completed'` (if not already `'cancelled'` or `'error'`), records `state.completedAt` *before* building the result so `BatchResult.completedAt` is populated, then returns the `BatchResult` summary; `running` is released in `finally`. Tests may also read terminal state via `getState()` since `running` flips to `false` on the same tick as the resolved promise.
 - **IX-010.9** — `GET /api/batch/status` returns the current `BatchState` snapshot at any time. The frontend polls this to render progress and detect completion.
 
 ## Sequence Diagram
@@ -108,7 +108,7 @@ sequenceDiagram
 
 ## Failure Handling
 
-- **Concurrent run** — see IX-010.2.
-- **IMAP fetch failure (outer)** — caught, `state.status = 'error'`, `BatchResult` returned with the partial counters; the fire-and-forget `.catch` in WebServer logs the error.
+- **Concurrent run** — see IX-010.2. The second `execute` rejects with `"Batch already running"`; the route's `.catch` logs it. The HTTP response is still `200 { status: "started" }` because the rejection is asynchronous.
+- **IMAP fetch failure (outer)** — caught, `state.status = 'error'`, `state.completedAt` set, `BatchResult` returned with the partial counters; the fire-and-forget `.catch` in WebServer logs the error.
 - **Per-message IMAP failure** — caught in the inner loop; counted as `errors`; logged to ActivityLog with `success: false` and the error string. Run continues.
 - **FM-001 risk** — BatchEngine performs many IMAP MOVE operations on a non-INBOX folder. Each `moveMessage` call goes through MOD-0002, which is responsible for INBOX restoration on completion (see INV-001). BatchEngine itself does not select folders — it relies on `moveMessage`'s own folder handling — so the IDLE-stranding risk is bounded to MOD-0002's contract.

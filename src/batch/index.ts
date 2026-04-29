@@ -307,15 +307,15 @@ export class BatchEngine {
       if (this.state.status === 'executing') {
         this.state.status = 'completed';
       }
-
+      this.state.completedAt = new Date().toISOString();
       return this.buildResult();
     } catch (err) {
       this.state.status = 'error';
+      this.state.completedAt = new Date().toISOString();
       this.logger.error({ error: err instanceof Error ? err.message : String(err) }, 'Batch execute failed');
       return this.buildResult();
     } finally {
       this.running = false;
-      this.state.completedAt = new Date().toISOString();
     }
   }
 
@@ -401,7 +401,7 @@ export class BatchEngine {
       moved: this.state.moved,
       skipped: this.state.skipped,
       errors: this.state.errors,
-      completedAt: this.state.completedAt!,
+      completedAt: this.state.completedAt ?? new Date().toISOString(),
     };
   }
 }

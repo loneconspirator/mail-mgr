@@ -18,7 +18,7 @@ architecture-section: architecture.md#configuration--state
 ## Named Interactions
 
 - **IX-011.1** — User submits a rule mutation:
-    - `POST /api/rules` (create) — body is a `Rule` without `id`; `order` is optional.
+    - `POST /api/rules` (create) — body is a `Rule` without `id`. `order` is required by `ruleSchema` (a non-negative integer); the route does not default it. Frontend callers compute the next order client-side or via a prior `GET /api/rules`.
     - `PUT /api/rules/{id}` (update) — body is a full `Rule` (without `id`).
     - `DELETE /api/rules/{id}` (delete).
     - `PUT /api/rules/reorder` — body is an array of `{id, order}` pairs.
@@ -26,7 +26,7 @@ architecture-section: architecture.md#configuration--state
 - **IX-011.2** — WebServer parses the body and calls the corresponding `ConfigRepository` method.
 - **IX-011.3** — ConfigRepository validates the input against `ruleSchema`. On validation failure, it throws; WebServer maps to HTTP 400 with `{ error: "Validation failed", details: [...] }`.
 - **IX-011.4** — On success, ConfigRepository mutates the in-memory rule list:
-    - `addRule` generates a UUID for `id`, assigns `order` if omitted (`nextOrder()`), and appends.
+    - `addRule` generates a UUID for `id` and appends. `order` is required by `ruleSchema` and must be supplied in the body — there is no defaulting in `addRule` itself. Callers that need a default order (e.g. `proposed-rules.ts`, the action-folder processor) call `ConfigRepository.nextOrder()` explicitly before invoking `addRule`. The persisted `order` round-trips back in the route's response payload.
     - `updateRule` replaces the existing rule by id; returns null if not found (WebServer → 404).
     - `deleteRule` removes by id; returns false if not found (WebServer → 404).
     - `reorderRules` applies the order updates atomically (unknown ids are ignored).
