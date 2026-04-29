@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Action Folder Safety Hardening
 status: planning
-last_updated: "2026-04-24T23:46:20.082Z"
-last_activity: 2026-04-24
+last_updated: "2026-04-29T07:00:00.000Z"
+last_activity: 2026-04-29
 progress:
   total_phases: 1
   completed_phases: 1
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 
 Milestone: v0.8 Action Folder Safety Hardening — Active
 Status: Planning
-Last activity: 2026-04-24
+Last activity: 2026-04-29 - Completed quick task 260428-x6c: Populate architecture covers-* frontmatter
 
 Progress: [░░░░░░░░░░] 0% (0/0 plans, 0/1 phases)
 
@@ -62,7 +62,6 @@ Recent decisions affecting current work:
 2. **Populate delivered-to field in proposed rules and modify form** — Include delivered-to as matcher in proposals, prepopulate in Modify modal
 3. **Wire IX-003 integration test** — IX-003's 7 named interactions need a dedicated integration test; spec frontmatter `integration-test: null` (surfaced by /validate 2026-04-28)
 4. **Wire IX-004 integration test** — IX-004's 8 named interactions need a dedicated integration test; spec frontmatter `integration-test: null` (surfaced by /validate 2026-04-28)
-5. **Populate architecture covers-integrations frontmatter** — `specs/architecture.md` declares empty `covers-modules: []` and `covers-integrations: []`, causing recurring back-link warnings
 
 ### Roadmap Evolution
 
@@ -80,6 +79,7 @@ Recent decisions affecting current work:
 | 260420-did | Add optional folder finder to New Rule modal | 2026-04-20 | a31a7ce | [260420-did-add-optional-folder-finder-to-new-rule-m](./quick/260420-did-add-optional-folder-finder-to-new-rule-m/) |
 | 260420-dsq | Rename skip rule display to leave in place | 2026-04-20 | 7422b67 | [260420-dsq-rename-skip-rule-display-to-leave-in-pla](./quick/260420-dsq-rename-skip-rule-display-to-leave-in-pla/) |
 | Phase 31 P02 | 1min | 1 tasks | 1 files |
+| 260428-x6c | Populate architecture covers-* frontmatter, clear back-link warnings | 2026-04-29 | 68e20c6 | [260428-x6c-populate-covers-modules-and-covers-integ](./quick/260428-x6c-populate-covers-modules-and-covers-integ/) |
 
 ## Session Continuity
 
