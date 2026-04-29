@@ -1,7 +1,11 @@
 ---
 title: Mail-Mgr System Architecture
-covers-modules: []
-covers-integrations: []
+covers-modules: [MOD-0001, MOD-0002, MOD-0003, MOD-0004, MOD-0005, MOD-0006,
+                 MOD-0007, MOD-0008, MOD-0009, MOD-0010, MOD-0011, MOD-0012,
+                 MOD-0013, MOD-0014, MOD-0015, MOD-0016, MOD-0017, MOD-0018,
+                 MOD-0019]
+covers-integrations: [IX-001, IX-002, IX-003, IX-004, IX-005, IX-006,
+                      IX-007, IX-008, IX-009, IX-010, IX-011, IX-012]
 ---
 
 # Mail-Mgr System Architecture
@@ -362,6 +366,13 @@ flowchart LR
     style D3 fill:#e8f4fd,stroke:#1e88e5
     style D5 fill:#e8f4fd,stroke:#1e88e5
 ```
+
+### Other integration entry points
+
+- **IX-009: Batch Dry-Run Preview** — Web UI requests a dry-run preview from BatchEngine; no IMAP mutations.
+- **IX-010: Batch Execute & Cancel** — Web UI commits or aborts a batch run via BatchEngine; per-message cancel honoured.
+- **IX-011: Rule CRUD & Hot Reload** — Web UI mutates `config.yml` via ConfigRepository; subsystems reload without process restart.
+- **IX-012: Proposal Dismissal & Resurfacing** — User dismisses a proposal via Web UI; PatternDetector resurfaces after 5 new contradicting signals.
 
 ---
 
