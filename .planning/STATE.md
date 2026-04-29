@@ -63,7 +63,6 @@ Recent decisions affecting current work:
 3. **Wire IX-003 integration test** — IX-003's 7 named interactions need a dedicated integration test; spec frontmatter `integration-test: null` (surfaced by /validate 2026-04-28)
 4. **Wire IX-004 integration test** — IX-004's 8 named interactions need a dedicated integration test; spec frontmatter `integration-test: null` (surfaced by /validate 2026-04-28)
 5. **Populate architecture covers-integrations frontmatter** — `specs/architecture.md` declares empty `covers-modules: []` and `covers-integrations: []`, causing recurring back-link warnings
-6. **Add MOD back-link comments to schema files** — Sweep all `interface-schema:` source files and add MOD-#### header comments where missing
 
 ### Roadmap Evolution
 
