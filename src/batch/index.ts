@@ -1,3 +1,6 @@
+// MOD-0019 — BatchEngine
+// See specs/modules/mod-0019-batch-engine.md
+
 import type { ImapClient, ReviewMessage } from '../imap/index.js';
 import { reviewMessageToEmailMessage } from '../imap/index.js';
 import { evaluateRules } from '../rules/index.js';

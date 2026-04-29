@@ -14,11 +14,11 @@ Listens for new IMAP messages in INBOX via IDLE (or polling fallback), orchestra
 
 ## Interface Summary
 
-- `start()` — Connect to IMAP, begin IDLE/poll listening for new messages.
-- `stop()` — Disconnect and cease processing.
+- `start()` — Connect to IMAP (if not already connected), seed the lastUid cursor, attach the newMail handler, and begin IDLE/poll listening.
+- `stop()` — Detach the newMail handler and stop processing. Does **not** disconnect the IMAP client (the client is shared with other consumers; the caller owns its lifecycle).
 - `processNewMessages()` — Fetch messages with UIDs greater than lastUid, evaluate rules, execute actions. Called on each IDLE newMail event.
 - `updateRules(rules)` — Hot-reload the rule set from ConfigRepository change listener.
-- `getState()` — Returns current monitor state (connected, lastUid, processing status).
+- `getState()` — Returns current `MonitorState`: `{ connectionStatus, lastProcessedAt, messagesProcessed }`.
 
 ## Dependencies
 

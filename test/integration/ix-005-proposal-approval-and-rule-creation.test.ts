@@ -4,9 +4,9 @@
  *
  * Spec: specs/integrations/ix-005-proposal-approval-and-rule-creation.md
  *
- * Real Fastify WebServer (MOD-0012) wired to a real ConfigRepository
- * (MOD-0014) writing to a temp YAML file, a real ProposalStore (MOD-0013)
- * over a temp SQLite db, and the real ConflictChecker (MOD-0015). The
+ * Real Fastify WebServer (MOD-0015) wired to a real ConfigRepository
+ * (MOD-0014) writing to a temp YAML file, a real ProposalStore (MOD-0012)
+ * over a temp SQLite db, and the real ConflictChecker (MOD-0013). The
  * Monitor / Sweeper / BatchEngine reload listeners are stand-in `vi.fn()`s
  * registered through configRepo.onRulesChange — sufficient to prove
  * IX-005.8's fan-out without spinning up live IMAP.

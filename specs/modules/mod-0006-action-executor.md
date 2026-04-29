@@ -22,6 +22,6 @@ Executes the matched rule's action against a message. Handles move, review, skip
 
 ## Notes
 
-- `ActionContext` provides the ImapClient, review folder path, and trash folder path so the executor can resolve destinations for review and delete actions.
+- `ActionContext` provides the ImapClient, review folder path, trash folder path, and an optional `sourceFolder` (used by BatchEngine in non-INBOX modes to scope MOVE to the right source).
 - On move failure due to missing folder, the executor creates the folder and retries once.
 - Skip actions return a successful result without touching IMAP.

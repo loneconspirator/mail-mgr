@@ -91,4 +91,4 @@ Alternative to phase 4: instead of a `move` action, the approved rule has action
 
 ### UC-001.d: Multiple moves strengthen proposal before approval
 
-Before phase 3, the user receives and manually moves 3 more messages from the same sender to "Newsletters". Each move increments the proposal's match count. By the time the user visits the UI, the proposal shows 4 matches and is labeled "Strong", giving higher confidence in the suggested rule.
+Before phase 3, the user receives and manually moves 4 more messages from the same sender to "Newsletters" (5 moves total). Each move increments the proposal's match count. By the time the user visits the UI, the proposal shows 5 matches and is labeled "Strong" (strength = matching_count − contradicting_count, with > 4 → Strong), giving higher confidence in the suggested rule.

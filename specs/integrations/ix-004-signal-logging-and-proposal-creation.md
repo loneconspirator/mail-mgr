@@ -34,8 +34,8 @@ sequenceDiagram
     participant SS as SignalStore
     participant PS as ProposalStore
 
+    MT->>SS: logSignal(sender, destination, metadata)
     MT->>PD: processSignal(moveSignal)
-    PD->>SS: logSignal(sender, destination, metadata)
 
     PD->>PS: findByKey(sender, envelopeRecipient, sourceFolder)
 

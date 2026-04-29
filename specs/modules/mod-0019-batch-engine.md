@@ -17,6 +17,7 @@ Retroactively applies the current rule set to messages already present in a chos
 - `dryRun(sourceFolder)` — Fetch all messages, evaluate against current rules, return `DryRunGroup[]` keyed by `{action, destination}`. Sets `state.status` to `dry-running` then `previewing`. Throws `"Batch already running"` when `running === true`.
 - `execute(sourceFolder)` — Fetch all messages, process in chunks of 25, perform moves through ActionExecutor (inbox mode), `processSweepMessage` (review mode), or direct `ImapClient.moveMessage` (generic mode). Yields with `setImmediate` between chunks. Returns a `BatchResult` summary. Throws `"Batch already running"` on concurrent invocation.
 - `cancel()` — Set the cooperative cancel flag. Effective at the next inter-chunk check; the in-flight chunk completes.
+- `isRunning()` — Return whether `dryRun` or `execute` is currently in progress. Used by `WebServer` for the synchronous HTTP 409 guard before fire-and-forget execute.
 - `getState()` — Return the current `BatchState` snapshot (status, source folder, totals, counters, dry-run results, completedAt).
 - `updateRules(rules)` — Hot-swap the engine's rules array. The next chunk uses the new set; an in-flight chunk completes against its captured copy.
 
