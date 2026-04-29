@@ -1,7 +1,7 @@
 ---
 id: IX-003
 title: User move detection and destination resolution
-integration-test: null
+integration-test: test/integration/ix-003-user-move-detection-and-destination-resolution.test.ts
 modules: [MOD-0002, MOD-0007, MOD-0008, MOD-0009]
 starting-states: []
 use-cases: [UC-001, UC-006]
