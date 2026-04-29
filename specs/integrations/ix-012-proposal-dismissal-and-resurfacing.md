@@ -1,7 +1,7 @@
 ---
 id: IX-012
 title: Proposal dismissal and signal-driven resurfacing
-integration-test: null
+integration-test: test/integration/ix-012-proposal-dismissal-and-resurfacing.test.ts
 modules: [MOD-0010, MOD-0012, MOD-0015]
 starting-states: []
 use-cases: [UC-006]

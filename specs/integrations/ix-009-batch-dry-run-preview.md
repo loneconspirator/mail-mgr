@@ -1,7 +1,7 @@
 ---
 id: IX-009
 title: Batch dry-run preview of retroactive rule application
-integration-test: null
+integration-test: test/integration/ix-009-batch-dry-run-preview.test.ts
 modules: [MOD-0002, MOD-0003, MOD-0004, MOD-0015, MOD-0016, MOD-0019]
 starting-states: []
 use-cases: [UC-004]

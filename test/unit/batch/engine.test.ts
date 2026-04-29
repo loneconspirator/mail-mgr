@@ -539,6 +539,51 @@ describe('BatchEngine logActivity', () => {
       'batch',
     );
   });
+
+  it('logs activity with batch source on failed execute (success: false)', async () => {
+    const deps = makeDeps();
+    const messages = makeMessages(1);
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
+    const rule = makeRule();
+    mockedEvaluateRules.mockReturnValue(rule);
+    (deps.client.moveMessage as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Move failed'));
+
+    const engine = new BatchEngine(deps);
+    await engine.execute('TestFolder');
+
+    expect(deps.activityLog.logActivity).toHaveBeenCalledWith(
+      expect.objectContaining({ success: false, error: 'Move failed' }),
+      expect.anything(),
+      rule,
+      'batch',
+    );
+  });
+});
+
+describe('BatchEngine BatchResult shape', () => {
+  it('execute returns BatchResult with all required counter fields', async () => {
+    const deps = makeDeps();
+    const messages = makeMessages(2);
+    (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue(messages);
+    const rule = makeRule();
+    mockedEvaluateRules.mockReturnValue(rule);
+
+    const engine = new BatchEngine(deps);
+    const result = await engine.execute('TestFolder');
+
+    expect(result).toMatchObject({
+      status: 'completed',
+      totalMessages: 2,
+      processed: 2,
+      moved: 2,
+      skipped: 0,
+      errors: 0,
+    });
+    // completedAt is set on state in the finally block; verify via getState()
+    const state = engine.getState();
+    expect(typeof state.completedAt).toBe('string');
+    expect(Number.isNaN(Date.parse(state.completedAt!))).toBe(false);
+  });
 });
 
 describe('BatchEngine review rule resolution', () => {

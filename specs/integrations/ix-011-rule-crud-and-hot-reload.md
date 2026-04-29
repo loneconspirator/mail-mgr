@@ -1,7 +1,7 @@
 ---
 id: IX-011
 title: Rule CRUD via web API with hot-reload across processing subsystems
-integration-test: null
+integration-test: test/integration/ix-011-rule-crud-and-hot-reload.test.ts
 modules: [MOD-0001, MOD-0014, MOD-0015, MOD-0016, MOD-0019]
 starting-states: []
 use-cases: [UC-005]

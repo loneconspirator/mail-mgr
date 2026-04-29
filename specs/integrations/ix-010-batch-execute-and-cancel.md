@@ -1,7 +1,7 @@
 ---
 id: IX-010
 title: Batch execute with chunked processing and cooperative cancel
-integration-test: null
+integration-test: test/integration/ix-010-batch-execute-and-cancel.test.ts
 modules: [MOD-0002, MOD-0003, MOD-0004, MOD-0006, MOD-0007, MOD-0015, MOD-0016, MOD-0019]
 starting-states: []
 use-cases: [UC-004]
