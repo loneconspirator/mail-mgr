@@ -1,0 +1,41 @@
+-- One-time cleanup for INBOX-destinated rows polluted before the
+-- DestinationResolver + ProposalStore guards landed.
+--
+-- Context: .planning/debug/108-moves-to-inbox-proposed-rule.md
+--
+-- WHERE TO RUN:
+--   Soma (TrueNAS, 192.168.1.90) -- production SQLite DB used by the
+--   mail-mgr container. NOT runnable from the local executor; the user
+--   must SSH into Soma and apply this manually against the DB volume.
+--
+-- WHEN TO RUN:
+--   AFTER the new build (with the resolver + proposal guards) has been
+--   deployed to Soma. Running this against the old build will only
+--   provide temporary relief -- new INBOX rows will accumulate again.
+--
+-- WHAT IT DOES:
+--   1) Removes historical INBOX-destinated move signals (signal noise).
+--   2) Removes any active/dismissed proposed rules with destination=INBOX
+--      (UI cleanup). Approved rules are also removed -- they shouldn't
+--      exist (the UI prevents approving an INBOX-destinated rule), but
+--      if any slipped through, this clears them too.
+--
+-- SAFETY:
+--   Take a snapshot of the SQLite DB file before running. Both DELETEs
+--   are scoped strictly to destination_folder='INBOX' -- they will not
+--   touch any other rows. If you want extra safety, run the SELECT
+--   versions first to count what would be affected:
+--
+--     SELECT COUNT(*) FROM move_signals    WHERE destination_folder = 'INBOX';
+--     SELECT COUNT(*) FROM proposed_rules  WHERE destination_folder = 'INBOX';
+--
+--   Then run the DELETEs:
+
+DELETE FROM move_signals    WHERE destination_folder = 'INBOX';
+DELETE FROM proposed_rules  WHERE destination_folder = 'INBOX';
+
+-- Optional case-insensitive variants (uncomment if any non-canonical
+-- 'inbox' / 'Inbox' rows exist -- unlikely on Fastmail but cheap insurance):
+--
+-- DELETE FROM move_signals    WHERE UPPER(destination_folder) = 'INBOX';
+-- DELETE FROM proposed_rules  WHERE UPPER(destination_folder) = 'INBOX';
