@@ -40,6 +40,14 @@ const COMMON_FOLDERS = [
 ];
 
 /**
+ * Case-insensitive INBOX check. INBOX is the entrance, never a routing target.
+ * See .planning/debug/108-moves-to-inbox-proposed-rule.md for context: action-folder
+ * VIP/undoVip/unblock activity seeds INBOX into getRecentFolders(), which would
+ * otherwise let resolveFast/runDeepScan attribute disappearances to INBOX.
+ */
+const isInbox = (folder: string): boolean => folder.toUpperCase() === 'INBOX';
+
+/**
  * Two-tier destination resolver for user-initiated moves.
  * Fast pass checks recent folders and common names.
  * Deep scan searches all folders by Message-ID on a longer cycle.
@@ -60,15 +68,17 @@ export class DestinationResolver {
   async resolveFast(messageId: string, sourceFolder: string): Promise<string | null> {
     const recentFolders = this.deps.activityLog.getRecentFolders(10);
 
-    // Build deduplicated candidate list, excluding source folder
+    // Build deduplicated candidate list, excluding source folder and INBOX.
+    // INBOX exclusion: per 260430-msg, INBOX is never a valid routing target;
+    // any user move into INBOX is a one-off "rescue", not a rule pattern.
     const candidates = new Set<string>();
     for (const folder of recentFolders) {
-      if (folder !== sourceFolder) {
+      if (folder !== sourceFolder && !isInbox(folder)) {
         candidates.add(folder);
       }
     }
     for (const folder of COMMON_FOLDERS) {
-      if (folder !== sourceFolder) {
+      if (folder !== sourceFolder && !isInbox(folder)) {
         candidates.add(folder);
       }
     }
@@ -109,6 +119,12 @@ export class DestinationResolver {
       let found = false;
 
       for (const folder of allFolders) {
+        // Skip INBOX unconditionally — never a valid routing target
+        // (260430-msg). Comes BEFORE other skips so it short-circuits even
+        // if some IMAP server flagged INBOX as \Noselect or similar.
+        if (isInbox(folder.path)) {
+          continue;
+        }
         // Skip non-selectable folders
         if (folder.flags.includes('\\Noselect')) {
           continue;
