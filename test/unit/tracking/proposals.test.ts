@@ -210,6 +210,33 @@ describe('ProposalStore', () => {
       expect(proposals).toHaveLength(1);
       expect(proposals[0].matchingCount).toBe(2);
     });
+
+    describe('INBOX guard (260430-msg)', () => {
+      it('is a no-op when destination is INBOX', () => {
+        const key = makeKey({ sourceFolder: 'Review' });
+        const signalId = insertSignal(db, { source_folder: 'Review', destination_folder: 'INBOX' });
+        store.upsertProposal(key, 'INBOX', signalId);
+        const rows = db.prepare('SELECT * FROM proposed_rules').all();
+        expect(rows).toHaveLength(0);
+      });
+
+      it('is a no-op when destination is lowercase "inbox"', () => {
+        const key = makeKey({ sourceFolder: 'Review' });
+        const signalId = insertSignal(db, { source_folder: 'Review', destination_folder: 'inbox' });
+        store.upsertProposal(key, 'inbox', signalId);
+        const rows = db.prepare('SELECT * FROM proposed_rules').all();
+        expect(rows).toHaveLength(0);
+      });
+
+      it('still inserts proposals for non-INBOX destinations (negative control)', () => {
+        const key = makeKey({ sourceFolder: 'Review' });
+        const signalId = insertSignal(db, { source_folder: 'Review', destination_folder: 'Archive' });
+        store.upsertProposal(key, 'Archive', signalId);
+        const rows = db.prepare('SELECT destination_folder FROM proposed_rules').all() as Array<{ destination_folder: string }>;
+        expect(rows).toHaveLength(1);
+        expect(rows[0].destination_folder).toBe('Archive');
+      });
+    });
   });
 
   describe('getProposals', () => {
