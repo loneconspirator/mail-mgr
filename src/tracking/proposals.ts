@@ -21,6 +21,13 @@ export class ProposalStore {
    * Skips approved proposals. Handles dismissed resurface logic.
    */
   upsertProposal(key: ProposalKey, destination: string, _signalId: number): void {
+    // Guard: never form proposals destined for INBOX. INBOX is the entrance,
+    // not a routing target. See .planning/debug/108-moves-to-inbox-proposed-rule.md
+    // for context. The destination resolver also filters INBOX; this is belt-and-suspenders.
+    if (destination.toUpperCase() === 'INBOX') {
+      return;
+    }
+
     const normalizedRecipient = key.envelopeRecipient === '' ? null : (key.envelopeRecipient ?? null);
 
     const txn = this.db.transaction(() => {
