@@ -173,4 +173,71 @@ describe('DestinationResolver', () => {
       expect(results.size).toBe(0);
     });
   });
+
+  describe('INBOX exclusion (260430-msg)', () => {
+    it('excludes INBOX from fast-pass candidates even when getRecentFolders returns it', async () => {
+      // Source is the review folder; INBOX is in recentFolders pool (seeded by
+      // VIP/undoVip/unblock action-folder activity). Both INBOX and Projects
+      // contain the message-id, but resolver must pick Projects, never INBOX.
+      const deps = createMockDeps({
+        'INBOX': ['<msg-inbox-1@test.com>'],
+        'Projects': ['<msg-inbox-1@test.com>'],
+      });
+      (deps.activityLog as { getRecentFolders: ReturnType<typeof vi.fn> }).getRecentFolders.mockReturnValue(['INBOX', 'Projects']);
+
+      const resolver = new DestinationResolver(deps);
+      const result = await resolver.resolveFast('<msg-inbox-1@test.com>', 'Review');
+
+      expect(result).toBe('Projects');
+
+      // Belt-and-suspenders: ensure INBOX was NEVER searched in fast-pass.
+      const switchCalls = (deps.client as { withMailboxSwitch: ReturnType<typeof vi.fn> }).withMailboxSwitch.mock.calls;
+      const inboxCalls = switchCalls.filter((c: unknown[]) => c[0] === 'INBOX');
+      expect(inboxCalls).toHaveLength(0);
+    });
+
+    it('excludes INBOX from deep-scan candidates even when listFolders returns it', async () => {
+      // listFolders returns INBOX + Projects, but only INBOX has the message.
+      // Per D-06: when no non-INBOX folder matches, the message is dropped
+      // (results map has no entry for it).
+      const allFolders = [
+        { path: 'INBOX', flags: [] as string[] },
+        { path: 'Projects', flags: [] as string[] },
+      ];
+      const deps = createMockDeps({
+        'INBOX': ['<msg-inbox-2@test.com>'],
+        'Projects': [],
+      });
+      (deps.listFolders as ReturnType<typeof vi.fn>).mockResolvedValue(allFolders);
+
+      const resolver = new DestinationResolver(deps);
+      resolver.enqueueDeepScan('<msg-inbox-2@test.com>', 'Review');
+      const results = await resolver.runDeepScan();
+
+      // INBOX must not appear as the resolved destination.
+      expect(results.has('<msg-inbox-2@test.com>')).toBe(false);
+
+      // INBOX must not be searched at all in deep scan.
+      const switchCalls = (deps.client as { withMailboxSwitch: ReturnType<typeof vi.fn> }).withMailboxSwitch.mock.calls;
+      const inboxCalls = switchCalls.filter((c: unknown[]) => c[0] === 'INBOX');
+      expect(inboxCalls).toHaveLength(0);
+    });
+
+    it('excludes lowercase "inbox" case-insensitively from fast-pass', async () => {
+      // Case-insensitive guard catches non-canonical 'inbox' / 'Inbox' too.
+      const deps = createMockDeps({
+        'inbox': ['<msg-inbox-3@test.com>'],
+        'Projects': ['<msg-inbox-3@test.com>'],
+      });
+      (deps.activityLog as { getRecentFolders: ReturnType<typeof vi.fn> }).getRecentFolders.mockReturnValue(['inbox', 'Projects']);
+
+      const resolver = new DestinationResolver(deps);
+      const result = await resolver.resolveFast('<msg-inbox-3@test.com>', 'Review');
+
+      expect(result).toBe('Projects');
+      const switchCalls = (deps.client as { withMailboxSwitch: ReturnType<typeof vi.fn> }).withMailboxSwitch.mock.calls;
+      const lowerInboxCalls = switchCalls.filter((c: unknown[]) => c[0] === 'inbox');
+      expect(lowerInboxCalls).toHaveLength(0);
+    });
+  });
 });
