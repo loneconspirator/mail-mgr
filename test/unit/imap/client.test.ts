@@ -16,6 +16,7 @@ function createMockFlow(overrides: Partial<ImapFlowLike> = {}): ImapFlowLike {
 
   return {
     usable: true,
+    close: vi.fn(),
     connect: vi.fn(async () => {}),
     logout: vi.fn(async () => {}),
     mailboxOpen: vi.fn(async () => ({})),

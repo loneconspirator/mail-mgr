@@ -41,6 +41,7 @@ export interface SearchQuery {
 }
 
 export interface ImapFlowLike {
+  close(): void;
   connect(): Promise<void>;
   logout(): Promise<void>;
   mailboxOpen(path: string | string[]): Promise<unknown>;
@@ -74,6 +75,14 @@ const MAX_BACKOFF_MS = 60_000;
 // converts "wedged" into "throw and reconnect".
 const NOOP_TIMEOUT_MS = 30_000;
 const LIST_TIMEOUT_MS = 15_000;
+
+// FM-002 Phase 34: clustered op-class buckets, NOT per-op constants. See
+// .planning/phases/34-.../34-RESEARCH.md "Per-op timeout budget" for the
+// rationale. Plan 02 wires these into every public op via guardedOp.
+const CONNECT_TIMEOUT_MS = 30_000;       // R3 — TLS handshake + LOGIN + SELECT INBOX
+const LOCK_TIMEOUT_MS = 15_000;          // getMailboxLock acquisition
+const WRITE_TIMEOUT_MS = 30_000;         // moveMessage / appendMessage / search
+const BULK_FETCH_TIMEOUT_MS = 120_000;   // fetchAllMessages — whole-folder fetch
 
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
