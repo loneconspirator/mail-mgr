@@ -81,8 +81,16 @@ const LIST_TIMEOUT_MS = 15_000;
 // rationale. Plan 02 wires these into every public op via guardedOp.
 const CONNECT_TIMEOUT_MS = 30_000;       // R3 — TLS handshake + LOGIN + SELECT INBOX
 const LOCK_TIMEOUT_MS = 15_000;          // getMailboxLock acquisition
-const WRITE_TIMEOUT_MS = 30_000;         // moveMessage / appendMessage / search
-const BULK_FETCH_TIMEOUT_MS = 120_000;   // fetchAllMessages — whole-folder fetch
+// WRITE_TIMEOUT_MS covers server-side mutations (moveMessage, appendMessage,
+// createMailbox, renameFolder, deleteMessage) AND searchByHeader. SEARCH is
+// classified WRITE-bucket (not LIST) because a server-side scan over a large
+// folder genuinely can run longer than 15s; the LIST/STATUS bucket is for
+// metadata reads only. Spec ref: MOD-0002 "Wedge detection" notes paragraph.
+const WRITE_TIMEOUT_MS = 30_000;
+// BULK_FETCH_TIMEOUT_MS covers whole-folder envelope fetches: fetchAllMessages,
+// fetchMessagesRaw, AND fetchNewMessages (the sinceUid=0 first-sync case is
+// effectively a full-folder fetch — see WR-04).
+const BULK_FETCH_TIMEOUT_MS = 120_000;
 
 /**
  * FM-002 IN-01: sentinel error class for `withTimeout` rejections.
