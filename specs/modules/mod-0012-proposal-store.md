@@ -4,7 +4,7 @@ title: ProposalStore
 interface-schema: src/tracking/proposals.ts
 unit-test-path: test/unit/tracking/
 integrations: [IX-004, IX-005, IX-012]
-invariants-enforced: []
+invariants-enforced: [INV-002]
 architecture-section: architecture.md#user-behavior-learning
 ---
 
@@ -14,7 +14,7 @@ SQLite persistence for detected move patterns presented as rule proposals. Track
 
 ## Interface Summary
 
-- `upsertProposal(key, destination, signalId)` — Create or update a proposal for the given sender/source/destination combination. Handles match/contradict counting, dominant destination recalculation, and dismissed proposal resurfacing.
+- `upsertProposal(key, destination, signalId)` — Create or update a proposal for the given sender/source/destination combination. Handles match/contradict counting, dominant destination recalculation, and dismissed proposal resurfacing. Returns early without writing when `destination.toUpperCase() === 'INBOX'` (enforces INV-002 defensively — the resolver is the primary guard).
 - `getProposals()` — List active proposals (excludes approved and dismissed) sorted by strength (matching − contradicting) DESC, then last_signal_at DESC.
 - `getById(id)` — Look up a proposal by ID.
 - `getExampleSubjects(sender, envelopeRecipient, sourceFolder, limit?)` — Get example message subjects from SignalStore for display in the web UI.
@@ -30,3 +30,4 @@ SQLite persistence for detected move patterns presented as rule proposals. Track
 - The `destination_counts` field is a JSON-serialized map of {folder: count}, enabling dominant destination recalculation when contradicting moves occur.
 - Resurfacing logic: a dismissed proposal's `signals_since_dismiss` counter increments on each new signal. At 5, the proposal is reactivated.
 - Approved proposals store the `approved_rule_id` for traceability back to the created rule.
+- `upsertProposal` short-circuits when destination is INBOX. This is a defense-in-depth guard; the primary INBOX exclusion lives in MOD-0009 (`DestinationResolver`). See INV-002.

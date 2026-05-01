@@ -4,7 +4,7 @@ title: DestinationResolver
 interface-schema: src/tracking/destinations.ts
 unit-test-path: test/unit/tracking/
 integrations: [IX-003]
-invariants-enforced: [INV-001]
+invariants-enforced: [INV-001, INV-002]
 architecture-section: architecture.md#user-behavior-learning
 ---
 
@@ -26,5 +26,6 @@ Locates where a moved message ended up using a two-tier resolution strategy. Fas
 ## Notes
 
 - Fast-pass checks the last 10 folders from activity log plus hardcoded common names (Archive, All Mail, Trash, Gmail special folders).
+- INBOX is never a candidate destination. Both fast-pass (recent + common folders) and deep-scan iteration filter INBOX via `isInbox(folder)` (case-insensitive). Enforces INV-002.
 - Deep-scan excludes the source folder, already-checked folders, and non-selectable mailboxes.
 - If deep-scan also fails, the message is presumed deleted and dropped from the queue.
