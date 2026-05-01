@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 
 Milestone: v0.8 Action Folder Safety Hardening — Active
 Status: Planning
-Last activity: 2026-04-29 - Completed quick task 260429-d4a: Wire IX-003 integration test
+Last activity: 2026-05-01 - Completed quick task 260430-msg: Fix INBOX-destination bug in proposed rules
 
 Progress: [░░░░░░░░░░] 0% (0/0 plans, 0/1 phases)
 
@@ -80,6 +80,7 @@ Recent decisions affecting current work:
 | Phase 31 P02 | 1min | 1 tasks | 1 files |
 | 260428-x6c | Populate architecture covers-* frontmatter, clear back-link warnings | 2026-04-29 | 68e20c6 | [260428-x6c-populate-covers-modules-and-covers-integ](./quick/260428-x6c-populate-covers-modules-and-covers-integ/) |
 | 260429-d4a | Wire IX-003 integration test | 2026-04-29 | 2089921 | [260429-d4a-wire-ix-003-integration-test](./quick/260429-d4a-wire-ix-003-integration-test/) |
+| 260430-msg | Fix INBOX-destination bug in proposed rules | 2026-05-01 | 54000ff | [260430-msg-fix-inbox-destination-bug-in-proposed-ru](./quick/260430-msg-fix-inbox-destination-bug-in-proposed-ru/) |
 
 ## Session Continuity
 
