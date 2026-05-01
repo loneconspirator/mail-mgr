@@ -84,10 +84,28 @@ const LOCK_TIMEOUT_MS = 15_000;          // getMailboxLock acquisition
 const WRITE_TIMEOUT_MS = 30_000;         // moveMessage / appendMessage / search
 const BULK_FETCH_TIMEOUT_MS = 120_000;   // fetchAllMessages — whole-folder fetch
 
+/**
+ * FM-002 IN-01: sentinel error class for `withTimeout` rejections.
+ *
+ * `guardedOp` keys its `handleClose` trip-wire on `instanceof TimeoutError`
+ * rather than regex-matching on the message string, so a server-side
+ * "command timed out on server" reply or an imapflow-internal timeout-shaped
+ * error can no longer falsely trigger reconnect. The error message format
+ * (`${label} timed out after ${ms}ms`) is preserved verbatim so existing
+ * matrix tests and external log greps that match `/timed out/i` continue to
+ * work.
+ */
+export class TimeoutError extends Error {
+  constructor(label: string, ms: number) {
+    super(`${label} timed out after ${ms}ms`);
+    this.name = 'TimeoutError';
+  }
+}
+
 function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const timer = setTimeout(() => {
-      reject(new Error(`${label} timed out after ${ms}ms`));
+      reject(new TimeoutError(label, ms));
     }, ms);
     promise.then(
       (value) => {
@@ -249,7 +267,11 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     try {
       return await withTimeout(op(flow), timeoutMs, `IMAP ${label}`);
     } catch (err) {
-      if (err instanceof Error && /timed out/i.test(err.message)) {
+      // IN-01: key the trip-wire off the sentinel class, not a string match,
+      // so a server-side "[CLIENTBUG] command timed out on server" or any
+      // other timeout-shaped error from a deeper layer can't falsely trigger
+      // reconnect. Only OUR `withTimeout` rejection counts as a wedge.
+      if (err instanceof TimeoutError) {
         this.handleClose();
       }
       throw err;
