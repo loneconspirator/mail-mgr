@@ -17,7 +17,7 @@ Enforces HTTP BASIC authentication on every request via an `onRequest` hook agai
 ## Interface Summary
 
 - `buildServer(deps)` — Create and configure a Fastify instance with all routes registered. Returns the Fastify instance (not started). Throws synchronously if `WEB_AUTH_USER` or `WEB_AUTH_PASS` is unset.
-- `basicAuthHook({ user, pass })` — Factory that returns a Fastify `onRequest` hook performing constant-time credential comparison and skipping the `HEALTH_PATH` route. Exported from `src/web/auth.ts`.
+- `basicAuthHook(expectedUser, expectedPass)` — Factory that returns a Fastify `onRequest` hook performing constant-time credential comparison and skipping the `HEALTH_PATH` route. Exported from `src/web/auth.ts` alongside `readAuthCredsOrThrow()` and the `HEALTH_PATH` constant.
 - `registerHealthRoute(app)` — Registers `GET /healthz` returning 200 without auth. Exported from `src/web/routes/health.ts`.
 
 Key API routes relevant to UC-001:

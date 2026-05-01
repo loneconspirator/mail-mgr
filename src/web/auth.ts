@@ -1,6 +1,9 @@
 /**
  * HTTP BASIC auth onRequest hook for the Fastify web server.
  *
+ * Enforces INV-003 (all web requests require valid HTTP BASIC credentials,
+ * except /healthz). See specs/invariants/inv-003-web-requests-require-authentication.md.
+ *
  * Sourced from WEB_AUTH_USER / WEB_AUTH_PASS env vars. Fail-closed: if either
  * is unset/empty after trim, readAuthCredsOrThrow throws synchronously so
  * buildServer refuses to start. The /healthz endpoint (HEALTH_PATH) is

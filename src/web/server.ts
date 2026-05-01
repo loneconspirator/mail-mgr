@@ -4,6 +4,10 @@
  * See specs/modules/mod-0015-web-server.md for the module spec, IX-005 for the
  * proposal approval interaction this server participates in, and architecture.md
  * (#web-interface) for the architectural role.
+ *
+ * Enforces INV-003 (web auth required) by calling readAuthCredsOrThrow at
+ * startup (fail-closed) and registering basicAuthHook before any non-/healthz
+ * route handler.
  */
 import path from 'node:path';
 import Fastify from 'fastify';

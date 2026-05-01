@@ -1,3 +1,9 @@
+/**
+ * INV-003 enforcement test — every web request requires valid HTTP BASIC
+ * credentials, except /healthz. Covers fail-closed startup, 401 + WWW-Authenticate
+ * response shape, /healthz exemption, and constant-time-ish password compare.
+ * See specs/invariants/inv-003-web-requests-require-authentication.md.
+ */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
