@@ -135,3 +135,13 @@ Incident-driven hardening of the action-folder pipeline to prevent mass erroneou
 Plans:
 - [x] 33-01-PLAN.md — Fix processor bugs (D-05 post-move logging, D-06 duplicate early return) and add diagnostic logging (D-07)
 - [x] 33-02-PLAN.md — Add sentinel-aware skip to poller (D-01 skip on messages=1, D-02 skip on messages=0)
+
+### Phase 34: Generalize FM-002 — harden ImapClient against wedged-connection silent failures
+
+**Goal:** [To be planned]
+**Requirements**: TBD
+**Depends on:** Phase 33
+**Plans:** 0 plans
+
+Plans:
+- [ ] TBD (run /gsd-plan-phase 34 to break down)

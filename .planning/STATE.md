@@ -66,6 +66,7 @@ Recent decisions affecting current work:
 
 - v0.8 milestone created: Action Folder Safety Hardening (incident-driven, 2026-04-24)
 - Phase 33 added: Action Folder Safety Hardening — sentinel-aware skip, circuit breaker, diagnostic logging
+- Phase 34 added: Generalize FM-002 — harden ImapClient against wedged-connection silent failures
 
 ### Blockers/Concerns
 
