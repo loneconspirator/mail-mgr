@@ -1006,4 +1006,25 @@ describe('ImapClient', () => {
       await expect(client.listFolders()).rejects.toThrow('Not connected');
     });
   });
+
+  // FM-002 Task 1 (Phase 34): foundation pieces — mock factory now provides
+  // close() so the upcoming cleanupFlow.close() refactor type-checks. Pinned
+  // here so future regressions of the mock surface fail loudly.
+  describe('FM-002 Task 1 foundation: mock factory close()', () => {
+    it('createMockFlow default returns an object whose close is a vi.fn', () => {
+      const flow = createMockFlow();
+      expect(flow.close).toBeDefined();
+      expect(typeof flow.close).toBe('function');
+      // vi.fn instances expose mock metadata
+      expect((flow.close as unknown as { mock?: unknown }).mock).toBeDefined();
+    });
+
+    it('createMockFlow honors a close override', () => {
+      const customSpy = vi.fn();
+      const flow = createMockFlow({ close: customSpy });
+      expect(flow.close).toBe(customSpy);
+      flow.close();
+      expect(customSpy).toHaveBeenCalledOnce();
+    });
+  });
 });
