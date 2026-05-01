@@ -9,7 +9,7 @@
 - ✅ **v0.5 Sender Disposition Views** — Phases 13-16 (shipped 2026-04-20)
 - ✅ **v0.6 Action Folders** — Phases 17-25 (shipped 2026-04-22)
 - ✅ **v0.7 Sentinel Message System** — Phases 26-32 (shipped 2026-04-23)
-- 🔨 **v0.8 Action Folder Safety Hardening** — Phase 33 (active)
+- 🔨 **v0.8 Action Folder Safety Hardening & FM-002 Generalization** — Phases 33-34 (active)
 
 ## Phases
 
@@ -121,8 +121,10 @@ Full details: [milestones/v0.7-ROADMAP.md](milestones/v0.7-ROADMAP.md)
 | 30. Scanning & Rename Detection | v0.7 | 2/2 | Complete | 2026-04-22 |
 | 31. Auto-Healing & Failure Handling | v0.7 | 2/2 | Complete | 2026-04-22 |
 | 32. UI Cleanup | v0.7 | 1/1 | Complete | 2026-04-22 |
+| 33. Action Folder Safety Hardening | v0.8 | 2/2 | Complete | 2026-04-23 |
+| 34. Generalize FM-002 | v0.8 | 3/3 | Complete | 2026-05-01 |
 
-## Current Milestone: v0.8 Action Folder Safety Hardening
+## Current Milestone: v0.8 Action Folder Safety Hardening & FM-002 Generalization
 
 Incident-driven hardening of the action-folder pipeline to prevent mass erroneous rule creation (Block and VIP floods) and eliminate wasteful sentinel-only polling.
 
