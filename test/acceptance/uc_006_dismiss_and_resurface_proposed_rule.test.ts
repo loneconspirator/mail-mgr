@@ -42,6 +42,7 @@ import { ReviewSweeper } from '../../src/sweep/index.js';
 import type { Config } from '../../src/config/schema.js';
 import type { ProposedRuleCard } from '../../src/shared/types.js';
 
+import { AUTH_HEADERS } from '../_authHeader.js';
 import {
   sendTestEmail,
   listMailboxMessages,
@@ -380,7 +381,7 @@ describe('UC-006: Dismiss and resurface proposed rule', () => {
     });
     const p1Id = proposals[0].id;
 
-    let listResp = await server.inject({ method: 'GET', url: '/api/proposed-rules' });
+    let listResp = await server.inject({ method: 'GET', url: '/api/proposed-rules', headers: { ...AUTH_HEADERS } });
     expect(listResp.statusCode).toBe(200);
     let cards = listResp.json() as ProposedRuleCard[];
     expect(cards).toHaveLength(1);
@@ -391,6 +392,7 @@ describe('UC-006: Dismiss and resurface proposed rule', () => {
     const dismissResp = await server.inject({
       method: 'POST',
       url: `/api/proposed-rules/${p1Id}/dismiss`,
+      headers: { ...AUTH_HEADERS },
     });
     expect(dismissResp.statusCode).toBe(204);
 
@@ -399,7 +401,7 @@ describe('UC-006: Dismiss and resurface proposed rule', () => {
     expect(row.dismissed_at).not.toBeNull();
     expect(row.signals_since_dismiss).toBe(0);
 
-    listResp = await server.inject({ method: 'GET', url: '/api/proposed-rules' });
+    listResp = await server.inject({ method: 'GET', url: '/api/proposed-rules', headers: { ...AUTH_HEADERS } });
     cards = listResp.json() as ProposedRuleCard[];
     expect(cards.find((c) => c.id === p1Id)).toBeUndefined();
 
@@ -427,7 +429,7 @@ describe('UC-006: Dismiss and resurface proposed rule', () => {
     }
 
     // ---- Phase 4: resurfaced card with notice; matchingCount=7 ----
-    listResp = await server.inject({ method: 'GET', url: '/api/proposed-rules' });
+    listResp = await server.inject({ method: 'GET', url: '/api/proposed-rules', headers: { ...AUTH_HEADERS } });
     cards = listResp.json() as ProposedRuleCard[];
     const resurfaced = cards.find((c) => c.id === p1Id);
     expect(resurfaced).toBeDefined();
@@ -453,7 +455,7 @@ describe('UC-006: Dismiss and resurface proposed rule', () => {
     }
 
     const p1Id = proposalStore.getProposals()[0].id;
-    await server.inject({ method: 'POST', url: `/api/proposed-rules/${p1Id}/dismiss` });
+    await server.inject({ method: 'POST', url: `/api/proposed-rules/${p1Id}/dismiss`, headers: { ...AUTH_HEADERS } });
 
     await app.monitor.start();
     const postUids = await batchPrepareInbox(
@@ -471,6 +473,7 @@ describe('UC-006: Dismiss and resurface proposed rule', () => {
     const reDismiss = await server.inject({
       method: 'POST',
       url: `/api/proposed-rules/${p1Id}/dismiss`,
+      headers: { ...AUTH_HEADERS },
     });
     expect(reDismiss.statusCode).toBe(204);
 
@@ -495,7 +498,7 @@ describe('UC-006: Dismiss and resurface proposed rule', () => {
     }
 
     const p1Id = proposalStore.getProposals()[0].id;
-    await server.inject({ method: 'POST', url: `/api/proposed-rules/${p1Id}/dismiss` });
+    await server.inject({ method: 'POST', url: `/api/proposed-rules/${p1Id}/dismiss`, headers: { ...AUTH_HEADERS } });
 
     await app.monitor.start();
     const resurfaceUids = await batchPrepareInbox(
@@ -510,6 +513,7 @@ describe('UC-006: Dismiss and resurface proposed rule', () => {
     const approveResp = await server.inject({
       method: 'POST',
       url: `/api/proposed-rules/${p1Id}/approve`,
+      headers: { ...AUTH_HEADERS },
     });
     expect(approveResp.statusCode).toBe(200);
     const newRule = approveResp.json() as { id: string; match: { sender: string }; action: { type: string; folder: string } };
@@ -564,7 +568,7 @@ describe('UC-006: Dismiss and resurface proposed rule', () => {
     }
 
     const p1Id = proposalStore.getProposals()[0].id;
-    await server.inject({ method: 'POST', url: `/api/proposed-rules/${p1Id}/dismiss` });
+    await server.inject({ method: 'POST', url: `/api/proposed-rules/${p1Id}/dismiss`, headers: { ...AUTH_HEADERS } });
 
     // 3 to Newsletters, 2 to Read later (interleaved); 5 signals total → resurface.
     await app.monitor.start();
@@ -599,7 +603,7 @@ describe('UC-006: Dismiss and resurface proposed rule', () => {
     }
 
     const p1Id = proposalStore.getProposals()[0].id;
-    await server.inject({ method: 'POST', url: `/api/proposed-rules/${p1Id}/dismiss` });
+    await server.inject({ method: 'POST', url: `/api/proposed-rules/${p1Id}/dismiss`, headers: { ...AUTH_HEADERS } });
     const beforeRow = readRow(activityLog, p1Id);
 
     // GreenMail's basic SMTP doesn't expose envelope-recipient cleanly through
@@ -648,6 +652,7 @@ describe('UC-006: Dismiss and resurface proposed rule', () => {
     const res = await server.inject({
       method: 'POST',
       url: '/api/proposed-rules/9999/dismiss',
+      headers: { ...AUTH_HEADERS },
     });
     expect(res.statusCode).toBe(404);
   }, 30_000);
@@ -675,6 +680,7 @@ describe('UC-006: Dismiss and resurface proposed rule', () => {
     const modifyResp = await server.inject({
       method: 'POST',
       url: `/api/proposed-rules/${p1.id}/modify`,
+      headers: { ...AUTH_HEADERS },
     });
     expect(modifyResp.statusCode).toBe(200);
     const prefill = modifyResp.json() as {
@@ -705,6 +711,7 @@ describe('UC-006: Dismiss and resurface proposed rule', () => {
         enabled: true,
         order: 0,
       },
+      headers: { ...AUTH_HEADERS },
     });
     expect(createResp.statusCode).toBe(201);
     const newRule = createResp.json() as { id: string };
@@ -716,7 +723,7 @@ describe('UC-006: Dismiss and resurface proposed rule', () => {
       method: 'POST',
       url: `/api/proposed-rules/${p1.id}/mark-approved`,
       payload: { ruleId: newRule.id },
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...AUTH_HEADERS },
     });
     expect(markResp.statusCode).toBe(204);
 

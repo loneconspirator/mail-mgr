@@ -53,6 +53,7 @@ import { ReviewSweeper } from '../../src/sweep/index.js';
 import type { Config, Rule } from '../../src/config/schema.js';
 import type { DryRunGroup, BatchState } from '../../src/batch/index.js';
 
+import { AUTH_HEADERS } from '../_authHeader.js';
 import {
   sendTestEmail,
   listMailboxMessages,
@@ -300,7 +301,7 @@ async function pollUntilStatus(
   const start = Date.now();
   // 250ms poll interval per UC-004 spec instructions.
   while (Date.now() - start < timeoutMs) {
-    const resp = await app.inject({ method: 'GET', url: '/api/batch/status' });
+    const resp = await app.inject({ method: 'GET', url: '/api/batch/status', headers: { ...AUTH_HEADERS } });
     const state = resp.json() as BatchState;
     if (predicate(state)) return state;
     await new Promise((r) => setTimeout(r, 250));
@@ -314,13 +315,13 @@ async function postJson(
   payload?: Record<string, unknown>,
 ) {
   if (payload === undefined) {
-    return app.inject({ method: 'POST', url });
+    return app.inject({ method: 'POST', url, headers: { ...AUTH_HEADERS } });
   }
   return app.inject({
     method: 'POST',
     url,
     payload,
-    headers: { 'content-type': 'application/json' },
+    headers: { 'content-type': 'application/json', ...AUTH_HEADERS },
   });
 }
 

@@ -29,6 +29,8 @@ import { registerBatchRoutes } from './routes/batch.js';
 import { registerProposedRuleRoutes } from './routes/proposed-rules.js';
 import { registerDispositionRoutes } from './routes/dispositions.js';
 import { registerActionFolderConfigRoutes } from './routes/action-folder-config.js';
+import { basicAuthHook, readAuthCredsOrThrow } from './auth.js';
+import { registerHealthRoute } from './routes/health.js';
 
 export interface ServerDeps {
   configRepo: ConfigRepository;
@@ -45,10 +47,23 @@ export interface ServerDeps {
 }
 
 export function buildServer(deps: ServerDeps): FastifyInstance {
+  // Fail-closed: refuse to build the server if the operator has not set the
+  // BASIC auth credentials. This must throw synchronously so misconfigured
+  // deploys fail at startup rather than silently running unauthenticated.
+  const { user: authUser, pass: authPass } = readAuthCredsOrThrow();
+
   const app = Fastify({ logger: false });
 
   // Store deps on app for route access
   app.decorate('deps', deps);
+
+  // Register the unauthenticated /healthz route BEFORE the auth hook (defense
+  // in depth — the hook also short-circuits on HEALTH_PATH).
+  registerHealthRoute(app);
+
+  // Enforce HTTP BASIC auth on every other request. Hook order: this runs
+  // before any route handler thanks to onRequest.
+  app.addHook('onRequest', basicAuthHook(authUser, authPass));
 
   // Serve frontend static files
   const publicDir = deps.staticRoot || path.join(process.cwd(), 'dist', 'public');

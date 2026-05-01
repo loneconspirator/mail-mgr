@@ -43,6 +43,7 @@ import { ReviewSweeper } from '../../src/sweep/index.js';
 import type { Config } from '../../src/config/schema.js';
 import type { ProposedRuleCard } from '../../src/shared/types.js';
 
+import { AUTH_HEADERS } from '../_authHeader.js';
 import {
   sendTestEmail,
   waitForProcessed,
@@ -438,7 +439,7 @@ describe('UC-001: Manual move → proposed rule → auto-filing', () => {
 
     // The UI does GET /api/proposed-rules first; verify the proposal is there
     // labeled "Weak (1 move)" as the spec describes.
-    const listResp = await server.inject({ method: 'GET', url: '/api/proposed-rules' });
+    const listResp = await server.inject({ method: 'GET', url: '/api/proposed-rules', headers: { ...AUTH_HEADERS } });
     expect(listResp.statusCode).toBe(200);
     const cards = listResp.json() as ProposedRuleCard[];
     expect(cards).toHaveLength(1);
@@ -449,6 +450,7 @@ describe('UC-001: Manual move → proposed rule → auto-filing', () => {
     const approveResp = await server.inject({
       method: 'POST',
       url: `/api/proposed-rules/${proposalId}/approve`,
+      headers: { ...AUTH_HEADERS },
     });
     expect(approveResp.statusCode).toBe(200);
     const newRule = approveResp.json() as { id: string; match: { sender: string }; action: { type: string; folder: string } };
@@ -585,7 +587,7 @@ describe('UC-001: Manual move → proposed rule → auto-filing', () => {
     });
 
     // The card surfaced to the UI labels the proposal "Strong".
-    const listResp = await server.inject({ method: 'GET', url: '/api/proposed-rules' });
+    const listResp = await server.inject({ method: 'GET', url: '/api/proposed-rules', headers: { ...AUTH_HEADERS } });
     expect(listResp.statusCode).toBe(200);
     const cards = listResp.json() as ProposedRuleCard[];
     expect(cards).toHaveLength(1);
@@ -644,6 +646,7 @@ describe('UC-001: Manual move → proposed rule → auto-filing', () => {
     const blocked = await server.inject({
       method: 'POST',
       url: `/api/proposed-rules/${proposalId}/approve`,
+      headers: { ...AUTH_HEADERS },
     });
     expect(blocked.statusCode).toBe(409);
     const blockedBody = blocked.json() as { error: string; conflict: { type: string; rule: { id: string } } };
@@ -662,6 +665,7 @@ describe('UC-001: Manual move → proposed rule → auto-filing', () => {
     const ok = await server.inject({
       method: 'POST',
       url: `/api/proposed-rules/${proposalId}/approve?insertBefore=${broadRule.id}`,
+      headers: { ...AUTH_HEADERS },
     });
     expect(ok.statusCode).toBe(200);
     const newRule = ok.json() as { id: string; order: number };
@@ -771,6 +775,7 @@ describe('UC-001: Manual move → proposed rule → auto-filing', () => {
     const approveResp = await server.inject({
       method: 'POST',
       url: `/api/proposed-rules/${proposalId}/approve?asReview=true`,
+      headers: { ...AUTH_HEADERS },
     });
     expect(approveResp.statusCode).toBe(200);
     const newRule = approveResp.json() as { id: string; action: { type: string; folder?: string } };

@@ -39,6 +39,7 @@ import { buildServer } from '../../src/web/server.js';
 import type { ServerDeps } from '../../src/web/server.js';
 import type { Config, Rule } from '../../src/config/schema.js';
 
+import { AUTH_HEADERS } from '../_authHeader.js';
 function baseConfig(): Config {
   return {
     imap: {
@@ -201,6 +202,7 @@ describe('IX-005 — Proposal approval, conflict checking, and rule creation', (
       const res = await h.app.inject({
         method: 'POST',
         url: `/api/proposed-rules/${proposalId}/approve`,
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(200);
@@ -238,6 +240,7 @@ describe('IX-005 — Proposal approval, conflict checking, and rule creation', (
       const res = await h.app.inject({
         method: 'POST',
         url: `/api/proposed-rules/${proposalId}/approve`,
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(200);
@@ -269,6 +272,7 @@ describe('IX-005 — Proposal approval, conflict checking, and rule creation', (
       const res = await h.app.inject({
         method: 'POST',
         url: `/api/proposed-rules/${proposalId}/approve`,
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(409);
@@ -302,6 +306,7 @@ describe('IX-005 — Proposal approval, conflict checking, and rule creation', (
       const res = await h.app.inject({
         method: 'POST',
         url: `/api/proposed-rules/${proposalId}/approve`,
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(409);
@@ -336,6 +341,7 @@ describe('IX-005 — Proposal approval, conflict checking, and rule creation', (
       const res = await h.app.inject({
         method: 'POST',
         url: `/api/proposed-rules/${proposalId}/approve?insertBefore=${broad.id}`,
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(200);

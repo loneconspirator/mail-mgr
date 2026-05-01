@@ -15,6 +15,7 @@ export default defineConfig({
           name: 'unit',
           include: ['test/unit/**/*.test.ts'],
           globals: true,
+          setupFiles: ['./test/setup.ts'],
         },
       },
       {
@@ -24,6 +25,7 @@ export default defineConfig({
           globals: true,
           testTimeout: 30_000,
           globalSetup: ['./test/integration/global-setup.ts'],
+          setupFiles: ['./test/setup.ts'],
           // Integration + acceptance tests share a single GreenMail instance
           // (one INBOX, one mailbox tree). Running files in parallel causes
           // INBOX/folder cross-contamination — one file's appended messages
@@ -41,6 +43,7 @@ export default defineConfig({
           testTimeout: 180_000,
           hookTimeout: 60_000,
           globalSetup: ['./test/integration/global-setup.ts'],
+          setupFiles: ['./test/setup.ts'],
           fileParallelism: false,
         },
       },

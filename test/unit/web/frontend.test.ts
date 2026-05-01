@@ -11,6 +11,7 @@ import { ConfigRepository } from '../../../src/config/repository.js';
 import { ActivityLog } from '../../../src/log/index.js';
 import { ProposalStore } from '../../../src/tracking/proposals.js';
 import { runMigrations } from '../../../src/log/migrations.js';
+import { AUTH_HEADERS } from '../../_authHeader.js';
 
 // --- Helpers ---
 
@@ -75,7 +76,7 @@ afterEach(() => {
 describe('Frontend SPA serving', () => {
   it('serves index.html at root with correct content', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'GET', url: '/' });
+    const res = await app.inject({ method: 'GET', url: '/', headers: { ...AUTH_HEADERS } });
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toContain('Mail Manager');
@@ -85,7 +86,7 @@ describe('Frontend SPA serving', () => {
 
   it('serves bundled app.js', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'GET', url: '/app.js' });
+    const res = await app.inject({ method: 'GET', url: '/app.js', headers: { ...AUTH_HEADERS } });
 
     expect(res.statusCode).toBe(200);
     expect(res.body.length).toBeGreaterThan(100);
@@ -93,7 +94,7 @@ describe('Frontend SPA serving', () => {
 
   it('serves styles.css', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'GET', url: '/styles.css' });
+    const res = await app.inject({ method: 'GET', url: '/styles.css', headers: { ...AUTH_HEADERS } });
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toContain('font-family');
@@ -101,7 +102,7 @@ describe('Frontend SPA serving', () => {
 
   it('falls back to index.html for unknown non-API routes (SPA routing)', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'GET', url: '/some/deep/route' });
+    const res = await app.inject({ method: 'GET', url: '/some/deep/route', headers: { ...AUTH_HEADERS } });
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toContain('Mail Manager');
@@ -109,7 +110,7 @@ describe('Frontend SPA serving', () => {
 
   it('returns 404 JSON for unknown API routes', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'GET', url: '/api/nonexistent' });
+    const res = await app.inject({ method: 'GET', url: '/api/nonexistent', headers: { ...AUTH_HEADERS } });
 
     expect(res.statusCode).toBe(404);
     expect(res.json()).toEqual({ error: 'Not found' });
@@ -122,25 +123,25 @@ describe('Frontend SPA serving', () => {
     }]);
     const app = buildServer(makeDeps(config));
 
-    const rulesRes = await app.inject({ method: 'GET', url: '/api/rules' });
+    const rulesRes = await app.inject({ method: 'GET', url: '/api/rules', headers: { ...AUTH_HEADERS } });
     expect(rulesRes.statusCode).toBe(200);
     expect(rulesRes.json()).toHaveLength(1);
 
-    const statusRes = await app.inject({ method: 'GET', url: '/api/status' });
+    const statusRes = await app.inject({ method: 'GET', url: '/api/status', headers: { ...AUTH_HEADERS } });
     expect(statusRes.statusCode).toBe(200);
     expect(statusRes.json().connectionStatus).toBe('connected');
 
-    const activityRes = await app.inject({ method: 'GET', url: '/api/activity' });
+    const activityRes = await app.inject({ method: 'GET', url: '/api/activity', headers: { ...AUTH_HEADERS } });
     expect(activityRes.statusCode).toBe(200);
 
-    const imapRes = await app.inject({ method: 'GET', url: '/api/config/imap' });
+    const imapRes = await app.inject({ method: 'GET', url: '/api/config/imap', headers: { ...AUTH_HEADERS } });
     expect(imapRes.statusCode).toBe(200);
     expect(imapRes.json().host).toBe('imap.test.com');
   });
 
   it('index.html contains Proposed nav button with badge', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'GET', url: '/' });
+    const res = await app.inject({ method: 'GET', url: '/', headers: { ...AUTH_HEADERS } });
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toContain('data-page="proposed"');
@@ -150,7 +151,7 @@ describe('Frontend SPA serving', () => {
 
   it('styles.css contains Phase 11 proposal card styles', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'GET', url: '/styles.css' });
+    const res = await app.inject({ method: 'GET', url: '/styles.css', headers: { ...AUTH_HEADERS } });
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toContain('.proposal-card');
@@ -164,7 +165,7 @@ describe('Frontend SPA serving', () => {
 
   it('compiled app.js contains proposed page logic', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'GET', url: '/app.js' });
+    const res = await app.inject({ method: 'GET', url: '/app.js', headers: { ...AUTH_HEADERS } });
 
     expect(res.statusCode).toBe(200);
     // Check for string literals that survive minification
@@ -259,7 +260,7 @@ describe('Proposed Rules page', () => {
     `).run('msg-1', 'news@example.com', 'Weekly digest', 'INBOX', 'Newsletters');
 
     const app = buildServer(makeDepsWithProposals(makeConfig(), db));
-    const res = await app.inject({ method: 'GET', url: '/api/proposed-rules' });
+    const res = await app.inject({ method: 'GET', url: '/api/proposed-rules', headers: { ...AUTH_HEADERS } });
 
     expect(res.statusCode).toBe(200);
     const cards = res.json();
@@ -275,7 +276,7 @@ describe('Proposed Rules page', () => {
   it('GET /api/proposed-rules returns empty array when no proposals exist', async () => {
     const db = createProposalDb();
     const app = buildServer(makeDepsWithProposals(makeConfig(), db));
-    const res = await app.inject({ method: 'GET', url: '/api/proposed-rules' });
+    const res = await app.inject({ method: 'GET', url: '/api/proposed-rules', headers: { ...AUTH_HEADERS } });
 
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual([]);
@@ -290,7 +291,7 @@ describe('Proposed Rules page', () => {
     `).run('test@example.com', 'INBOX', 'Archive', 5, JSON.stringify({ Archive: 5 }), 'active').lastInsertRowid;
 
     const app = buildServer(makeDepsWithProposals(makeConfig(), db));
-    const res = await app.inject({ method: 'POST', url: `/api/proposed-rules/${id}/approve` });
+    const res = await app.inject({ method: 'POST', url: `/api/proposed-rules/${id}/approve`, headers: { ...AUTH_HEADERS } });
 
     expect(res.statusCode).toBe(200);
     const rule = res.json();
@@ -308,7 +309,7 @@ describe('Proposed Rules page', () => {
     `).run('test@example.com', 'INBOX', 'Archive', 5, JSON.stringify({ Archive: 5 }), 'active').lastInsertRowid;
 
     const app = buildServer(makeDepsWithProposals(makeConfig(), db));
-    const res = await app.inject({ method: 'POST', url: `/api/proposed-rules/${id}/dismiss` });
+    const res = await app.inject({ method: 'POST', url: `/api/proposed-rules/${id}/dismiss`, headers: { ...AUTH_HEADERS } });
 
     expect(res.statusCode).toBe(204);
 
@@ -326,7 +327,7 @@ describe('Proposed Rules page', () => {
     `).run('test@example.com', 'INBOX', 'Archive', 5, 2, JSON.stringify({ Archive: 5, Trash: 2 }), 'active');
 
     const app = buildServer(makeDepsWithProposals(makeConfig(), db));
-    const res = await app.inject({ method: 'GET', url: '/api/proposed-rules' });
+    const res = await app.inject({ method: 'GET', url: '/api/proposed-rules', headers: { ...AUTH_HEADERS } });
 
     expect(res.statusCode).toBe(200);
     const cards = res.json();
@@ -344,7 +345,7 @@ describe('Proposed Rules page', () => {
     `).run('test@example.com', 'INBOX', 'Archive', 8, JSON.stringify({ Archive: 8 }), 'active', 6);
 
     const app = buildServer(makeDepsWithProposals(makeConfig(), db));
-    const res = await app.inject({ method: 'GET', url: '/api/proposed-rules' });
+    const res = await app.inject({ method: 'GET', url: '/api/proposed-rules', headers: { ...AUTH_HEADERS } });
 
     expect(res.statusCode).toBe(200);
     const cards = res.json();

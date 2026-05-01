@@ -8,6 +8,7 @@ import type { ServerDeps } from '../../../src/web/server.js';
 import type { Config } from '../../../src/config/index.js';
 import { ConfigRepository } from '../../../src/config/repository.js';
 import { ActivityLog } from '../../../src/log/index.js';
+import { AUTH_HEADERS } from '../../_authHeader.js';
 
 // --- Helpers ---
 
@@ -80,7 +81,7 @@ afterEach(() => {
 describe('GET /api/config/action-folders', () => {
   it('returns 200 with action folder config object', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'GET', url: '/api/config/action-folders' });
+    const res = await app.inject({ method: 'GET', url: '/api/config/action-folders', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body).toHaveProperty('enabled');
@@ -96,6 +97,7 @@ describe('PUT /api/config/action-folders', () => {
     const res = await app.inject({
       method: 'PUT',
       url: '/api/config/action-folders',
+      headers: { ...AUTH_HEADERS },
       payload: { prefix: 'MyActions' },
     });
     expect(res.statusCode).toBe(200);
@@ -108,6 +110,7 @@ describe('PUT /api/config/action-folders', () => {
     const res = await app.inject({
       method: 'PUT',
       url: '/api/config/action-folders',
+      headers: { ...AUTH_HEADERS },
       payload: { enabled: false },
     });
     expect(res.statusCode).toBe(200);
@@ -119,6 +122,7 @@ describe('PUT /api/config/action-folders', () => {
     const res = await app.inject({
       method: 'PUT',
       url: '/api/config/action-folders',
+      headers: { ...AUTH_HEADERS },
       payload: { pollInterval: 30 },
     });
     expect(res.statusCode).toBe(200);
@@ -130,6 +134,7 @@ describe('PUT /api/config/action-folders', () => {
     const res = await app.inject({
       method: 'PUT',
       url: '/api/config/action-folders',
+      headers: { ...AUTH_HEADERS },
       payload: { prefix: '' },
     });
     expect(res.statusCode).toBe(400);
@@ -142,6 +147,7 @@ describe('PUT /api/config/action-folders', () => {
     const res = await app.inject({
       method: 'PUT',
       url: '/api/config/action-folders',
+      headers: { ...AUTH_HEADERS },
       payload: { pollInterval: -5 },
     });
     expect(res.statusCode).toBe(400);

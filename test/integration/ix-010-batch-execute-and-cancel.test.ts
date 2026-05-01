@@ -55,6 +55,7 @@ vi.mock('../../src/sweep/index.js', () => ({
 import { BatchEngine } from '../../src/batch/index.js';
 import { buildServer } from '../../src/web/server.js';
 import { evaluateRules } from '../../src/rules/index.js';
+import { AUTH_HEADERS } from '../_authHeader.js';
 import {
   isEligibleForSweep,
   resolveSweepDestination,
@@ -195,6 +196,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: { sourceFolder: 'TestFolder' },
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(200);
@@ -211,6 +213,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: {},
+        headers: { ...AUTH_HEADERS },
       });
       expect(res.statusCode).toBe(400);
       await app.close();
@@ -236,6 +239,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: { sourceFolder: 'TestFolder' },
+        headers: { ...AUTH_HEADERS },
       });
       expect(second.statusCode).toBe(409);
       expect(second.json()).toEqual({ error: 'Batch already running' });
@@ -260,6 +264,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: { sourceFolder: 'INBOX' },
+        headers: { ...AUTH_HEADERS },
       });
       expect(res.statusCode).toBe(200);
 
@@ -285,6 +290,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: { sourceFolder: 'Review' },
+        headers: { ...AUTH_HEADERS },
       });
       expect(res.statusCode).toBe(200);
 
@@ -305,6 +311,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: { sourceFolder: 'Archive/Old' },
+        headers: { ...AUTH_HEADERS },
       });
 
       await waitForStatus(engine, (s) => s === 'completed' || s === 'error');
@@ -329,6 +336,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
           method: 'POST',
           url: '/api/batch/execute',
           payload: { sourceFolder: 'TestFolder' },
+          headers: { ...AUTH_HEADERS },
         });
 
         await waitForStatus(engine, (s) => s === 'completed' || s === 'error');
@@ -380,7 +388,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
 
     it('IX-010.5: POST /api/batch/cancel returns { status: "cancelling" }', async () => {
       const { app } = buildHarness();
-      const res = await app.inject({ method: 'POST', url: '/api/batch/cancel' });
+      const res = await app.inject({ method: 'POST', url: '/api/batch/cancel', headers: { ...AUTH_HEADERS } });
       expect(res.statusCode).toBe(200);
       expect(res.json()).toEqual({ status: 'cancelling' });
       await app.close();
@@ -402,6 +410,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: { sourceFolder: 'TestFolder' },
+        headers: { ...AUTH_HEADERS },
       });
 
       await waitForStatus(engine, (s) => s === 'completed' || s === 'error');
@@ -421,6 +430,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: { sourceFolder: 'Review' },
+        headers: { ...AUTH_HEADERS },
       });
 
       await waitForStatus(engine, (s) => s === 'completed' || s === 'error');
@@ -444,6 +454,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: { sourceFolder: 'Review' },
+        headers: { ...AUTH_HEADERS },
       });
 
       await waitForStatus(engine, (s) => s === 'completed' || s === 'error');
@@ -468,6 +479,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: { sourceFolder: 'INBOX' },
+        headers: { ...AUTH_HEADERS },
       });
 
       await waitForStatus(engine, (s) => s === 'completed' || s === 'error');
@@ -493,6 +505,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: { sourceFolder: 'INBOX' },
+        headers: { ...AUTH_HEADERS },
       });
 
       await waitForStatus(engine, (s) => s === 'completed' || s === 'error');
@@ -513,6 +526,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: { sourceFolder: 'Archive/Old' },
+        headers: { ...AUTH_HEADERS },
       });
 
       await waitForStatus(engine, (s) => s === 'completed' || s === 'error');
@@ -538,6 +552,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: { sourceFolder: 'Archive/Old' },
+        headers: { ...AUTH_HEADERS },
       });
 
       await waitForStatus(engine, (s) => s === 'completed' || s === 'error');
@@ -566,6 +581,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: { sourceFolder: 'Archive/Old' },
+        headers: { ...AUTH_HEADERS },
       });
 
       await waitForStatus(engine, (s) => s === 'completed' || s === 'error');
@@ -598,6 +614,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: { sourceFolder: 'TestFolder' },
+        headers: { ...AUTH_HEADERS },
       });
       await waitForStatus(engine, (s) => s === 'completed' || s === 'error');
 
@@ -635,17 +652,18 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: { sourceFolder: 'TestFolder' },
+        headers: { ...AUTH_HEADERS },
       });
 
       await waitForStatus(engine, (s) => s === 'executing');
-      const midRun = await app.inject({ method: 'GET', url: '/api/batch/status' });
+      const midRun = await app.inject({ method: 'GET', url: '/api/batch/status', headers: { ...AUTH_HEADERS } });
       expect(midRun.statusCode).toBe(200);
       expect((midRun.json() as { status: string }).status).toBe('executing');
 
       resolveFetch([makeReviewMessage({ uid: 1 })]);
       await waitForStatus(engine, (s) => s === 'completed' || s === 'error');
 
-      const post = await app.inject({ method: 'GET', url: '/api/batch/status' });
+      const post = await app.inject({ method: 'GET', url: '/api/batch/status', headers: { ...AUTH_HEADERS } });
       const body = post.json() as { status: string; completedAt: string | null; processed: number };
       expect(body.status).toBe('completed');
       expect(body.completedAt).not.toBeNull();
@@ -663,6 +681,7 @@ describe('IX-010 — Batch execute with chunked processing and cooperative cance
         method: 'POST',
         url: '/api/batch/execute',
         payload: { sourceFolder: 'TestFolder' },
+        headers: { ...AUTH_HEADERS },
       });
 
       await waitForStatus(engine, (s) => s === 'error' || s === 'completed');

@@ -41,6 +41,7 @@ import type { Config, Rule } from '../../src/config/schema.js';
 import type { FolderCache } from '../../src/folders/index.js';
 import type { ActivityLog } from '../../src/log/index.js';
 
+import { AUTH_HEADERS } from '../_authHeader.js';
 const silentLogger = pino({ level: 'silent' });
 
 function baseConfig(): Config {
@@ -167,6 +168,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
         method: 'POST',
         url: '/api/rules',
         payload: ruleBody(),
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(201);
@@ -185,6 +187,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
         method: 'PUT',
         url: `/api/rules/${created.id}`,
         payload: ruleBody({ name: 'Renamed Rule' }),
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(200);
@@ -199,6 +202,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
       const res = await h.app.inject({
         method: 'DELETE',
         url: `/api/rules/${created.id}`,
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(204);
@@ -216,6 +220,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
         method: 'PUT',
         url: '/api/rules/reorder',
         payload: [{ id: a.id, order: 5 }, { id: b.id, order: 2 }],
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(200);
@@ -233,6 +238,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
       const res = await h.app.inject({
         method: 'DELETE',
         url: '/api/rules?namePrefix=Newsletter',
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(200);
@@ -245,6 +251,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
       const res = await h.app.inject({
         method: 'DELETE',
         url: '/api/rules?namePrefix=N',
+        headers: { ...AUTH_HEADERS },
       });
       expect(res.statusCode).toBe(400);
     });
@@ -263,6 +270,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
           enabled: true,
           order: 0,
         },
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(400);
@@ -285,6 +293,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
           enabled: true,
           order: 0,
         },
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(400);
@@ -299,6 +308,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
         method: 'POST',
         url: '/api/rules',
         payload: ruleBody({ order: 8 }),
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(201);
@@ -315,6 +325,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
         method: 'PUT',
         url: '/api/rules/nonexistent-id',
         payload: ruleBody(),
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(404);
@@ -328,6 +339,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
       const res = await h.app.inject({
         method: 'DELETE',
         url: '/api/rules/nonexistent-id',
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(404);
@@ -342,6 +354,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
         method: 'PUT',
         url: '/api/rules/reorder',
         payload: [{ id: a.id, order: 9 }, { id: 'unknown-id', order: 100 }],
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(200);
@@ -363,6 +376,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
         method: 'POST',
         url: '/api/rules',
         payload: ruleBody({ name: 'Persisted' }),
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(201);
@@ -382,6 +396,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
         method: 'POST',
         url: '/api/rules',
         payload: ruleBody({ name: 'L1' }),
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(201);
@@ -403,6 +418,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
         method: 'PUT',
         url: `/api/rules/${created.id}`,
         payload: ruleBody({ name: 'X-renamed' }),
+        headers: { ...AUTH_HEADERS },
       });
       expect(h.rulesListener).toHaveBeenCalledTimes(1);
 
@@ -410,10 +426,11 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
         method: 'PUT',
         url: '/api/rules/reorder',
         payload: [{ id: created.id, order: 42 }],
+        headers: { ...AUTH_HEADERS },
       });
       expect(h.rulesListener).toHaveBeenCalledTimes(2);
 
-      await h.app.inject({ method: 'DELETE', url: `/api/rules/${created.id}` });
+      await h.app.inject({ method: 'DELETE', url: `/api/rules/${created.id}`, headers: { ...AUTH_HEADERS } });
       expect(h.rulesListener).toHaveBeenCalledTimes(3);
       expect((h.rulesListener.mock.calls[2][0] as Rule[])).toHaveLength(0);
     });
@@ -428,6 +445,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
         method: 'POST',
         url: '/api/rules',
         payload: ruleBody({ action: { type: 'move', folder: 'Missing/Folder' } }),
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(201);
@@ -442,6 +460,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
         method: 'POST',
         url: '/api/rules',
         payload: ruleBody({ action: { type: 'move', folder: 'Archive/Lists' } }),
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(201);
@@ -459,6 +478,7 @@ describe('IX-011 — Rule CRUD via web API with hot-reload', () => {
         method: 'PUT',
         url: `/api/rules/${created.id}`,
         payload: ruleBody({ action: { type: 'move', folder: 'Still/Missing' } }),
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(200);

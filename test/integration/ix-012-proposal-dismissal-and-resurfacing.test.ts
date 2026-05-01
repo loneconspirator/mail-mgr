@@ -42,6 +42,7 @@ import type { ConfigRepository } from '../../src/config/index.js';
 import type { MoveSignal } from '../../src/tracking/signals.js';
 import type { ProposedRuleCard } from '../../src/shared/types.js';
 
+import { AUTH_HEADERS } from '../_authHeader.js';
 const silentLogger = pino({ level: 'silent' });
 
 interface DismissProposalRow {
@@ -147,6 +148,7 @@ describe('IX-012 — Proposal dismissal and signal-driven resurfacing', () => {
       const res = await h.app.inject({
         method: 'POST',
         url: '/api/proposed-rules/99999/dismiss',
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(404);
@@ -163,6 +165,7 @@ describe('IX-012 — Proposal dismissal and signal-driven resurfacing', () => {
       const res = await h.app.inject({
         method: 'POST',
         url: `/api/proposed-rules/${proposal.id}/dismiss`,
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(204);
@@ -187,7 +190,7 @@ describe('IX-012 — Proposal dismissal and signal-driven resurfacing', () => {
 
       expect(h.proposalStore.getProposals().map(p => p.sender)).toEqual(['b@example.com']);
 
-      const res = await h.app.inject({ method: 'GET', url: '/api/proposed-rules' });
+      const res = await h.app.inject({ method: 'GET', url: '/api/proposed-rules', headers: { ...AUTH_HEADERS } });
       expect(res.statusCode).toBe(200);
       const cards = res.json() as ProposedRuleCard[];
       expect(cards.map(c => c.sender)).toEqual(['b@example.com']);
@@ -297,7 +300,7 @@ describe('IX-012 — Proposal dismissal and signal-driven resurfacing', () => {
         h.patternDetector.processSignal(makeSignal({ id: i, messageId: `<m${i}@example.com>` }));
       }
 
-      const res = await h.app.inject({ method: 'GET', url: '/api/proposed-rules' });
+      const res = await h.app.inject({ method: 'GET', url: '/api/proposed-rules', headers: { ...AUTH_HEADERS } });
       expect(res.statusCode).toBe(200);
       const cards = res.json() as ProposedRuleCard[];
       const card = cards.find(c => c.id === proposal.id);
@@ -322,6 +325,7 @@ describe('IX-012 — Proposal dismissal and signal-driven resurfacing', () => {
       const res = await h.app.inject({
         method: 'POST',
         url: `/api/proposed-rules/${proposal.id}/dismiss`,
+        headers: { ...AUTH_HEADERS },
       });
 
       // Current behavior: 204 and the row is now dismissed. Spec flags this as

@@ -42,6 +42,7 @@ import { BatchEngine } from '../../src/batch/index.js';
 import { ReviewSweeper } from '../../src/sweep/index.js';
 import type { Config, Rule } from '../../src/config/schema.js';
 
+import { AUTH_HEADERS } from '../_authHeader.js';
 import {
   sendTestEmail,
   waitForProcessed,
@@ -278,6 +279,7 @@ describe('UC-005: Direct rule editing via web UI', () => {
         enabled: true,
         order: 0,
       },
+      headers: { ...AUTH_HEADERS },
     });
     expect(createResp.statusCode).toBe(201);
     const outageRule = createResp.json() as Rule & { warnings?: string[] };
@@ -318,6 +320,7 @@ describe('UC-005: Direct rule editing via web UI', () => {
         enabled: true,
         order: outageRule.order,
       },
+      headers: { ...AUTH_HEADERS },
     });
     expect(updateResp.statusCode).toBe(200);
 
@@ -384,6 +387,7 @@ describe('UC-005: Direct rule editing via web UI', () => {
         { id: r1.id, order: r0.order },
         { id: r0.id, order: r1.order },
       ],
+      headers: { ...AUTH_HEADERS },
     });
     expect(reorderResp.statusCode).toBe(200);
     const rulesAfterReorder = configRepo.getRules();
@@ -416,6 +420,7 @@ describe('UC-005: Direct rule editing via web UI', () => {
     const deleteResp = await server.inject({
       method: 'DELETE',
       url: `/api/rules/${r0.id}`,
+      headers: { ...AUTH_HEADERS },
     });
     expect(deleteResp.statusCode).toBe(204);
     expect(configRepo.getRules().find((r) => r.id === r0.id)).toBeUndefined();
@@ -457,6 +462,7 @@ describe('UC-005: Direct rule editing via web UI', () => {
         enabled: true,
         order: 0,
       },
+      headers: { ...AUTH_HEADERS },
     });
 
     expect(res.statusCode).toBe(400);
@@ -486,6 +492,7 @@ describe('UC-005: Direct rule editing via web UI', () => {
         enabled: true,
         order: 0,
       },
+      headers: { ...AUTH_HEADERS },
     });
 
     expect(res.statusCode).toBe(201);
@@ -506,6 +513,7 @@ describe('UC-005: Direct rule editing via web UI', () => {
         enabled: true,
         order: 0,
       },
+      headers: { ...AUTH_HEADERS },
     });
     expect(res.statusCode).toBe(404);
   });
@@ -544,6 +552,7 @@ describe('UC-005: Direct rule editing via web UI', () => {
     const res = await server.inject({
       method: 'DELETE',
       url: '/api/rules?namePrefix=Imported-2024:',
+      headers: { ...AUTH_HEADERS },
     });
     expect(res.statusCode).toBe(200);
     const body = res.json() as { deleted: number; names: string[] };
@@ -563,12 +572,14 @@ describe('UC-005: Direct rule editing via web UI', () => {
     const noMatch = await server.inject({
       method: 'DELETE',
       url: '/api/rules?namePrefix=NoSuchPrefix:',
+      headers: { ...AUTH_HEADERS },
     });
     expect(noMatch.statusCode).toBe(404);
 
     const tooShort = await server.inject({
       method: 'DELETE',
       url: '/api/rules?namePrefix=N',
+      headers: { ...AUTH_HEADERS },
     });
     expect(tooShort.statusCode).toBe(400);
   });
@@ -613,6 +624,7 @@ describe('UC-005: Direct rule editing via web UI', () => {
         enabled: false,
         order: created.order,
       },
+      headers: { ...AUTH_HEADERS },
     });
     expect(offResp.statusCode).toBe(200);
 
@@ -642,6 +654,7 @@ describe('UC-005: Direct rule editing via web UI', () => {
         enabled: true,
         order: created.order,
       },
+      headers: { ...AUTH_HEADERS },
     });
     expect(onResp.statusCode).toBe(200);
 
@@ -683,6 +696,7 @@ describe('UC-005: Direct rule editing via web UI', () => {
         { id: valid.id, order: originalOrder + 50 },
         { id: 'stale-bogus-id', order: 999 },
       ],
+      headers: { ...AUTH_HEADERS },
     });
     expect(res.statusCode).toBe(200);
 
@@ -739,7 +753,7 @@ describe('UC-005: Direct rule editing via web UI', () => {
       method: 'POST',
       url: '/api/batch/execute',
       payload: { sourceFolder: TRIAGE_005G },
-      headers: { 'content-type': 'application/json' },
+      headers: { 'content-type': 'application/json', ...AUTH_HEADERS },
     });
     expect(execResp.statusCode).toBe(200);
 
@@ -750,7 +764,7 @@ describe('UC-005: Direct rule editing via web UI', () => {
     const start = Date.now();
     let preSwapState: { processed: number; moved: number } | null = null;
     while (Date.now() - start < 10_000) {
-      const r = await server.inject({ method: 'GET', url: '/api/batch/status' });
+      const r = await server.inject({ method: 'GET', url: '/api/batch/status', headers: { ...AUTH_HEADERS } });
       const s = r.json() as { status: string; processed: number; moved: number };
       if (s.status !== 'executing') {
         await new Promise((res) => setTimeout(res, 25));
@@ -780,7 +794,7 @@ describe('UC-005: Direct rule editing via web UI', () => {
     const finalStart = Date.now();
     let final: { status: string; processed: number; moved: number; skipped: number } | null = null;
     while (Date.now() - finalStart < 30_000) {
-      const r = await server.inject({ method: 'GET', url: '/api/batch/status' });
+      const r = await server.inject({ method: 'GET', url: '/api/batch/status', headers: { ...AUTH_HEADERS } });
       final = r.json() as typeof final;
       if (final!.status === 'completed') break;
       await new Promise((res) => setTimeout(res, 100));

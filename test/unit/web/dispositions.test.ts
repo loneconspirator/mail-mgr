@@ -9,6 +9,7 @@ import type { Config } from '../../../src/config/index.js';
 import { ConfigRepository } from '../../../src/config/repository.js';
 import { ActivityLog } from '../../../src/log/index.js';
 import { isSenderOnly, isValidDispositionType } from '../../../src/web/routes/dispositions.js';
+import { AUTH_HEADERS } from '../../_authHeader.js';
 
 // --- Helpers ---
 
@@ -203,7 +204,7 @@ describe('GET /api/dispositions', () => {
 
   it('returns 200 with array of only sender-only rules when no type param', async () => {
     app = buildServer(makeDeps(makeTestConfig()));
-    const res = await app.inject({ method: 'GET', url: '/api/dispositions' });
+    const res = await app.inject({ method: 'GET', url: '/api/dispositions', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     // r1, r2, r3, r4, r7, r9 are sender-only (r5 has subject, r6 has no sender, r8 has deliveredTo, r10 has readStatus read)
@@ -223,7 +224,7 @@ describe('GET /api/dispositions', () => {
 
   it('returns 200 with filtered rules when ?type=skip', async () => {
     app = buildServer(makeDeps(makeTestConfig()));
-    const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=skip' });
+    const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=skip', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     // r1 (skip, enabled), r7 (skip, disabled), r9 (skip, readStatus any)
@@ -233,7 +234,7 @@ describe('GET /api/dispositions', () => {
 
   it('returns 200 with filtered rules when ?type=delete', async () => {
     app = buildServer(makeDeps(makeTestConfig()));
-    const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=delete' });
+    const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=delete', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body).toHaveLength(1);
@@ -242,7 +243,7 @@ describe('GET /api/dispositions', () => {
 
   it('returns 200 with filtered rules when ?type=review', async () => {
     app = buildServer(makeDeps(makeTestConfig()));
-    const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=review' });
+    const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=review', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body).toHaveLength(1);
@@ -251,7 +252,7 @@ describe('GET /api/dispositions', () => {
 
   it('returns 200 with filtered rules when ?type=move', async () => {
     app = buildServer(makeDeps(makeTestConfig()));
-    const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=move' });
+    const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=move', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body).toHaveLength(1);
@@ -260,7 +261,7 @@ describe('GET /api/dispositions', () => {
 
   it('returns 400 with error message when ?type=invalid', async () => {
     app = buildServer(makeDeps(makeTestConfig()));
-    const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=invalid' });
+    const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=invalid', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(400);
     const body = res.json();
     expect(body.error).toBe('Invalid disposition type');
@@ -273,14 +274,14 @@ describe('GET /api/dispositions', () => {
       makeRule({ id: 'r2', match: { subject: 'alert' }, action: { type: 'skip' }, order: 1 }),
     ]);
     app = buildServer(makeDeps(config));
-    const res = await app.inject({ method: 'GET', url: '/api/dispositions' });
+    const res = await app.inject({ method: 'GET', url: '/api/dispositions', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual([]);
   });
 
   it('excludes multi-criteria rules from all responses', async () => {
     app = buildServer(makeDeps(makeTestConfig()));
-    const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=delete' });
+    const res = await app.inject({ method: 'GET', url: '/api/dispositions?type=delete', headers: { ...AUTH_HEADERS } });
     const body = res.json();
     // r5 is sender+subject delete, should NOT appear
     const ids = body.map((r: any) => r.id);
@@ -289,7 +290,7 @@ describe('GET /api/dispositions', () => {
 
   it('includes disabled sender-only rules in results', async () => {
     app = buildServer(makeDeps(makeTestConfig()));
-    const res = await app.inject({ method: 'GET', url: '/api/dispositions' });
+    const res = await app.inject({ method: 'GET', url: '/api/dispositions', headers: { ...AUTH_HEADERS } });
     const body = res.json();
     const ids = body.map((r: any) => r.id);
     expect(ids).toContain('r7');

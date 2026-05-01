@@ -52,6 +52,7 @@ import { buildServer } from '../../src/web/server.js';
 import { evaluateRules } from '../../src/rules/index.js';
 import { isEligibleForSweep, resolveSweepDestination } from '../../src/sweep/index.js';
 
+import { AUTH_HEADERS } from '../_authHeader.js';
 const mockedEvaluateRules = vi.mocked(evaluateRules);
 const mockedIsEligible = vi.mocked(isEligibleForSweep);
 const mockedResolveSweep = vi.mocked(resolveSweepDestination);
@@ -158,6 +159,7 @@ describe('IX-009 — Batch dry-run preview of retroactive rule application', () 
         method: 'POST',
         url: '/api/batch/dry-run',
         payload: { sourceFolder: 'TestFolder' },
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(200);
@@ -172,6 +174,7 @@ describe('IX-009 — Batch dry-run preview of retroactive rule application', () 
         method: 'POST',
         url: '/api/batch/dry-run',
         payload: {},
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(400);
@@ -185,6 +188,7 @@ describe('IX-009 — Batch dry-run preview of retroactive rule application', () 
         method: 'POST',
         url: '/api/batch/dry-run',
         payload: { sourceFolder: '' },
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(400);
@@ -205,6 +209,7 @@ describe('IX-009 — Batch dry-run preview of retroactive rule application', () 
         method: 'POST',
         url: '/api/batch/dry-run',
         payload: { sourceFolder: 'TestFolder' },
+        headers: { ...AUTH_HEADERS },
       });
       // Yield so the first request enters the engine and flips `running`.
       await new Promise((r) => setImmediate(r));
@@ -213,6 +218,7 @@ describe('IX-009 — Batch dry-run preview of retroactive rule application', () 
         method: 'POST',
         url: '/api/batch/dry-run',
         payload: { sourceFolder: 'TestFolder' },
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(second.statusCode).toBe(409);
@@ -236,6 +242,7 @@ describe('IX-009 — Batch dry-run preview of retroactive rule application', () 
         method: 'POST',
         url: '/api/batch/dry-run',
         payload: { sourceFolder: 'TestFolder' },
+        headers: { ...AUTH_HEADERS },
       });
 
       // Wait until BatchEngine has progressed past the status flip and into
@@ -268,6 +275,7 @@ describe('IX-009 — Batch dry-run preview of retroactive rule application', () 
         method: 'POST',
         url: '/api/batch/dry-run',
         payload: { sourceFolder: 'INBOX' },
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(200);
@@ -291,6 +299,7 @@ describe('IX-009 — Batch dry-run preview of retroactive rule application', () 
         method: 'POST',
         url: '/api/batch/dry-run',
         payload: { sourceFolder: 'Review' },
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(200);
@@ -311,6 +320,7 @@ describe('IX-009 — Batch dry-run preview of retroactive rule application', () 
         method: 'POST',
         url: '/api/batch/dry-run',
         payload: { sourceFolder: 'Archive/Old' },
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(200);
@@ -335,6 +345,7 @@ describe('IX-009 — Batch dry-run preview of retroactive rule application', () 
         method: 'POST',
         url: '/api/batch/dry-run',
         payload: { sourceFolder: 'TestFolder' },
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(200);
@@ -360,6 +371,7 @@ describe('IX-009 — Batch dry-run preview of retroactive rule application', () 
         method: 'POST',
         url: '/api/batch/dry-run',
         payload: { sourceFolder: 'TestFolder' },
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(200);
@@ -384,6 +396,7 @@ describe('IX-009 — Batch dry-run preview of retroactive rule application', () 
         method: 'POST',
         url: '/api/batch/dry-run',
         payload: { sourceFolder: 'Review' },
+        headers: { ...AUTH_HEADERS },
       });
 
       const body = res.json() as { results: Array<{ action: string; destination: string }> };
@@ -409,6 +422,7 @@ describe('IX-009 — Batch dry-run preview of retroactive rule application', () 
         method: 'POST',
         url: '/api/batch/dry-run',
         payload: { sourceFolder: 'Review' },
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(mockedResolveSweep).toHaveBeenCalledWith(
@@ -441,6 +455,7 @@ describe('IX-009 — Batch dry-run preview of retroactive rule application', () 
         method: 'POST',
         url: '/api/batch/dry-run',
         payload: { sourceFolder: 'TestFolder' },
+        headers: { ...AUTH_HEADERS },
       });
 
       const body = res.json() as {
@@ -484,6 +499,7 @@ describe('IX-009 — Batch dry-run preview of retroactive rule application', () 
         method: 'POST',
         url: '/api/batch/dry-run',
         payload: { sourceFolder: 'TestFolder' },
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(200);
@@ -508,6 +524,7 @@ describe('IX-009 — Batch dry-run preview of retroactive rule application', () 
         method: 'POST',
         url: '/api/batch/dry-run',
         payload: { sourceFolder: 'TestFolder' },
+        headers: { ...AUTH_HEADERS },
       });
 
       expect(res.statusCode).toBe(500);

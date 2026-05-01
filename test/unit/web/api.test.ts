@@ -8,6 +8,7 @@ import type { ServerDeps } from '../../../src/web/server.js';
 import type { Config } from '../../../src/config/index.js';
 import { ConfigRepository } from '../../../src/config/repository.js';
 import { ActivityLog } from '../../../src/log/index.js';
+import { AUTH_HEADERS } from '../../_authHeader.js';
 
 // --- Helpers ---
 
@@ -98,7 +99,7 @@ describe('GET /api/rules', () => {
     ]);
     const app = buildServer(makeDeps(config));
 
-    const res = await app.inject({ method: 'GET', url: '/api/rules' });
+    const res = await app.inject({ method: 'GET', url: '/api/rules', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body).toHaveLength(2);
@@ -108,7 +109,7 @@ describe('GET /api/rules', () => {
 
   it('returns empty array when no rules', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'GET', url: '/api/rules' });
+    const res = await app.inject({ method: 'GET', url: '/api/rules', headers: { ...AUTH_HEADERS } });
     expect(res.json()).toEqual([]);
   });
 });
@@ -120,6 +121,7 @@ describe('POST /api/rules', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/rules',
+      headers: { ...AUTH_HEADERS },
       payload: {
         name: 'New Rule',
         match: { sender: '*@github.com' },
@@ -142,6 +144,7 @@ describe('POST /api/rules', () => {
     const res = await app.inject({
       method: 'POST',
       url: '/api/rules',
+      headers: { ...AUTH_HEADERS },
       payload: { name: '' }, // missing required fields
     });
 
@@ -158,6 +161,7 @@ describe('PUT /api/rules/:id', () => {
     const res = await app.inject({
       method: 'PUT',
       url: '/api/rules/rule-1',
+      headers: { ...AUTH_HEADERS },
       payload: {
         name: 'Updated Rule',
         match: { sender: '*@updated.com' },
@@ -177,6 +181,7 @@ describe('PUT /api/rules/:id', () => {
     const res = await app.inject({
       method: 'PUT',
       url: '/api/rules/nope',
+      headers: { ...AUTH_HEADERS },
       payload: { name: 'X', match: { sender: '*' }, action: { type: 'move', folder: 'X' }, enabled: true, order: 0 },
     });
     expect(res.statusCode).toBe(404);
@@ -188,14 +193,14 @@ describe('DELETE /api/rules/:id', () => {
     const config = makeConfig([makeRule({ id: 'rule-1' })]);
     const app = buildServer(makeDeps(config));
 
-    const res = await app.inject({ method: 'DELETE', url: '/api/rules/rule-1' });
+    const res = await app.inject({ method: 'DELETE', url: '/api/rules/rule-1', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(204);
     expect(updatedRules).toHaveLength(0);
   });
 
   it('returns 404 for non-existent rule', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'DELETE', url: '/api/rules/nope' });
+    const res = await app.inject({ method: 'DELETE', url: '/api/rules/nope', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(404);
   });
 });
@@ -211,6 +216,7 @@ describe('PUT /api/rules/reorder', () => {
     const res = await app.inject({
       method: 'PUT',
       url: '/api/rules/reorder',
+      headers: { ...AUTH_HEADERS },
       payload: [
         { id: 'b', order: 0 },
         { id: 'a', order: 1 },
@@ -229,14 +235,14 @@ describe('PUT /api/rules/reorder', () => {
 describe('GET /api/activity', () => {
   it('returns activity entries', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'GET', url: '/api/activity' });
+    const res = await app.inject({ method: 'GET', url: '/api/activity', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(200);
     expect(res.json()).toEqual([]);
   });
 
   it('respects limit and offset params', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'GET', url: '/api/activity?limit=10&offset=5' });
+    const res = await app.inject({ method: 'GET', url: '/api/activity?limit=10&offset=5', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(200);
   });
 });
@@ -246,7 +252,7 @@ describe('GET /api/activity', () => {
 describe('GET /api/status', () => {
   it('returns monitor state', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'GET', url: '/api/status' });
+    const res = await app.inject({ method: 'GET', url: '/api/status', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.connectionStatus).toBe('connected');
@@ -260,7 +266,7 @@ describe('GET /api/status', () => {
 describe('GET /api/config/imap', () => {
   it('returns IMAP config with masked password', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'GET', url: '/api/config/imap' });
+    const res = await app.inject({ method: 'GET', url: '/api/config/imap', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body.host).toBe('imap.test.com');
@@ -279,6 +285,7 @@ describe('PUT /api/config/imap', () => {
     const res = await app.inject({
       method: 'PUT',
       url: '/api/config/imap',
+      headers: { ...AUTH_HEADERS },
       payload: {
         host: 'new.host.com',
         port: 993,
@@ -303,6 +310,7 @@ describe('PUT /api/config/imap', () => {
     const res = await app.inject({
       method: 'PUT',
       url: '/api/config/imap',
+      headers: { ...AUTH_HEADERS },
       payload: {
         host: 'imap.test.com',
         port: 993,
@@ -325,6 +333,7 @@ describe('PUT /api/config/imap', () => {
     const res = await app.inject({
       method: 'PUT',
       url: '/api/config/imap',
+      headers: { ...AUTH_HEADERS },
       payload: { host: '', port: -1 },
     });
     expect(res.statusCode).toBe(400);
@@ -336,7 +345,7 @@ describe('PUT /api/config/imap', () => {
 describe('GET /api/config/envelope', () => {
   it('returns { envelopeHeader: null } when not configured', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'GET', url: '/api/config/envelope' });
+    const res = await app.inject({ method: 'GET', url: '/api/config/envelope', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body).toEqual({ envelopeHeader: null });
@@ -346,7 +355,7 @@ describe('GET /api/config/envelope', () => {
     const config = makeConfig();
     (config.imap as any).envelopeHeader = 'Delivered-To';
     const app = buildServer(makeDeps(config));
-    const res = await app.inject({ method: 'GET', url: '/api/config/envelope' });
+    const res = await app.inject({ method: 'GET', url: '/api/config/envelope', headers: { ...AUTH_HEADERS } });
     expect(res.statusCode).toBe(200);
     const body = res.json();
     expect(body).toEqual({ envelopeHeader: 'Delivered-To' });
@@ -356,7 +365,7 @@ describe('GET /api/config/envelope', () => {
 describe('POST /api/config/envelope/discover', () => {
   it('returns envelope status shape on error (no IMAP server)', async () => {
     const app = buildServer(makeDeps(makeConfig()));
-    const res = await app.inject({ method: 'POST', url: '/api/config/envelope/discover' });
+    const res = await app.inject({ method: 'POST', url: '/api/config/envelope/discover', headers: { ...AUTH_HEADERS } });
     // Without a real IMAP server, this should return 500 with error
     expect(res.statusCode).toBe(500);
     const body = res.json();
