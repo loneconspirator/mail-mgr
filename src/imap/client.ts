@@ -192,6 +192,43 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     }
   }
 
+  /**
+   * FM-002: chokepoint wrapping every public IMAP op.
+   * (a) refuses to issue if flow missing or flow.usable is false (and
+   *     force-closes so reconnect runs),
+   * (b) bounds the inner imapflow call with withTimeout,
+   * (c) on timeout, force-closes so reconnect runs.
+   * Caller-side errors (NoConnection, server errors) propagate without
+   * forcing close — handleClose is only invoked on wedge-shaped failures.
+   *
+   * Plan 02 wires this through every public op. This plan only introduces
+   * the wrapper; cleanupFlow already exercises the `handleClose` side
+   * effect via the cycleIdle path so the wrapper is testable today.
+   */
+  private async guardedOp<T>(
+    label: string,
+    op: (flow: ImapFlowLike) => Promise<T>,
+    timeoutMs: number,
+  ): Promise<T> {
+    if (!this.flow) throw new Error('Not connected');
+    if (!this.flow.usable) {
+      this.handleClose();
+      throw new Error(`IMAP ${label}: connection not usable`);
+    }
+    // Capture flow into a local — protects the closure if a concurrent
+    // handleClose nulls the reference between the usable check and the
+    // inner call.
+    const flow = this.flow;
+    try {
+      return await withTimeout(op(flow), timeoutMs, `IMAP ${label}`);
+    } catch (err) {
+      if (err instanceof Error && /timed out/i.test(err.message)) {
+        this.handleClose();
+      }
+      throw err;
+    }
+  }
+
   async withMailboxSwitch<T>(folder: string, fn: (flow: ImapFlowLike) => Promise<T>): Promise<T> {
     if (!this.flow) throw new Error('Not connected');
 
@@ -634,6 +671,16 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
 
   private cleanupFlow(): void {
     if (this.flow) {
+      // FM-002: imapflow.close() rejects every entry in requestTagMap and
+      // every pending lock with NoConnection (lib/imap-flow.js:1673-1759).
+      // Without this call, in-flight promises in the abandoned flow never
+      // reject — old wedged callers stay stuck forever. Synchronous return;
+      // the rejection of in-flight promises happens via setImmediate.
+      try {
+        this.flow.close();
+      } catch {
+        // best-effort — close() should never throw, but be defensive
+      }
       this.flow.removeAllListeners();
       this.flow = null;
     }
