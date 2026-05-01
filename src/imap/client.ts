@@ -186,13 +186,33 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     return this.backoffMs;
   }
 
-  async withMailboxLock<T>(folder: string, fn: (flow: ImapFlowLike) => Promise<T>): Promise<T> {
-    if (!this.flow) throw new Error('Not connected');
-    const lock = await this.flow.getMailboxLock(folder);
+  async withMailboxLock<T>(
+    folder: string,
+    fn: (flow: ImapFlowLike) => Promise<T>,
+    workTimeoutMs: number = WRITE_TIMEOUT_MS,
+  ): Promise<T> {
+    // FM-002 Phase 34: guard BOTH the lock acquisition (LOCK_TIMEOUT_MS) and
+    // the inner work (caller-supplied) — getMailboxLock can hang during the
+    // SELECT inside processLocks (imapflow lib/imap-flow.js:3340-3469).
+    const lock = await this.guardedOp(
+      `getMailboxLock(${folder})`,
+      (flow) => flow.getMailboxLock(folder),
+      LOCK_TIMEOUT_MS,
+    );
     try {
-      return await fn(this.flow);
+      return await this.guardedOp(
+        `withMailboxLock(${folder}) work`,
+        (flow) => fn(flow),
+        workTimeoutMs,
+      );
     } finally {
-      lock.release();
+      // Defensive: lock.release() should not throw, but if the imapflow
+      // internal state is corrupted we still need to fall through.
+      try {
+        lock.release();
+      } catch {
+        // best-effort release — already swallowed pre-FM-002
+      }
     }
   }
 
@@ -233,20 +253,45 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     }
   }
 
-  async withMailboxSwitch<T>(folder: string, fn: (flow: ImapFlowLike) => Promise<T>): Promise<T> {
-    if (!this.flow) throw new Error('Not connected');
-
+  async withMailboxSwitch<T>(
+    folder: string,
+    fn: (flow: ImapFlowLike) => Promise<T>,
+    workTimeoutMs: number = WRITE_TIMEOUT_MS,
+  ): Promise<T> {
     this.stopIdleAndPoll();
 
-    const lock = await this.flow.getMailboxLock(folder);
+    // FM-002 Phase 34: guard lock acquisition AND inner work; the INBOX
+    // restore in the finally is best-effort but bounded by LOCK_TIMEOUT_MS
+    // so a wedge during restore can't outlive the calling op's return.
+    const lock = await this.guardedOp(
+      `getMailboxLock(${folder})`,
+      (flow) => flow.getMailboxLock(folder),
+      LOCK_TIMEOUT_MS,
+    );
     try {
-      return await fn(this.flow);
+      return await this.guardedOp(
+        `withMailboxSwitch(${folder}) work`,
+        (flow) => fn(flow),
+        workTimeoutMs,
+      );
     } finally {
-      lock.release();
       try {
-        await this.flow!.mailboxOpen('INBOX');
+        lock.release();
       } catch {
-        // best-effort reopen
+        // best-effort release
+      }
+      try {
+        // best-effort INBOX restore — bound it so a wedge during restore
+        // doesn't hang the calling op past return
+        if (this.flow) {
+          await withTimeout(
+            this.flow.mailboxOpen('INBOX'),
+            LOCK_TIMEOUT_MS,
+            'IMAP SELECT INBOX (restore)',
+          );
+        }
+      } catch {
+        // best-effort reopen — already swallowed pre-FM-002
       }
       this.startIdleOrPoll();
     }
@@ -273,8 +318,11 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
 
   /** List all mailboxes with path and flags. */
   async listMailboxes(): Promise<Array<{ path: string; flags: string[] }>> {
-    if (!this.flow) throw new Error('Not connected');
-    const mailboxes = await this.flow.list();
+    const mailboxes = await this.guardedOp(
+      'LIST',
+      (flow) => flow.list(),
+      LIST_TIMEOUT_MS,
+    );
     return mailboxes.map((mb) => {
       const box = mb as { path?: string; flags?: Set<string> | string[] };
       return {
@@ -285,8 +333,11 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   }
 
   async status(path: string): Promise<{ messages: number; unseen: number }> {
-    if (!this.flow) throw new Error('Not connected');
-    const result = await this.flow.status(path, { messages: true, unseen: true });
+    const result = await this.guardedOp(
+      `STATUS(${path})`,
+      (flow) => flow.status(path, { messages: true, unseen: true }),
+      LIST_TIMEOUT_MS,
+    );
     return {
       messages: result.messages ?? 0,
       unseen: result.unseen ?? 0,
@@ -296,18 +347,21 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   async createMailbox(path: string | string[]): Promise<void> {
     await this.withMailboxLock('INBOX', async (flow) => {
       await flow.mailboxCreate(path);
-    });
+    }, LIST_TIMEOUT_MS);
   }
 
   async renameFolder(oldPath: string, newPath: string): Promise<void> {
     await this.withMailboxLock('INBOX', async (flow) => {
       await flow.mailboxRename(oldPath, newPath);
-    });
+    }, LIST_TIMEOUT_MS);
   }
 
   async appendMessage(folder: string, raw: string, flags: string[]): Promise<AppendResponse> {
-    if (!this.flow) throw new Error('Not connected');
-    const result = await this.flow.append(folder, raw, flags);
+    const result = await this.guardedOp(
+      `APPEND(${folder})`,
+      (flow) => flow.append(folder, raw, flags),
+      WRITE_TIMEOUT_MS,
+    );
     if (result === false) {
       throw new Error(`APPEND to ${folder} failed`);
     }
@@ -335,9 +389,11 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
       return this.specialUseCache.get(use)!;
     }
 
-    if (!this.flow) throw new Error('Not connected');
-
-    const mailboxes = await this.flow.list();
+    const mailboxes = await this.guardedOp(
+      `LIST(special-use ${use})`,
+      (flow) => flow.list(),
+      LIST_TIMEOUT_MS,
+    );
     for (const mb of mailboxes) {
       const box = mb as { path?: string; specialUse?: string };
       if (box.specialUse === use && box.path) {
@@ -351,12 +407,17 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   }
 
   async fetchMessagesRaw(range: string, query: Record<string, unknown>): Promise<unknown[]> {
-    if (!this.flow) throw new Error('Not connected');
-    const results: unknown[] = [];
-    for await (const msg of this.flow.fetch(range, query, { uid: true })) {
-      results.push(msg);
-    }
-    return results;
+    return this.guardedOp(
+      `FETCH(${range})`,
+      async (flow) => {
+        const results: unknown[] = [];
+        for await (const msg of flow.fetch(range, query, { uid: true })) {
+          results.push(msg);
+        }
+        return results;
+      },
+      BULK_FETCH_TIMEOUT_MS,
+    );
   }
 
   /** Return the header field names to always fetch (sentinel header + optional envelope headers). */
@@ -474,16 +535,13 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
 
   /** List all IMAP folders as a nested tree of FolderNode. */
   async listFolders(): Promise<FolderNode[]> {
-    if (!this.flow) throw new Error('Not connected');
-    // FM-002: refuse to issue LIST against a known-bad socket and bound the
-    // wait time so a wedged connection surfaces as a thrown error rather
-    // than hanging the request and starving FolderCache's stale fallback.
-    if (!this.flow.usable) throw new Error('IMAP connection not usable');
-    const tree = await withTimeout(
-      this.flow.listTree(),
+    // FM-002 Phase 34: routed through guardedOp like every other public op.
+    // Same trip-wire (usable=false force-closes), same bound (LIST_TIMEOUT_MS).
+    const tree = await this.guardedOp(
+      'LIST',
+      (flow) => flow.listTree() as Promise<{ folders?: unknown[] }>,
       LIST_TIMEOUT_MS,
-      'IMAP LIST',
-    ) as { folders?: unknown[] };
+    );
     return this.transformTree(tree.folders ?? []);
   }
 
