@@ -75,7 +75,7 @@ This architecture covers the mail-mgr application itself. Out of scope:
 
 | Module | Responsibility |
 |--------|---------------|
-| **WebServer** | Fastify HTTP server serving the SPA frontend and REST API routes for rules, activity, status, config, proposals, batch operations, and folder listing. |
+| **WebServer** | Fastify HTTP server serving the SPA frontend and REST API routes for rules, activity, status, config, proposals, batch operations, and folder listing. Enforces HTTP BASIC auth on every request via an `onRequest` hook against env-sourced credentials (`WEB_AUTH_USER` / `WEB_AUTH_PASS`); fails closed at startup if either is unset. The `/healthz` liveness route is the sole exemption so container probes can reach it without credentials. See INV-003. |
 
 ---
 
