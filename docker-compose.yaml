@@ -7,6 +7,8 @@ services:
       - mail-mgr-data:/data
     environment:
       - IMAP_PASSWORD=${IMAP_PASSWORD}
+      - WEB_AUTH_USER=${WEB_AUTH_USER}
+      - WEB_AUTH_PASS=${WEB_AUTH_PASS}
       - DATA_PATH=/data
     restart: unless-stopped
 

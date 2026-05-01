@@ -57,7 +57,11 @@ Any config value can reference environment variables with `${VAR_NAME}` syntax. 
 |---|---|---|
 | `DATA_PATH` | Directory for config.yml and db.sqlite3 | `./data` |
 | `IMAP_PASSWORD` | IMAP password (referenced in config) | - |
+| `WEB_AUTH_USER` | HTTP BASIC auth username (required — app refuses to start without it) | - |
+| `WEB_AUTH_PASS` | HTTP BASIC auth password (required — app refuses to start without it) | - |
 | `NODE_ENV` | Set to `production` in Docker | - |
+
+> **Authentication.** mail-mgr requires HTTP BASIC auth on all web UI and API routes. Set `WEB_AUTH_USER` and `WEB_AUTH_PASS` before starting the service; the app will refuse to start without them. The `/healthz` endpoint is intentionally unauthenticated for container health probes.
 
 Rule format, matching semantics, and supported actions are documented in the relevant module specs — see [`specs/modules/mod-0004-rule-evaluator.md`](./specs/modules/mod-0004-rule-evaluator.md), [`mod-0005-rule-matcher.md`](./specs/modules/mod-0005-rule-matcher.md), and [`mod-0006-action-executor.md`](./specs/modules/mod-0006-action-executor.md).
 
@@ -114,11 +118,17 @@ Each integration test maps to a named integration in [`specs/integrations/`](./s
 
 ```bash
 docker compose up -d
-# or with the IMAP password inline:
-IMAP_PASSWORD=your-password docker compose up -d
+# or with all required env vars inline:
+WEB_AUTH_USER=admin WEB_AUTH_PASS=$(openssl rand -hex 16) IMAP_PASSWORD=your-password docker compose up -d
 ```
 
-Or create a `.env` file containing `IMAP_PASSWORD=your-password`.
+`WEB_AUTH_USER` and `WEB_AUTH_PASS` are required — the service refuses to start without them. Recommended path: create a `.env` file containing all three:
+
+```
+IMAP_PASSWORD=your-password
+WEB_AUTH_USER=admin
+WEB_AUTH_PASS=<generated-secret>
+```
 
 The Docker setup uses a multi-stage build on `node:22-alpine`, runs as non-root user `mailmgr`, persists data in a named volume at `/data`, seeds `config.yml` from the default template on first run, exposes port 3000, and restarts automatically unless stopped.
 
