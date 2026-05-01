@@ -112,6 +112,53 @@ describe('ImapClient', () => {
       expect(c.state).toBe('error');
       expect(errorHandler).toHaveBeenCalledWith(error);
     });
+
+    // FM-002 Phase 34 Task 3 (R3): a wedge during reconnect — TLS handshake
+    // or SELECT INBOX hanging forever — must not leave the client stuck in
+    // 'connecting'. CONNECT_TIMEOUT_MS bounds both calls; the existing
+    // catch block routes the timeout to error/emit/scheduleReconnect.
+    it('rejects and schedules reconnect when flow.connect hangs past CONNECT_TIMEOUT_MS', async () => {
+      const hangFlow = createMockFlow({
+        connect: vi.fn(() => new Promise<void>(() => {})), // never resolves
+      });
+      const f = vi.fn(() => hangFlow);
+      const c = new ImapClient(TEST_CONFIG, f);
+      const errorSpy = vi.fn();
+      c.on('error', errorSpy);
+
+      const connectPromise = c.connect();
+      // CONNECT_TIMEOUT_MS = 30_000
+      await vi.advanceTimersByTimeAsync(30_000);
+      await connectPromise;
+
+      expect(c.state).toBe('error');
+      expect(errorSpy).toHaveBeenCalled();
+      expect(errorSpy.mock.calls[0][0].message).toMatch(/timed out/i);
+
+      // Reconnect happens after backoff (1s).
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(f).toHaveBeenCalledTimes(2);
+    });
+
+    it('rejects and schedules reconnect when mailboxOpen hangs past CONNECT_TIMEOUT_MS', async () => {
+      const hangFlow = createMockFlow({
+        mailboxOpen: vi.fn(() => new Promise(() => {})),
+      });
+      const f = vi.fn(() => hangFlow);
+      const c = new ImapClient(TEST_CONFIG, f);
+      const errorSpy = vi.fn();
+      c.on('error', errorSpy);
+
+      const connectPromise = c.connect();
+      await vi.advanceTimersByTimeAsync(30_000);
+      await connectPromise;
+
+      expect(c.state).toBe('error');
+      expect(errorSpy.mock.calls[0][0].message).toMatch(/SELECT INBOX.*timed out/i);
+
+      await vi.advanceTimersByTimeAsync(1_000);
+      expect(f).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('disconnect', () => {
