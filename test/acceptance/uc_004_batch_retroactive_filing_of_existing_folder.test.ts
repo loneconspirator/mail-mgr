@@ -101,7 +101,7 @@ async function bringUpApp(tmpDir: string): Promise<AppHandle> {
       port: IMAP_PORT,
       tls: false,
       auth: { user: 'user', pass: 'pass' },
-      idleTimeout: 300_000,
+      idleTimeout: 90_000,
       pollInterval: 60_000,
     },
     server: { port: 3000, host: '127.0.0.1' },

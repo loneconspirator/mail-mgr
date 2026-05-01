@@ -65,7 +65,7 @@ function createMockActivityLog() {
 
 function createBaseConfig(overrides: Partial<Config> = {}): Config {
   return {
-    imap: { host: 'imap.test', port: 993, tls: true, auth: { user: 'u', pass: 'p' }, idleTimeout: 300000, pollInterval: 60000 },
+    imap: { host: 'imap.test', port: 993, tls: true, auth: { user: 'u', pass: 'p' }, idleTimeout: 90000, pollInterval: 60000 },
     server: { port: 3000, host: '0.0.0.0' },
     rules: [
       {

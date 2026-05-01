@@ -42,7 +42,7 @@ export const TEST_IMAP_CONFIG = {
   port: IMAP_PORT,
   tls: false,
   auth: { user: 'user', pass: 'pass' },
-  idleTimeout: 300_000,
+  idleTimeout: 90_000,
   pollInterval: 60_000,
 };
 

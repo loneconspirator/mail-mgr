@@ -7,6 +7,10 @@ const TEST_CONFIG: ImapConfig = {
   port: 993,
   tls: true,
   auth: { user: 'test@example.com', pass: 'secret' },
+  // FM-002 Phase 34: kept at 300_000 (NOT the new schema default of 90_000)
+  // to match existing FM-002 test timer math — the existing tests advance
+  // timers by exactly 300_000 to drive cycleIdle. Other tests use the
+  // schema default (90_000) elsewhere.
   idleTimeout: 300_000,
   pollInterval: 60_000,
 };

@@ -218,7 +218,7 @@ describe('FM-001: scheduled scan must not strand IMAP IDLE on non-INBOX folder',
     await clearFolder(VIP_PATH);
 
     client = new ImapClient(
-      { ...TEST_IMAP_CONFIG, idleTimeout: 300_000, pollInterval: 1_000 },
+      { ...TEST_IMAP_CONFIG, idleTimeout: 90_000, pollInterval: 1_000 },
       makeImapFlowFactory(),
     );
     await client.connect();

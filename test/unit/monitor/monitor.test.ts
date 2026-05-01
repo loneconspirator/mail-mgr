@@ -18,7 +18,7 @@ function makeConfig(rules: Rule[] = []): Config {
       port: 993,
       tls: true,
       auth: { user: 'test', pass: 'test' },
-      idleTimeout: 300000,
+      idleTimeout: 90000,
       pollInterval: 60000,
     },
     server: { port: 3000, host: '0.0.0.0' },

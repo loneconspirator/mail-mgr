@@ -171,7 +171,10 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
 
     if (this.flow) {
       try {
-        await this.flow.logout();
+        // FM-002 Phase 34: bound logout — a hung LOGOUT must not silently
+        // delay disconnect() forever. 5s is generous for a single LOGOUT
+        // command on a healthy server. Failure is already swallowed.
+        await withTimeout(this.flow.logout(), 5_000, 'IMAP LOGOUT');
       } catch {
         // best-effort logout
       }
@@ -310,9 +313,9 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     // Non-INBOX source folders go through withMailboxSwitch so INBOX + IDLE
     // are restored on both success and error paths (INV-001 / FM-001).
     if (sourceFolder === 'INBOX') {
-      await this.withMailboxLock(sourceFolder, work);
+      await this.withMailboxLock(sourceFolder, work, WRITE_TIMEOUT_MS);
     } else {
-      await this.withMailboxSwitch(sourceFolder, work);
+      await this.withMailboxSwitch(sourceFolder, work, WRITE_TIMEOUT_MS);
     }
   }
 
@@ -375,13 +378,13 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
         { uid: true },
       );
       return Array.isArray(result) ? result : [];
-    });
+    }, WRITE_TIMEOUT_MS);
   }
 
   async deleteMessage(folder: string, uid: number): Promise<boolean> {
     return this.withMailboxSwitch(folder, async (flow) => {
       return flow.messageDelete([uid], { uid: true });
-    });
+    }, LIST_TIMEOUT_MS);
   }
 
   async getSpecialUseFolder(use: string): Promise<string | null> {
@@ -449,7 +452,7 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
         }
       }
       return results;
-    });
+    }, WRITE_TIMEOUT_MS);
   }
 
   async fetchAllMessages(folder: string): Promise<ReviewMessage[]> {
@@ -471,8 +474,8 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     // restored on both success and error paths (INV-001 / FM-001). INBOX
     // can stay on withMailboxLock since the post-op restore is a no-op.
     return folder === 'INBOX'
-      ? this.withMailboxLock(folder, work)
-      : this.withMailboxSwitch(folder, work);
+      ? this.withMailboxLock(folder, work, BULK_FETCH_TIMEOUT_MS)
+      : this.withMailboxSwitch(folder, work, BULK_FETCH_TIMEOUT_MS);
   }
 
   private parseRawToReviewMessage(raw: unknown): ReviewMessage {

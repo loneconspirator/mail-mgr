@@ -8,7 +8,7 @@ const TEST_CONFIG: ImapConfig = {
   port: 993,
   tls: true,
   auth: { user: 'test@example.com', pass: 'secret' },
-  idleTimeout: 300_000,
+  idleTimeout: 90_000,
   pollInterval: 60_000,
 };
 

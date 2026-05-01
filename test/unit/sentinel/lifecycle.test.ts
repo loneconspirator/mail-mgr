@@ -22,7 +22,7 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
       port: 993,
       tls: true,
       auth: { user: 'test', pass: 'test' },
-      idleTimeout: 300_000,
+      idleTimeout: 90_000,
       pollInterval: 60_000,
     },
     server: { port: 3000, host: '0.0.0.0' },
