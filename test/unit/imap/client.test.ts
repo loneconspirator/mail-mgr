@@ -1200,7 +1200,7 @@ describe('ImapClient', () => {
         hangMockValue: () => vi.fn(() => ({
           [Symbol.asyncIterator]: () => ({ next: () => new Promise<never>(() => {}) }),
         })),
-        timeoutMs: 30_000,
+        timeoutMs: 120_000,
         invoke: (c) => c.fetchNewMessages(0),
       },
       {

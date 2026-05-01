@@ -455,7 +455,7 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
         }
       }
       return results;
-    }, WRITE_TIMEOUT_MS);
+    }, BULK_FETCH_TIMEOUT_MS);
   }
 
   async fetchAllMessages(folder: string): Promise<ReviewMessage[]> {
