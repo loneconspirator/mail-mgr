@@ -350,13 +350,13 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   async createMailbox(path: string | string[]): Promise<void> {
     await this.withMailboxLock('INBOX', async (flow) => {
       await flow.mailboxCreate(path);
-    }, LIST_TIMEOUT_MS);
+    }, WRITE_TIMEOUT_MS);
   }
 
   async renameFolder(oldPath: string, newPath: string): Promise<void> {
     await this.withMailboxLock('INBOX', async (flow) => {
       await flow.mailboxRename(oldPath, newPath);
-    }, LIST_TIMEOUT_MS);
+    }, WRITE_TIMEOUT_MS);
   }
 
   async appendMessage(folder: string, raw: string, flags: string[]): Promise<AppendResponse> {

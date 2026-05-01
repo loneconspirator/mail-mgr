@@ -1149,14 +1149,14 @@ describe('ImapClient', () => {
         label: 'createMailbox',
         hangMockKey: 'mailboxCreate',
         hangMockValue: () => vi.fn(() => new Promise<never>(() => {})),
-        timeoutMs: 15_000,
+        timeoutMs: 30_000,
         invoke: (c) => c.createMailbox('Foo'),
       },
       {
         label: 'renameFolder',
         hangMockKey: 'mailboxRename',
         hangMockValue: () => vi.fn(() => new Promise<never>(() => {})),
-        timeoutMs: 15_000,
+        timeoutMs: 30_000,
         invoke: (c) => c.renameFolder('Foo', 'Bar'),
       },
       {
