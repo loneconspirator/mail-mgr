@@ -284,15 +284,18 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
         // best-effort release
       }
       try {
-        // best-effort INBOX restore — bound it so a wedge during restore
-        // doesn't hang the calling op past return
-        if (this.flow) {
-          await withTimeout(
-            this.flow.mailboxOpen('INBOX'),
-            LOCK_TIMEOUT_MS,
-            'IMAP SELECT INBOX (restore)',
-          );
-        }
+        // FM-002 Phase 34: route INBOX restore through guardedOp so a wedge
+        // here trips the same `flow.usable` precheck and `handleClose`-on-
+        // timeout side effects as every other op. Without this, a hung
+        // restore burns LOCK_TIMEOUT_MS without scheduling a reconnect, and
+        // the next caller re-issues against the same wedged socket.
+        // Errors are still swallowed at the call site so a failed restore
+        // doesn't mask the inner work's real error.
+        await this.guardedOp(
+          'SELECT INBOX (restore)',
+          (flow) => flow.mailboxOpen('INBOX').then(() => undefined),
+          LOCK_TIMEOUT_MS,
+        );
       } catch {
         // best-effort reopen — already swallowed pre-FM-002
       }
