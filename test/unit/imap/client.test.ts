@@ -410,6 +410,21 @@ describe('ImapClient', () => {
 
       await c.disconnect();
     });
+
+    // IN-04: pin the new schema default (idleTimeout=90_000) end-to-end so a
+    // future change that inverts the cycleIdle scheduling math (e.g. schedules
+    // at 2 * idleTimeout) fails this test even though the existing 300_000
+    // tests would still pass against the wrong constant.
+    it('cycles IDLE at the new schema default of 90s', async () => {
+      const conf: ImapConfig = { ...TEST_CONFIG, idleTimeout: 90_000 };
+      const f = createMockFlow();
+      const c = new ImapClient(conf, vi.fn(() => f));
+      c.on('error', () => {});
+      await c.connect();
+      await vi.advanceTimersByTimeAsync(90_000);
+      expect(f.noop).toHaveBeenCalledTimes(1);
+      await c.disconnect();
+    });
   });
 
   describe('polling fallback', () => {
