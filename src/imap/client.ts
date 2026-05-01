@@ -67,6 +67,32 @@ export type ImapFlowFactory = (config: ImapConfig) => ImapFlowLike;
 const MIN_BACKOFF_MS = 1_000;
 const MAX_BACKOFF_MS = 60_000;
 
+// FM-002: hard caps on individual IMAP operations so a half-open socket
+// surfaces as a thrown error instead of an indefinite hang. Both the IDLE
+// keepalive and the LIST/listTree request had been observed to wedge in
+// production after multi-day uptime; these timeouts are the trip-wire that
+// converts "wedged" into "throw and reconnect".
+const NOOP_TIMEOUT_MS = 30_000;
+const LIST_TIMEOUT_MS = 15_000;
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${ms}ms`));
+    }, ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (err) => {
+        clearTimeout(timer);
+        reject(err);
+      },
+    );
+  });
+}
+
 export class ImapClient extends EventEmitter<ImapClientEvents> {
   private flow: ImapFlowLike | null = null;
   private _state: ConnectionState = 'disconnected';
@@ -399,7 +425,15 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   /** List all IMAP folders as a nested tree of FolderNode. */
   async listFolders(): Promise<FolderNode[]> {
     if (!this.flow) throw new Error('Not connected');
-    const tree = await this.flow.listTree() as { folders?: unknown[] };
+    // FM-002: refuse to issue LIST against a known-bad socket and bound the
+    // wait time so a wedged connection surfaces as a thrown error rather
+    // than hanging the request and starving FolderCache's stale fallback.
+    if (!this.flow.usable) throw new Error('IMAP connection not usable');
+    const tree = await withTimeout(
+      this.flow.listTree(),
+      LIST_TIMEOUT_MS,
+      'IMAP LIST',
+    ) as { folders?: unknown[] };
     return this.transformTree(tree.folders ?? []);
   }
 
@@ -469,17 +503,23 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   }
 
   private async cycleIdle(): Promise<void> {
-    if (this._state !== 'connected' || !this.flow?.usable) {
+    if (this._state !== 'connected') return;
+
+    // FM-002: a half-open socket leaves `flow.usable` false (or makes noop
+    // hang forever). Both states must force-close so scheduleReconnect runs
+    // — silently no-oping was the production bug that let the wedge persist.
+    if (!this.flow?.usable) {
+      this.handleClose();
       return;
     }
 
     try {
-      await this.flow.noop();
+      await withTimeout(this.flow.noop(), NOOP_TIMEOUT_MS, 'IMAP NOOP');
     } catch {
-      // noop failure will trigger error/close handlers
+      this.handleClose();
+      return;
     }
 
-    // Schedule the next cycle
     if (this._state === 'connected') {
       this.idleTimer = setTimeout(() => {
         this.cycleIdle();

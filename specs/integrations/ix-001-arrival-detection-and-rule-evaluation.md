@@ -78,3 +78,4 @@ sequenceDiagram
 ## Failure Handling
 
 - **FM-001** — A scheduled folder scan elsewhere in the system (e.g. IX-006, IX-007) leaves the shared IMAP connection on a non-INBOX folder, silently breaking IX-001.1 until the connection is reset. INV-001 binds every consumer of MOD-0002 to restore INBOX + IDLE before relinquishing the connection.
+- **FM-002** — The shared IMAP socket goes half-open (NAT timeout, silent server-side close, network blip) after long uptime. The IDLE keepalive must detect the wedge — both `flow.usable === false` and a hung NOOP — and force the reconnect path so IX-001.1 resumes. MOD-0002 is responsible for the trip-wire; IX-001 is the consumer that silently breaks if the trip-wire is missing.

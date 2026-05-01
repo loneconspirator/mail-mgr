@@ -917,4 +917,93 @@ describe('ImapClient', () => {
       await c.disconnect();
     });
   });
+
+  // FM-002: half-open IMAP socket detection. Both the IDLE cycler and
+  // listFolders had been observed hanging silently against a wedged
+  // connection in production. These tests pin the new behavior:
+  // - cycleIdle force-closes (triggering reconnect) when usable=false
+  // - cycleIdle force-closes when noop hangs past NOOP_TIMEOUT_MS
+  // - listFolders rejects when usable=false
+  // - listFolders rejects when listTree hangs past LIST_TIMEOUT_MS
+  describe('FM-002 wedged connection detection', () => {
+    it('cycleIdle reconnects when flow.usable becomes false', async () => {
+      await client.connect();
+      expect(client.state).toBe('connected');
+
+      // Wedge the socket: still "connected" from the client's POV, but the
+      // underlying flow is unusable.
+      (mockFlow as unknown as { usable: boolean }).usable = false;
+
+      // Replace factory so the reconnect attempt observes a fresh flow.
+      const reconnectFlow = createMockFlow();
+      (factory as ReturnType<typeof vi.fn>).mockReturnValueOnce(reconnectFlow);
+
+      // Trigger cycleIdle by advancing past idleTimeout.
+      await vi.advanceTimersByTimeAsync(300_000);
+
+      // handleClose should have fired, scheduling a reconnect.
+      // After backoff (1s), reconnect happens.
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      expect(factory).toHaveBeenCalledTimes(2);
+    });
+
+    it('cycleIdle reconnects when noop hangs past timeout', async () => {
+      const hangFlow = createMockFlow({
+        noop: vi.fn(() => new Promise<void>(() => {})), // never resolves
+      });
+      const f = vi.fn(() => hangFlow);
+      const c = new ImapClient(TEST_CONFIG, f);
+      c.on('error', () => {});
+
+      await c.connect();
+
+      // Trigger cycleIdle.
+      await vi.advanceTimersByTimeAsync(300_000);
+      // Advance past the NOOP timeout (30s).
+      await vi.advanceTimersByTimeAsync(30_000);
+
+      // After the timeout fires, handleClose runs and a reconnect is
+      // scheduled. Advance the backoff so the new factory call happens.
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      expect(f).toHaveBeenCalledTimes(2);
+    });
+
+    it('listFolders throws when flow.usable is false', async () => {
+      await client.connect();
+      (mockFlow as unknown as { usable: boolean }).usable = false;
+
+      await expect(client.listFolders()).rejects.toThrow(/not usable/i);
+    });
+
+    it('listFolders throws when listTree hangs past timeout', async () => {
+      const hangFlow = createMockFlow({
+        listTree: vi.fn(() => new Promise(() => {})), // never resolves
+      });
+      const f = vi.fn(() => hangFlow);
+      const c = new ImapClient(TEST_CONFIG, f);
+
+      await c.connect();
+
+      const promise = c.listFolders();
+      // Attach a synchronous catch handler so the timeout rejection is
+      // observed as soon as fake-timer flushes fire it. Without this,
+      // vitest's fake-timer driver reports a benign "unhandled rejection"
+      // before the await below has a chance to attach.
+      const settled = promise.catch((e) => e);
+      // Drive past the LIST timeout (15s).
+      await vi.advanceTimersByTimeAsync(15_000);
+
+      const result = await settled;
+      expect(result).toBeInstanceOf(Error);
+      expect((result as Error).message).toMatch(/timed out/i);
+
+      await c.disconnect();
+    });
+
+    it('listFolders throws when not connected', async () => {
+      await expect(client.listFolders()).rejects.toThrow('Not connected');
+    });
+  });
 });

@@ -43,3 +43,4 @@ Abstraction over imapflow providing all IMAP operations: connect/disconnect with
 - Emits `newMail`, `connected`, `disconnected`, and `error` events via EventEmitter.
 - Reconnect uses exponential backoff from 1s to 60s.
 - `withMailboxLock` and `withMailboxSwitch` handle folder context switching; callers should use the appropriate one based on whether they need exclusive access.
+- **Wedge detection (FM-002).** The IDLE/poll keepalive force-closes the connection (triggering reconnect via `handleClose`) when `flow.usable` is false or when `noop()` exceeds `NOOP_TIMEOUT_MS` (30s). Public IMAP operations reachable from request handlers — currently `listFolders` — likewise reject when `flow.usable` is false and bound the underlying imapflow call with `LIST_TIMEOUT_MS` (15s). Silent no-op on a wedged socket is forbidden; every command path must surface a half-open socket as a thrown error within seconds so callers can fail fast and reconnect can run.
