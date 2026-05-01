@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v0.8
 milestone_name: Action Folder Safety Hardening
 status: planning
-last_updated: "2026-05-01T17:55:00.000Z"
+last_updated: "2026-05-01T18:39:00.000Z"
 last_activity: 2026-05-01
 progress:
   total_phases: 1
@@ -26,7 +26,7 @@ See: .planning/PROJECT.md (updated 2026-04-23)
 
 Milestone: v0.8 Action Folder Safety Hardening — Active
 Status: Planning
-Last activity: 2026-05-01 - Completed quick task 260501-ewi: Wire IX-004 integration test
+Last activity: 2026-05-01 - Completed quick task 260501-fo4: Implement HTTP BASIC auth on web app and API
 
 Progress: [░░░░░░░░░░] 0% (0/0 plans, 0/1 phases)
 
@@ -60,7 +60,6 @@ Recent decisions affecting current work:
 
 1. **Prevent redundant proposed rules and handle rule ordering conflicts** — Block approval of rules that duplicate existing criteria; warn when shadowed by higher-priority rules with reorder option
 2. **Populate delivered-to field in proposed rules and modify form** — Include delivered-to as matcher in proposals, prepopulate in Modify modal
-3. **Implement HTTP BASIC auth on web app and API** — Add env-driven shared credential middleware over `src/web/` covering UI and API routes
 
 ### Roadmap Evolution
 
@@ -83,6 +82,7 @@ Recent decisions affecting current work:
 | 260430-msg | Fix INBOX-destination bug in proposed rules | 2026-05-01 | 54000ff | [260430-msg-fix-inbox-destination-bug-in-proposed-ru](./quick/260430-msg-fix-inbox-destination-bug-in-proposed-ru/) |
 | 260501-ej8 | Document INV-002 (INBOX never proposed) and add IX-003.8 integration test | 2026-05-01 | c31d478 | [260501-ej8-document-inv-002-inbox-never-proposed-an](./quick/260501-ej8-document-inv-002-inbox-never-proposed-an/) |
 | 260501-ewi | Wire IX-004 integration test | 2026-05-01 | 04e280b | [260501-ewi-wire-ix-004-integration-test](./quick/260501-ewi-wire-ix-004-integration-test/) |
+| 260501-fo4 | Implement HTTP BASIC auth on web app and API | 2026-05-01 | 9cc1692 | [260501-fo4-implement-http-basic-auth-on-web-app-and](./quick/260501-fo4-implement-http-basic-auth-on-web-app-and/) |
 
 ## Session Continuity
 
