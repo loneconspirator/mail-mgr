@@ -6,6 +6,7 @@ data/
 *.tsbuildinfo
 .ralph/
 .claude/scheduled_tasks.lock
+.claude/worktrees/
 
 # ── GSD baseline (auto-generated) ──
 .gsd
