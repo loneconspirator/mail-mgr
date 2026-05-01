@@ -19,7 +19,7 @@ function makeConfig(rules: Config['rules'] = []): Config {
       port: 993,
       tls: true,
       auth: { user: 'test@test.com', pass: 'secret123' },
-      idleTimeout: 300000,
+      idleTimeout: 90000,
       pollInterval: 60000,
     },
     server: { port: 3000, host: '0.0.0.0' },
@@ -291,7 +291,7 @@ describe('PUT /api/config/imap', () => {
         port: 993,
         tls: true,
         auth: { user: 'new@test.com', pass: '****' },
-        idleTimeout: 300000,
+        idleTimeout: 90000,
         pollInterval: 60000,
       },
     });
@@ -316,7 +316,7 @@ describe('PUT /api/config/imap', () => {
         port: 993,
         tls: true,
         auth: { user: 'test@test.com', pass: 'new-secret' },
-        idleTimeout: 300000,
+        idleTimeout: 90000,
         pollInterval: 60000,
       },
     });

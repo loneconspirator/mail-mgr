@@ -77,7 +77,9 @@ export const imapConfigSchema = z.object({
   port: z.number().int().positive().default(993),
   tls: z.boolean().default(true),
   auth: imapAuthSchema,
-  idleTimeout: z.number().int().positive().default(300_000),
+  // FM-002: 90s default (down from 300s) — wedge-detection latency drops
+  // 3.3x; well within RFC 2177's 29-minute server-side IDLE tolerance.
+  idleTimeout: z.number().int().positive().default(90_000),
   pollInterval: z.number().int().positive().default(60_000),
   envelopeHeader: z.string().optional(),
 });

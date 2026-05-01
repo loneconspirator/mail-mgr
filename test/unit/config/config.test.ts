@@ -26,7 +26,7 @@ imap:
   auth:
     user: mike@example.com
     pass: secret123
-  idleTimeout: 300000
+  idleTimeout: 90000
   pollInterval: 60000
 
 server:
@@ -54,7 +54,7 @@ imap:
   auth:
     user: mike@example.com
     pass: \${TEST_IMAP_PASSWORD}
-  idleTimeout: 300000
+  idleTimeout: 90000
   pollInterval: 60000
 
 server:
@@ -110,7 +110,7 @@ server: {}
 
     expect(config.imap.port).toBe(993);
     expect(config.imap.tls).toBe(true);
-    expect(config.imap.idleTimeout).toBe(300_000);
+    expect(config.imap.idleTimeout).toBe(90_000);
     expect(config.imap.pollInterval).toBe(60_000);
     expect(config.server.port).toBe(3000);
     expect(config.server.host).toBe('0.0.0.0');
@@ -284,7 +284,7 @@ describe('configSchema', () => {
         port: 993,
         tls: true,
         auth: { user: 'u', pass: 'p' },
-        idleTimeout: 300000,
+        idleTimeout: 90000,
         pollInterval: 60000,
       },
       server: { port: 3000, host: '0.0.0.0' },

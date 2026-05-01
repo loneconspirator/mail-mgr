@@ -7,6 +7,10 @@ const TEST_CONFIG: ImapConfig = {
   port: 993,
   tls: true,
   auth: { user: 'test@example.com', pass: 'secret' },
+  // FM-002 Phase 34: kept at 300_000 (NOT the new schema default of 90_000)
+  // to match existing FM-002 test timer math — the existing tests advance
+  // timers by exactly 300_000 to drive cycleIdle. Other tests use the
+  // schema default (90_000) elsewhere.
   idleTimeout: 300_000,
   pollInterval: 60_000,
 };
@@ -1098,6 +1102,268 @@ describe('ImapClient', () => {
       expect(throwingClose).toHaveBeenCalled();
       expect(f).toHaveBeenCalledTimes(2);
     });
+
+    // FM-002 Phase 34 Plan 02 Task 3 (R6): the matrix.
+    //
+    // For every public op listed below, two tests run against a fresh
+    // ImapClient + mock flow:
+    //   A) flow.usable=false → op rejects with /not usable/i
+    //   B) the op's underlying imapflow call never resolves → op rejects
+    //      with /timed out/i within its op-class timeout window.
+    //
+    // Each iteration constructs its own client to avoid state leakage,
+    // attaches a no-op error handler so the auto-reconnect path's emit('error')
+    // doesn't trip vitest's unhandled-error guard, and disconnects in the
+    // assertion epilogue.
+    interface OpCase {
+      label: string;
+      hangMockKey: keyof ImapFlowLike;
+      hangMockValue: () => unknown;
+      timeoutMs: number;
+      invoke: (c: ImapClient) => Promise<unknown>;
+    }
+
+    const OP_CASES: OpCase[] = [
+      {
+        label: 'listMailboxes',
+        hangMockKey: 'list',
+        hangMockValue: () => vi.fn(() => new Promise<never>(() => {})),
+        timeoutMs: 15_000,
+        invoke: (c) => c.listMailboxes(),
+      },
+      {
+        label: 'listFolders',
+        hangMockKey: 'listTree',
+        hangMockValue: () => vi.fn(() => new Promise<never>(() => {})),
+        timeoutMs: 15_000,
+        invoke: (c) => c.listFolders(),
+      },
+      {
+        label: 'status',
+        hangMockKey: 'status',
+        hangMockValue: () => vi.fn(() => new Promise<never>(() => {})),
+        timeoutMs: 15_000,
+        invoke: (c) => c.status('INBOX'),
+      },
+      {
+        label: 'createMailbox',
+        hangMockKey: 'mailboxCreate',
+        hangMockValue: () => vi.fn(() => new Promise<never>(() => {})),
+        timeoutMs: 15_000,
+        invoke: (c) => c.createMailbox('Foo'),
+      },
+      {
+        label: 'renameFolder',
+        hangMockKey: 'mailboxRename',
+        hangMockValue: () => vi.fn(() => new Promise<never>(() => {})),
+        timeoutMs: 15_000,
+        invoke: (c) => c.renameFolder('Foo', 'Bar'),
+      },
+      {
+        label: 'appendMessage',
+        hangMockKey: 'append',
+        hangMockValue: () => vi.fn(() => new Promise<never>(() => {})),
+        timeoutMs: 30_000,
+        invoke: (c) => c.appendMessage('INBOX', 'raw', []),
+      },
+      {
+        label: 'searchByHeader',
+        hangMockKey: 'search',
+        hangMockValue: () => vi.fn(() => new Promise<never>(() => {})),
+        timeoutMs: 30_000,
+        invoke: (c) => c.searchByHeader('Sent', 'Message-ID', '<x@y>'),
+      },
+      {
+        label: 'deleteMessage',
+        hangMockKey: 'messageDelete',
+        hangMockValue: () => vi.fn(() => new Promise<never>(() => {})),
+        timeoutMs: 15_000,
+        invoke: (c) => c.deleteMessage('Sent', 1),
+      },
+      {
+        label: 'moveMessage(INBOX)',
+        hangMockKey: 'messageMove',
+        hangMockValue: () => vi.fn(() => new Promise<never>(() => {})),
+        timeoutMs: 30_000,
+        invoke: (c) => c.moveMessage(1, 'Archive', 'INBOX'),
+      },
+      {
+        label: 'moveMessage(non-INBOX)',
+        hangMockKey: 'messageMove',
+        hangMockValue: () => vi.fn(() => new Promise<never>(() => {})),
+        timeoutMs: 30_000,
+        invoke: (c) => c.moveMessage(1, 'Archive', 'Sent'),
+      },
+      {
+        label: 'fetchNewMessages',
+        hangMockKey: 'fetch',
+        hangMockValue: () => vi.fn(() => ({
+          [Symbol.asyncIterator]: () => ({ next: () => new Promise<never>(() => {}) }),
+        })),
+        timeoutMs: 30_000,
+        invoke: (c) => c.fetchNewMessages(0),
+      },
+      {
+        label: 'fetchAllMessages(INBOX)',
+        hangMockKey: 'fetch',
+        hangMockValue: () => vi.fn(() => ({
+          [Symbol.asyncIterator]: () => ({ next: () => new Promise<never>(() => {}) }),
+        })),
+        timeoutMs: 120_000,
+        invoke: (c) => c.fetchAllMessages('INBOX'),
+      },
+      {
+        label: 'fetchAllMessages(non-INBOX)',
+        hangMockKey: 'fetch',
+        hangMockValue: () => vi.fn(() => ({
+          [Symbol.asyncIterator]: () => ({ next: () => new Promise<never>(() => {}) }),
+        })),
+        timeoutMs: 120_000,
+        invoke: (c) => c.fetchAllMessages('Review'),
+      },
+      {
+        label: 'getSpecialUseFolder',
+        hangMockKey: 'list',
+        hangMockValue: () => vi.fn(() => new Promise<never>(() => {})),
+        timeoutMs: 15_000,
+        invoke: (c) => c.getSpecialUseFolder('\\Trash'),
+      },
+      {
+        label: 'fetchMessagesRaw',
+        hangMockKey: 'fetch',
+        hangMockValue: () => vi.fn(() => ({
+          [Symbol.asyncIterator]: () => ({ next: () => new Promise<never>(() => {}) }),
+        })),
+        timeoutMs: 120_000,
+        invoke: (c) => c.fetchMessagesRaw('1:*', { uid: true }),
+      },
+    ];
+
+    // Lock-acquisition matrix: getMailboxLock itself hangs (the SELECT inside
+    // processLocks can stall — see RESEARCH Pitfall 3). The op label in the
+    // rejection message must contain "getMailboxLock" so operators can route
+    // the wedge to the right code path.
+    interface LockHangCase {
+      label: string;
+      invoke: (c: ImapClient) => Promise<unknown>;
+    }
+    const LOCK_HANG_CASES: LockHangCase[] = [
+      {
+        label: 'withMailboxLock-acquisition (via fetchNewMessages)',
+        invoke: (c) => c.fetchNewMessages(0),
+      },
+      {
+        label: 'withMailboxSwitch-acquisition (via searchByHeader)',
+        invoke: (c) => c.searchByHeader('Sent', 'Message-ID', '<x@y>'),
+      },
+    ];
+
+    it.each(OP_CASES.map((c) => [c.label, c] as const))(
+      '%s rejects with /not usable/i when flow.usable is false',
+      async (_label, op) => {
+        // Per-case fresh client — avoids state leakage between iterations.
+        const f = createMockFlow();
+        const cFactory = vi.fn(() => f);
+        const c = new ImapClient(TEST_CONFIG, cFactory);
+        c.on('error', () => {}); // swallow — handleClose path emits during the wedge
+        await c.connect();
+        (f as unknown as { usable: boolean }).usable = false;
+        await expect(op.invoke(c)).rejects.toThrow(/not usable/i);
+        await c.disconnect();
+      },
+    );
+
+    it.each(OP_CASES.map((c) => [c.label, c] as const))(
+      '%s rejects with /timed out/i when inner imapflow call hangs',
+      async (_label, op) => {
+        const hangFlow = createMockFlow({
+          [op.hangMockKey]: op.hangMockValue(),
+        } as unknown as Partial<ImapFlowLike>);
+        const f = vi.fn(() => hangFlow);
+        const c = new ImapClient(TEST_CONFIG, f);
+        c.on('error', () => {});
+        await c.connect();
+
+        const settled = op.invoke(c).catch((e) => e);
+        await vi.advanceTimersByTimeAsync(op.timeoutMs);
+
+        const result = await settled;
+        expect(result).toBeInstanceOf(Error);
+        expect((result as Error).message).toMatch(/timed out/i);
+
+        await c.disconnect();
+      },
+      180_000, // per-test timeout ceiling — must exceed BULK_FETCH_TIMEOUT_MS=120_000
+    );
+
+    it.each(LOCK_HANG_CASES.map((c) => [c.label, c] as const))(
+      '%s rejects with /timed out/i when getMailboxLock hangs',
+      async (_label, op) => {
+        const hangFlow = createMockFlow({
+          getMailboxLock: vi.fn(() => new Promise<never>(() => {})),
+        });
+        const f = vi.fn(() => hangFlow);
+        const c = new ImapClient(TEST_CONFIG, f);
+        c.on('error', () => {});
+        await c.connect();
+
+        const settled = op.invoke(c).catch((e) => e);
+        await vi.advanceTimersByTimeAsync(15_000); // LOCK_TIMEOUT_MS
+
+        const result = await settled;
+        expect(result).toBeInstanceOf(Error);
+        expect((result as Error).message).toMatch(/timed out/i);
+        expect((result as Error).message).toMatch(/getMailboxLock/);
+
+        await c.disconnect();
+      },
+      60_000,
+    );
+
+    // FM-002 Phase 34 Plan 02 Task 3 (R4): the in-flight rejection
+    // verification. Starts a fetchAllMessages against a never-yielding
+    // async iterator, trips the wedge (usable=false → cycleIdle →
+    // handleClose → cleanupFlow → flow.close()), and asserts both that
+    // close() was actually called AND that the in-flight promise rejected.
+    // The BULK_FETCH_TIMEOUT_MS bound is the belt-and-suspenders backstop
+    // — whichever rejection path fires first wins.
+    it('R4: in-flight fetchAllMessages rejects when handleClose fires mid-flight', async () => {
+      let usable = true;
+      const hangFlow = createMockFlow({
+        fetch: vi.fn(() => ({
+          [Symbol.asyncIterator]: () => ({ next: () => new Promise<never>(() => {}) }),
+        }) as unknown as ImapFlowLike['fetch']),
+        close: vi.fn(() => { usable = false; }),
+      });
+      Object.defineProperty(hangFlow, 'usable', {
+        get: () => usable,
+        set: (v: boolean) => { usable = v; },
+        configurable: true,
+      });
+      const f = vi.fn(() => hangFlow);
+      const c = new ImapClient(TEST_CONFIG, f);
+      c.on('error', () => {});
+      await c.connect();
+
+      const inflight = c.fetchAllMessages('Review').catch((e) => e);
+
+      // Trip the wedge — usable=false causes cycleIdle to call handleClose,
+      // which in cleanupFlow now calls flow.close().
+      usable = false;
+      // Drive past idleTimeout (300_000 — TEST_CONFIG kept at 300_000).
+      await vi.advanceTimersByTimeAsync(300_000);
+      // Backstop: drive past BULK_FETCH_TIMEOUT_MS so guardedOp's timeout
+      // also fires. Whichever fires first wins.
+      await vi.advanceTimersByTimeAsync(120_000);
+
+      const result = await inflight;
+      expect(result).toBeInstanceOf(Error);
+      expect((result as Error).message).toMatch(/not usable|timed out|not connected/i);
+      // R4 verification: flow.close() was actually called by cleanupFlow
+      expect(hangFlow.close).toHaveBeenCalled();
+
+      await c.disconnect();
+    }, 600_000);
   });
 
   // FM-002 Task 1 (Phase 34): foundation pieces — mock factory now provides
