@@ -141,9 +141,9 @@ Plans:
 **Goal:** Extend the FM-002 wedge-detection contract from IDLE+listFolders to the entire ImapClient public surface — every public op routes through a guardedOp chokepoint with per-op timeouts, cleanupFlow drains in-flight imapflow promises, flow.connect() is bounded, idleTimeout default drops 300s→90s, and the FM-002/MOD-0002 specs are widened to match.
 **Requirements**: R1 (spec generalization), R2 (guardedOp wrapper), R3 (bound flow.connect), R4 (in-flight rejection on handleClose via cleanupFlow.flow.close()), R5 (idleTimeout default 90s), R6 (it.each test matrix N×2)
 **Depends on:** Phase 33
-**Plans:** 3 plans
+**Plans:** 1/3 plans executed
 
 Plans:
-- [ ] 34-01-PLAN.md — Foundation: guardedOp wrapper, timeout constants, cleanupFlow.flow.close(), bound flow.connect/mailboxOpen, ImapFlowLike.close() (R2 partial, R3, R4 partial)
+- [x] 34-01-PLAN.md — Foundation: guardedOp wrapper, timeout constants, cleanupFlow.flow.close(), bound flow.connect/mailboxOpen, ImapFlowLike.close() (R2 partial, R3, R4 partial)
 - [ ] 34-02-PLAN.md — Apply guardedOp to every public op + lock acquisition; tune idleTimeout default 300_000→90_000; FM-002 it.each matrix (N×2 ≥ 30 cases) + R4 in-flight rejection test (R2 remainder, R4, R5, R6)
 - [ ] 34-03-PLAN.md — Spec generalization: FM-002 title + Required behavior + Test approach widened; MOD-0002 Notes updated; validate-failure-mode FM-002 PASS (R1)
