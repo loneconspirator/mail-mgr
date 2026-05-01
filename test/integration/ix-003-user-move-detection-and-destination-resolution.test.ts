@@ -27,6 +27,8 @@
  *   IX-003.6 — Confirmed move emits signal with full metadata
  *              (sender, subject, readStatus, sourceFolder, destinationFolder).
  *   IX-003.7 — Deep-scan miss drops the pending entry without erroring.
+ *   IX-003.8 — DestinationResolver excludes INBOX from candidates even when
+ *              ActivityLog returns INBOX in recent folders (INV-002).
  */
 import { describe, it, expect, beforeAll, beforeEach, afterEach } from 'vitest';
 import fs from 'node:fs';
@@ -149,6 +151,40 @@ async function userMovesMessage(
     const lock = await client.getMailboxLock(fromFolder);
     try {
       await client.messageMove([uid], toFolder, { uid: true });
+    } finally {
+      lock.release();
+    }
+  } finally {
+    await client.logout().catch(() => {});
+  }
+}
+
+/**
+ * Copy a message by UID from one folder to another via an independent
+ * ImapFlow connection. Unlike `messageMove`, the source copy stays in place,
+ * so afterwards the SAME Message-ID exists in BOTH folders. Used by IX-003.8
+ * to simulate the conditions under which the 260430-msg bug surfaced —
+ * Message-ID present in INBOX AND in a non-INBOX source folder, then moved
+ * out of the non-INBOX folder.
+ */
+async function copyMessage(
+  fromFolder: string,
+  toFolder: string,
+  uid: number,
+): Promise<void> {
+  const client = new ImapFlow({
+    host: HOST,
+    port: IMAP_PORT,
+    secure: false,
+    auth: { user: 'user', pass: 'pass' },
+    logger: false,
+    doSTARTTLS: false,
+  });
+  try {
+    await client.connect();
+    const lock = await client.getMailboxLock(fromFolder);
+    try {
+      await client.messageCopy([uid], toFolder, { uid: true });
     } finally {
       lock.release();
     }
@@ -534,5 +570,87 @@ describe('IX-003 — User move detection and destination resolution', () => {
     expect(moveTracker.getState().signalsLogged).toBe(0);
     expect(moveTracker.getState().pendingDeepScan).toBe(0);
     expect(signalStore.getSignalByMessageId(messageId)).toBeNull();
+  }, 60_000);
+
+  it('IX-003.8: DestinationResolver excludes INBOX even when it appears in recent folders (INV-002)', async () => {
+    const { moveTracker, signalStore, activityLog, destinationResolver } = app;
+
+    // ---- Seed: ActivityLog.getRecentFolders() must include INBOX ----
+    // Mimic the production preconditions of the 260430-msg bug: action-folder
+    // operations (vip/undoVip/unblock) write activity rows with folder='INBOX'.
+    // Without the INV-002 filter, getRecentFolders() then surfaces INBOX as a
+    // resolver candidate, and any Message-ID found in INBOX during search
+    // gets attributed as the destination.
+    const seedFolders = ['INBOX', 'INBOX', 'INBOX', FAST_DEST, 'Archive']; // INBOX dominant
+    for (const folder of seedFolders) {
+      activityLog.getDb().prepare(
+        `INSERT INTO activity (message_uid, action, folder, success, source)
+         VALUES (?, 'move', ?, 1, 'action-folder')`,
+      ).run(0, folder);
+    }
+    const recent = activityLog.getRecentFolders(10);
+    expect(recent).toContain('INBOX'); // sanity: the bug precondition is set up
+
+    // ---- Send a message to INBOX, then COPY (not move) it into REVIEW ----
+    // After this, the SAME Message-ID exists in BOTH INBOX and REVIEW. This
+    // is the exact poisoned state under which a buggy resolver would, when
+    // asked to find a message that vanished from REVIEW, walk recentFolders,
+    // hit INBOX, find the Message-ID, and return 'INBOX' as the destination.
+    await sendTestEmail({
+      from: 'inbox-trap@example.com',
+      to: 'user@localhost',
+      subject: 'IX-003.8 INBOX-never-resolved',
+      body: 'body',
+    });
+    const [inboxUid] = await waitForMailboxMessage('INBOX');
+    const messageId = await getMessageIdForUid('INBOX', inboxUid);
+    expect(messageId).toBeTruthy();
+
+    await copyMessage('INBOX', REVIEW_FOLDER, inboxUid);
+
+    // Sanity: the same Message-ID is now in both folders.
+    const reviewUids = await listMailboxMessages(REVIEW_FOLDER);
+    expect(reviewUids).toHaveLength(1);
+    const reviewMessageId = await getMessageIdForUid(REVIEW_FOLDER, reviewUids[0]);
+    expect(reviewMessageId).toBe(messageId);
+    expect(await listMailboxMessages('INBOX')).toHaveLength(1);
+
+    // ---- Baseline scan, then user moves the REVIEW copy out to FAST_DEST ----
+    // The INBOX copy stays put. MoveTracker will detect the disappearance
+    // from REVIEW; resolveFast will be asked to find the destination knowing
+    // only that the source was REVIEW.
+    await moveTracker.runScanForTest();
+    await userMovesMessage(REVIEW_FOLDER, FAST_DEST, reviewUids[0]);
+
+    // Sanity: REVIEW now empty, INBOX still has the original, FAST_DEST has
+    // the moved copy. Both INBOX and FAST_DEST contain the same Message-ID.
+    expect(await listMailboxMessages(REVIEW_FOLDER)).toHaveLength(0);
+    expect(await listMailboxMessages('INBOX')).toHaveLength(1);
+    expect(await listMailboxMessages(FAST_DEST)).toHaveLength(1);
+
+    await moveTracker.runScanForTest(); // scan #1 → pending
+    await moveTracker.runScanForTest(); // scan #2 → confirmed → resolver runs
+
+    // ---- Primary assertion: emitted signal's destination is NEVER INBOX ----
+    // The resolver may legitimately resolve to FAST_DEST (Archive), or if a
+    // future change makes it unresolvable, leave the entry queued for deep
+    // scan; the contract per INV-002 is purely "never INBOX".
+    const sig = signalStore.getSignalByMessageId(messageId);
+    if (sig) {
+      expect(sig.destinationFolder.toUpperCase()).not.toBe('INBOX');
+    }
+    // No matter what, no signal in the store may point at INBOX.
+    for (const s of signalStore.getSignals()) {
+      expect(s.destinationFolder.toUpperCase()).not.toBe('INBOX');
+    }
+
+    // ---- Secondary assertion: resolveFast directly never returns INBOX ----
+    // Call the resolver directly with the same poisoned recent-folders state
+    // the integration just exercised. Even with the Message-ID physically in
+    // INBOX, the return value must not be 'INBOX' (case-insensitive).
+    const direct = await destinationResolver.resolveFast(messageId, REVIEW_FOLDER);
+    if (direct !== null) {
+      expect(direct.toUpperCase()).not.toBe('INBOX');
+    }
   }, 60_000);
 });
