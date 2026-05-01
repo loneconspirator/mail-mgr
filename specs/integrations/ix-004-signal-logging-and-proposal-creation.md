@@ -1,7 +1,7 @@
 ---
 id: IX-004
 title: Signal logging and proposal creation/update
-integration-test: null
+integration-test: test/integration/ix-004-signal-logging-and-proposal-creation.test.ts
 modules: [MOD-0010, MOD-0011, MOD-0012]
 starting-states: []
 use-cases: [UC-001, UC-006]
