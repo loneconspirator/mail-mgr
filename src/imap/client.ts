@@ -140,8 +140,12 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
     try {
       this.flow = this.factory(this.config);
       this.bindFlowEvents(this.flow);
-      await this.flow.connect();
-      await this.flow.mailboxOpen('INBOX');
+      // FM-002 R3: bound TLS-handshake / LOGIN and the initial SELECT INBOX
+      // so a wedge during reconnect can no longer leave the client stuck in
+      // 'connecting' forever. Timeout errors flow through the catch block
+      // below into setState('error') + emit + scheduleReconnect.
+      await withTimeout(this.flow.connect(), CONNECT_TIMEOUT_MS, 'IMAP CONNECT');
+      await withTimeout(this.flow.mailboxOpen('INBOX'), CONNECT_TIMEOUT_MS, 'IMAP SELECT INBOX');
 
       this.setState('connected');
       this.resetBackoff();
