@@ -1177,7 +1177,7 @@ describe('ImapClient', () => {
         label: 'deleteMessage',
         hangMockKey: 'messageDelete',
         hangMockValue: () => vi.fn(() => new Promise<never>(() => {})),
-        timeoutMs: 15_000,
+        timeoutMs: 30_000,
         invoke: (c) => c.deleteMessage('Sent', 1),
       },
       {

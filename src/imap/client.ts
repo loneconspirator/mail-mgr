@@ -384,7 +384,7 @@ export class ImapClient extends EventEmitter<ImapClientEvents> {
   async deleteMessage(folder: string, uid: number): Promise<boolean> {
     return this.withMailboxSwitch(folder, async (flow) => {
       return flow.messageDelete([uid], { uid: true });
-    }, LIST_TIMEOUT_MS);
+    }, WRITE_TIMEOUT_MS);
   }
 
   async getSpecialUseFolder(use: string): Promise<string | null> {
