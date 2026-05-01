@@ -61,6 +61,8 @@ Recent decisions affecting current work:
 1. **Prevent redundant proposed rules and handle rule ordering conflicts** — Block approval of rules that duplicate existing criteria; warn when shadowed by higher-priority rules with reorder option
 2. **Populate delivered-to field in proposed rules and modify form** — Include delivered-to as matcher in proposals, prepopulate in Modify modal
 3. **Wire IX-004 integration test** — IX-004's 8 named interactions need a dedicated integration test; spec frontmatter `integration-test: null` (surfaced by /validate 2026-04-28)
+4. **Document INV-002 INBOX-never-proposed** — Update MOD-0009 + MOD-0012 and enforce in IX-003
+5. **Implement HTTP BASIC auth on web app and API** — Add env-driven shared credential middleware over `src/web/` covering UI and API routes
 
 ### Roadmap Evolution
 
