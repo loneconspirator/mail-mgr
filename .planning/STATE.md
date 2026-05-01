@@ -62,6 +62,7 @@ Recent decisions affecting current work:
 2. **Populate delivered-to field in proposed rules and modify form** — Include delivered-to as matcher in proposals, prepopulate in Modify modal
 3. **Generalize FM-002 — harden ImapClient against wedged-connection silent failures** — Extend the FM-002 trip-wire from IDLE+listFolders to the entire ImapClient public surface; bound flow.connect(); verify in-flight rejection on handleClose; consider lowering idleTimeout default. Likely root of much of the app's silent flakiness.
 4. **Add Delayed Move rule type with INBOX sweep** — New rule action where message stays in INBOX and gets swept from there after read/unread delays (Review-like semantics, INBOX-resident). Adds "Approve as Delayed" button on proposed rules page.
+5. **Add Reply-To to rule-tracked message fields** — Extend emailMatchSchema with `replyTo` matcher; flow through evaluator, conflict-checker, proposal generation, and UI. Targets bulk senders with unstable From but stable Reply-To.
 
 ### Roadmap Evolution
 
