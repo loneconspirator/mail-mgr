@@ -1006,6 +1006,51 @@ describe('ImapClient', () => {
     it('listFolders throws when not connected', async () => {
       await expect(client.listFolders()).rejects.toThrow('Not connected');
     });
+
+    // FM-002 Phase 34 Task 2: cleanupFlow must drain in-flight imapflow ops
+    // by calling flow.close() before nulling the reference. Without this,
+    // requestTagMap entries and pending locks in the abandoned imapflow
+    // instance never reject — old wedged callers stay stuck forever.
+    // (See node_modules/imapflow/lib/imap-flow.js:1673-1759.)
+    it('cleanupFlow calls flow.close before nulling the reference', async () => {
+      await client.connect();
+
+      // Wedge: usable=false will cause cycleIdle -> handleClose -> cleanupFlow
+      (mockFlow as unknown as { usable: boolean }).usable = false;
+
+      // Replace factory for the reconnect attempt
+      const reconnectFlow = createMockFlow();
+      (factory as ReturnType<typeof vi.fn>).mockReturnValueOnce(reconnectFlow);
+
+      // Drive cycleIdle past idleTimeout — usable check trips, handleClose
+      // runs, cleanupFlow runs, flow.close() should have been called.
+      await vi.advanceTimersByTimeAsync(300_000);
+
+      expect(mockFlow.close).toHaveBeenCalled();
+    });
+
+    it('cleanupFlow swallows errors from flow.close', async () => {
+      const throwingClose = vi.fn(() => {
+        throw new Error('boom');
+      });
+      const wedgeFlow = createMockFlow({ close: throwingClose });
+      const f = vi.fn(() => wedgeFlow);
+      const c = new ImapClient(TEST_CONFIG, f);
+      c.on('error', () => {});
+
+      await c.connect();
+
+      // Wedge — trip cycleIdle so handleClose -> cleanupFlow -> flow.close()
+      (wedgeFlow as unknown as { usable: boolean }).usable = false;
+      await vi.advanceTimersByTimeAsync(300_000);
+
+      // close() threw, but cleanupFlow swallowed it; reconnect should still
+      // have been scheduled. Advance the backoff so the new factory fires.
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      expect(throwingClose).toHaveBeenCalled();
+      expect(f).toHaveBeenCalledTimes(2);
+    });
   });
 
   // FM-002 Task 1 (Phase 34): foundation pieces — mock factory now provides
