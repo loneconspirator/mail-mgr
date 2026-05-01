@@ -5,6 +5,7 @@ integration-test: test/integration/ix-003-user-move-detection-and-destination-re
 modules: [MOD-0002, MOD-0007, MOD-0008, MOD-0009]
 starting-states: []
 use-cases: [UC-001, UC-006]
+invariants-enforced: [INV-002]
 architecture-section: architecture.md#uc-001-manual-move--proposed-rule--auto-filing
 ---
 
@@ -24,6 +25,7 @@ architecture-section: architecture.md#uc-001-manual-move--proposed-rule--auto-fi
 - **IX-003.5** — If fast-pass fails, the message is queued for deep-scan resolution on the 15-minute timer, which searches all selectable mailboxes by Message-ID.
 - **IX-003.6** — Once the destination is resolved, MoveTracker emits a confirmed move signal with full metadata (sender, envelope recipient, subject, visibility, read status, source folder, destination folder) for downstream processing by IX-004.
 - **IX-003.7** — If deep-scan also fails to locate the message (e.g., permanently deleted), the pending entry is dropped with no signal emitted.
+- **IX-003.8** — DestinationResolver MUST NOT return INBOX as a destination, even when INBOX appears in the recent-folders pool returned by `ActivityLog.getRecentFolders()` (e.g., after action-folder `vip`/`undoVip`/`unblock` operations seed INBOX rows into the activity log). Both fast-pass and deep-scan paths filter INBOX case-insensitively. Enforces INV-002.
 
 ## Sequence Diagram
 
@@ -77,6 +79,7 @@ sequenceDiagram
 ## Postconditions
 
 - Confirmed user moves produce a signal with sender, destination, and message metadata.
+- A confirmed move signal's `destinationFolder` is never INBOX (case-insensitive). See INV-002.
 - System-initiated moves are excluded and produce no signal.
 - Failed resolutions (message not found anywhere) are silently dropped.
 - Two-scan confirmation prevents false positives from transient states.
