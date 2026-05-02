@@ -19,6 +19,7 @@ Abstraction over imapflow providing all IMAP operations: connect/disconnect with
 - `moveMessage(uid, destination, sourceFolder?)` — Move a message by UID to a destination folder.
 - `fetchNewMessages(sinceUid)` — Fetch messages from INBOX with UIDs greater than the given cursor.
 - `fetchAllMessages(folder)` — Fetch all messages from a folder as ReviewMessage objects.
+- `fetchMessagesRaw(range, query)` — Fetch raw imapflow message records for a UID range with the given query (used by signal-logging paths that need fields beyond ReviewMessage).
 - `listMailboxes()` — List all mailboxes with flags.
 - `listFolders()` — List folder tree as hierarchical FolderNode objects.
 - `status(path)` — Get message count and unseen count for a folder.
@@ -28,8 +29,8 @@ Abstraction over imapflow providing all IMAP operations: connect/disconnect with
 - `searchByHeader(folder, headerName, headerValue)` — Search for messages by header value.
 - `deleteMessage(folder, uid)` — Delete a message by UID.
 - `getSpecialUseFolder(use)` — Look up special-use folders (e.g., `\Trash`).
-- `withMailboxLock(folder, fn)` — Execute a function with an exclusive mailbox lock.
-- `withMailboxSwitch(folder, fn)` — Execute a function after switching to a folder (shared access).
+- `withMailboxLock(folder, fn, workTimeoutMs?)` — Execute a function with an exclusive mailbox lock; `workTimeoutMs` bounds the inner work (defaults to `WRITE_TIMEOUT_MS`); the lock acquisition itself is bounded by `LOCK_TIMEOUT_MS`.
+- `withMailboxSwitch(folder, fn, workTimeoutMs?)` — Execute a function after switching to a folder (shared access); same timeout shape as `withMailboxLock`; the post-work INBOX restore is also routed through `guardedOp`.
 - `state` — Current connection state: disconnected, connecting, connected, or error.
 - `idleSupported` — Whether the server supports IDLE.
 
