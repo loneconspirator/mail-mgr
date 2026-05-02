@@ -29,6 +29,19 @@ describe('isSenderOnly', () => {
     const rule = makeRule({ match: { sender: 'alice@example.com', readStatus: 'any' } });
     expect(isSenderOnly(rule)).toBe(true);
   });
+
+  it('returns false for a rule with ONLY replyTo set (no sender)', () => {
+    // isSenderOnly requires sender; replyTo alone does not qualify.
+    const rule = makeRule({ match: { replyTo: '*@bulk.io' } });
+    expect(isSenderOnly(rule)).toBe(false);
+  });
+
+  it('returns false for a rule with sender + replyTo (replyTo narrows it)', () => {
+    // replyTo is excluded from isSenderOnly because the action-folder VIP/Block
+    // flow (PROC-09) is specifically about the From: address.
+    const rule = makeRule({ match: { sender: 'alice@example.com', replyTo: '*@bulk.io' } });
+    expect(isSenderOnly(rule)).toBe(false);
+  });
 });
 
 describe('findSenderRule', () => {

@@ -360,6 +360,79 @@ describe('matchRule', () => {
     });
   });
 
+  describe('replyTo matching', () => {
+    it('matches exact reply-to address from headers (lowercase header key)', () => {
+      const rule = makeRule({ replyTo: 'noreply@bulk.io' });
+      const msg = makeMessage({
+        headers: new Map([['reply-to', 'noreply@bulk.io']]),
+      });
+      expect(matchRule(rule, msg)).toBe(true);
+    });
+
+    it('matches replyTo glob pattern, case-insensitively', () => {
+      const rule = makeRule({ replyTo: '*@BULK.IO' });
+      const msg = makeMessage({
+        headers: new Map([['reply-to', 'noreply@bulk.io']]),
+      });
+      expect(matchRule(rule, msg)).toBe(true);
+    });
+
+    it('strips angle-bracket address from reply-to header before matching', () => {
+      const rule = makeRule({ replyTo: 'noreply@bulk.io' });
+      const msg = makeMessage({
+        headers: new Map([['reply-to', '"Bulk Sender" <noreply@bulk.io>']]),
+      });
+      expect(matchRule(rule, msg)).toBe(true);
+    });
+
+    it('returns false when message has no headers map', () => {
+      const rule = makeRule({ replyTo: 'noreply@bulk.io' });
+      const msg = makeMessage(); // no headers
+      expect(matchRule(rule, msg)).toBe(false);
+    });
+
+    it('returns false when headers exist but reply-to key is absent', () => {
+      const rule = makeRule({ replyTo: 'noreply@bulk.io' });
+      const msg = makeMessage({
+        headers: new Map([['list-id', '<bulk.io>']]),
+      });
+      expect(matchRule(rule, msg)).toBe(false);
+    });
+
+    it('returns false when reply-to header value does not match the pattern', () => {
+      const rule = makeRule({ replyTo: '*@bulk.io' });
+      const msg = makeMessage({
+        headers: new Map([['reply-to', 'someone@elsewhere.com']]),
+      });
+      expect(matchRule(rule, msg)).toBe(false);
+    });
+
+    it('AND-combines replyTo with sender — both must match', () => {
+      const rule = makeRule({ sender: 'a@b.com', replyTo: '*@bulk.io' });
+      // Both match
+      const goodMsg = makeMessage({
+        from: { name: 'A', address: 'a@b.com' },
+        headers: new Map([['reply-to', 'noreply@bulk.io']]),
+      });
+      expect(matchRule(rule, goodMsg)).toBe(true);
+
+      // sender matches but replyTo does not
+      const badMsg = makeMessage({
+        from: { name: 'A', address: 'a@b.com' },
+        headers: new Map([['reply-to', 'someone@elsewhere.com']]),
+      });
+      expect(matchRule(rule, badMsg)).toBe(false);
+    });
+
+    it('matches raw reply-to header value when no angle brackets present', () => {
+      const rule = makeRule({ replyTo: 'noreply@bulk.io' });
+      const msg = makeMessage({
+        headers: new Map([['reply-to', 'noreply@bulk.io']]),
+      });
+      expect(matchRule(rule, msg)).toBe(true);
+    });
+  });
+
   describe('unspecified fields are wildcards', () => {
     it('matches any sender when sender is not specified', () => {
       const rule = makeRule({ subject: 'Hello World' });

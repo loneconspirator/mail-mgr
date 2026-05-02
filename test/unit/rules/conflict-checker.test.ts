@@ -77,4 +77,37 @@ describe('checkProposalConflict', () => {
     const result = checkProposalConflict({ sender: 'foo@bar.com', envelopeRecipient: null }, rules);
     expect(result).toBeNull();
   });
+
+  describe('replyTo as narrowing-equivalent for proposal conflicts', () => {
+    it('not exact when existing rule has sender + replyTo (proposal lacks replyTo)', () => {
+      // ProposalInput cannot carry replyTo today; a sender+replyTo rule is more
+      // restrictive than a sender-only proposal and must NOT be flagged as a duplicate.
+      const rules = [makeRule({ match: { sender: 'foo@bar.com', replyTo: '*@bulk.io' } })];
+      const result = checkProposalConflict({ sender: 'foo@bar.com', envelopeRecipient: null }, rules);
+      expect(result).toBeNull();
+    });
+
+    it('not shadow when existing rule has broader sender glob + replyTo', () => {
+      // Same logic: replyTo narrows the rule; the sender-only proposal can't satisfy it.
+      const rules = [makeRule({ match: { sender: '*@bar.com', replyTo: '*@bulk.io' } })];
+      const result = checkProposalConflict({ sender: 'foo@bar.com', envelopeRecipient: null }, rules);
+      expect(result).toBeNull();
+    });
+
+    it('skips replyTo-only rules from exact/shadow detection (no sender to compare)', () => {
+      // replyTo-only rules don't carry a sender — exact/shadow loops both already
+      // skip rules without `match.sender`, so this just confirms no regression.
+      const rules = [makeRule({ match: { replyTo: '*@bulk.io' } })];
+      const result = checkProposalConflict({ sender: 'foo@bar.com', envelopeRecipient: null }, rules);
+      expect(result).toBeNull();
+    });
+
+    it('still detects exact conflict on sender when no replyTo present on existing rule', () => {
+      // Sanity: adding replyTo logic must NOT break the baseline exact-match path.
+      const rules = [makeRule({ match: { sender: 'foo@bar.com' } })];
+      const result = checkProposalConflict({ sender: 'foo@bar.com', envelopeRecipient: null }, rules);
+      expect(result).not.toBeNull();
+      expect(result!.type).toBe('exact');
+    });
+  });
 });
