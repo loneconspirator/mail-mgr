@@ -38,6 +38,7 @@ export const emailMatchSchema = z
     recipient: z.string().optional(),
     subject: z.string().optional(),
     deliveredTo: z.string().optional(),
+    replyTo: z.string().optional(),
     visibility: visibilityMatchEnum.optional(),
     readStatus: readStatusMatchEnum.optional(),
   })
@@ -47,6 +48,7 @@ export const emailMatchSchema = z
       m.recipient !== undefined ||
       m.subject !== undefined ||
       m.deliveredTo !== undefined ||
+      m.replyTo !== undefined ||
       m.visibility !== undefined ||
       m.readStatus !== undefined,
     { message: 'At least one match field is required' },

@@ -25,7 +25,14 @@ interface ProposalInput {
 const NARROWING_FIELDS = ['recipient', 'subject', 'visibility', 'readStatus'] as const;
 
 function hasNarrowingFields(match: Rule['match']): boolean {
-  return NARROWING_FIELDS.some((f) => match[f] !== undefined);
+  // NOTE: `replyTo` is a primary identity field for *matching* purposes (like sender),
+  // but for *proposal-conflict* purposes it counts as narrowing because today's
+  // ProposalInput does NOT carry a replyTo value. A rule that requires a specific
+  // replyTo therefore cannot be satisfied by — or shadow — a sender-only proposal.
+  // When proposals start carrying replyTo (follow-up work), revisit this guard.
+  if (NARROWING_FIELDS.some((f) => match[f] !== undefined)) return true;
+  if (match.replyTo !== undefined) return true;
+  return false;
 }
 
 function senderMatches(ruleSender: string, proposalSender: string): boolean {

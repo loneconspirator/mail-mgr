@@ -6,7 +6,13 @@ import type { Rule } from '../config/index.js';
 import type { EmailMessage } from '../imap/index.js';
 import { matchRule } from './matcher.js';
 
-/** Check whether a rule references match fields that require envelope data. */
+/**
+ * Check whether a rule references match fields that require envelope data.
+ * NOTE: `replyTo` is intentionally NOT included here — Reply-To is read from
+ * the per-message headers map populated by the IMAP layer, not from the
+ * envelope. A replyTo-only rule is fully evaluable even when envelope discovery
+ * has not run.
+ */
 function needsEnvelopeData(rule: Rule): boolean {
   return rule.match.deliveredTo !== undefined || rule.match.visibility !== undefined;
 }
@@ -16,8 +22,8 @@ function needsEnvelopeData(rule: Rule): boolean {
  * Rules are sorted by `order`, filtered to enabled only,
  * and the first match wins.
  * Rules referencing deliveredTo or visibility are skipped when
- * the message lacks envelope data (D-08). readStatus is never
- * skipped (D-09).
+ * the message lacks envelope data (D-08). readStatus and replyTo are
+ * never skipped (D-09; replyTo lives in headers, not envelope).
  * Returns the matching rule, or null if nothing matches.
  */
 export function evaluateRules(rules: Rule[], message: EmailMessage): Rule | null {

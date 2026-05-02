@@ -3,6 +3,11 @@ import type { Rule } from '../config/schema.js';
 /**
  * Check if a rule matches only on sender (no narrowing fields).
  * Extracted from dispositions.ts for shared use.
+ *
+ * NOTE: `replyTo` is excluded from "sender-only" because the action-folder
+ * VIP/Block flow (PROC-09) is specifically about the From: address. A rule
+ * that pins both sender AND replyTo is more specific than a pure From-based
+ * VIP/Block and shouldn't be reused there.
  */
 export function isSenderOnly(rule: Rule): boolean {
   const m = rule.match;
@@ -11,6 +16,7 @@ export function isSenderOnly(rule: Rule): boolean {
     m.recipient === undefined &&
     m.subject === undefined &&
     m.deliveredTo === undefined &&
+    m.replyTo === undefined &&
     m.visibility === undefined &&
     (m.readStatus === undefined || m.readStatus === 'any')
   );
