@@ -180,6 +180,10 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true, forceCreate = fals
       <input id="m-deliveredTo" value="${esc(rule?.match?.deliveredTo || '')}" placeholder="*@example.com" ${!envelopeAvailable ? 'disabled' : ''} />
     </div>
     <div class="form-group">
+      <label>Reply-To</label>
+      <input id="m-replyTo" value="${esc(rule?.match?.replyTo || '')}" placeholder="*@example.com" />
+    </div>
+    <div class="form-group">
       <label>Recipient Field${!envelopeAvailable ? ' <span class="info-icon" title="Envelope header not discovered &#8212; run discovery in IMAP settings.">&#9432;</span>' : ''}</label>
       <select id="m-visibility" ${!envelopeAvailable ? 'disabled' : ''}>
         <option value="">&mdash;</option>
@@ -245,6 +249,7 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true, forceCreate = fals
     const subject = (document.getElementById('m-subject') as HTMLInputElement).value.trim();
     const recipient = (document.getElementById('m-recipient') as HTMLInputElement).value.trim();
     const deliveredTo = (document.getElementById('m-deliveredTo') as HTMLInputElement).value.trim();
+    const replyTo = (document.getElementById('m-replyTo') as HTMLInputElement).value.trim();
     const visibility = (document.getElementById('m-visibility') as HTMLSelectElement).value;
     const readStatus = (document.getElementById('m-readStatus') as HTMLSelectElement).value;
     const folder = selectedFolder;
@@ -257,6 +262,7 @@ function openRuleModal(rule?: Rule, envelopeAvailable = true, forceCreate = fals
     if (subject) match.subject = subject;
     if (recipient) match.recipient = recipient;
     if (deliveredTo) match.deliveredTo = deliveredTo;
+    if (replyTo) match.replyTo = replyTo;
     if (visibility) match.visibility = visibility;
     if (readStatus) match.readStatus = readStatus;
     if (Object.keys(match).length === 0) {
