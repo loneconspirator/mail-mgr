@@ -231,5 +231,32 @@ describe('evaluateRules', () => {
       expect(result).not.toBeNull();
       expect(result!.id).toBe('rs');
     });
+
+    it('does NOT skip a replyTo-only rule when envelopeRecipient is undefined', () => {
+      // replyTo lives in headers, not envelope — needsEnvelopeData must return false for replyTo
+      const rules = [
+        makeRule('rt', 1, { replyTo: '*@bulk.io' }),
+      ];
+      const msg = makeMessage({
+        headers: new Map([['reply-to', 'noreply@bulk.io']]),
+        // intentionally no envelopeRecipient
+      });
+      const result = evaluateRules(rules, msg);
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe('rt');
+    });
+
+    it('does NOT skip a replyTo + sender rule when envelopeRecipient is undefined', () => {
+      const rules = [
+        makeRule('rt-sender', 1, { sender: 'a@b.com', replyTo: '*@bulk.io' }),
+      ];
+      const msg = makeMessage({
+        from: { name: 'A', address: 'a@b.com' },
+        headers: new Map([['reply-to', 'noreply@bulk.io']]),
+      });
+      const result = evaluateRules(rules, msg);
+      expect(result).not.toBeNull();
+      expect(result!.id).toBe('rt-sender');
+    });
   });
 });

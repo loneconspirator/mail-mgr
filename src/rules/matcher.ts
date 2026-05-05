@@ -9,7 +9,8 @@ import type { EmailMessage } from '../imap/index.js';
  * Test whether a single rule matches a message.
  * All specified match fields must match (AND logic).
  * Fields: sender, recipient (To+CC), subject, deliveredTo (envelope),
- * visibility (direct/cc/bcc/list), readStatus (read/unread/any).
+ * replyTo (Reply-To header), visibility (direct/cc/bcc/list),
+ * readStatus (read/unread/any).
  * All glob comparisons are case-insensitive.
  */
 export function matchRule(rule: Rule, message: EmailMessage): boolean {
@@ -17,6 +18,18 @@ export function matchRule(rule: Rule, message: EmailMessage): boolean {
 
   if (match.sender !== undefined) {
     if (!picomatch.isMatch(message.from.address, match.sender, { nocase: true })) {
+      return false;
+    }
+  }
+
+  // replyTo: Reply-To header glob match (header keys are lowercased by parseHeaderLines).
+  // Strip "<addr>" portion if present, mirroring deliveredTo's <>-stripping below.
+  if (match.replyTo !== undefined) {
+    const replyToHeader = message.headers?.get('reply-to');
+    if (!replyToHeader) return false;
+    const angleMatch = replyToHeader.match(/<([^>]+)>/);
+    const cleaned = (angleMatch ? angleMatch[1] : replyToHeader).trim();
+    if (!picomatch.isMatch(cleaned, match.replyTo, { nocase: true })) {
       return false;
     }
   }

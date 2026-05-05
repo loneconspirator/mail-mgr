@@ -35,16 +35,31 @@ describe('generateBehaviorDescription', () => {
     expect(generateBehaviorDescription({})).toBe('');
   });
 
-  it('outputs fields in canonical order: sender, to, subject, delivered-to, field, status', () => {
+  it('outputs fields in canonical order: sender, to, subject, delivered-to, reply-to, field, status', () => {
     const match = {
       readStatus: 'unread',
       visibility: 'cc',
+      replyTo: '*@bulk.io',
       deliveredTo: '*@work.com',
       subject: '*test*',
       recipient: 'a@b.com',
       sender: '*@ex.com',
     };
     expect(generateBehaviorDescription(match))
-      .toBe('sender: *@ex.com, to: a@b.com, subject: *test*, delivered-to: *@work.com, field: cc, status: unread');
+      .toBe('sender: *@ex.com, to: a@b.com, subject: *test*, delivered-to: *@work.com, reply-to: *@bulk.io, field: cc, status: unread');
+  });
+
+  it('returns reply-to label for replyTo-only match', () => {
+    expect(generateBehaviorDescription({ replyTo: '*@bulk.io' })).toBe('reply-to: *@bulk.io');
+  });
+
+  it('combines sender + reply-to in correct order', () => {
+    expect(generateBehaviorDescription({ sender: 'a@b.com', replyTo: '*@bulk.io' }))
+      .toBe('sender: a@b.com, reply-to: *@bulk.io');
+  });
+
+  it('combines delivered-to + reply-to in correct order (reply-to immediately after delivered-to)', () => {
+    expect(generateBehaviorDescription({ deliveredTo: '*@work.com', replyTo: '*@bulk.io' }))
+      .toBe('delivered-to: *@work.com, reply-to: *@bulk.io');
   });
 });
