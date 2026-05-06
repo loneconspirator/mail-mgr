@@ -40,6 +40,11 @@ echo "Seeding dev data..."
 DATA_PATH="$DATA_DIR" npx tsx "$SCRIPT_DIR/seed.ts"
 
 # ── 6. Start the app in the background ───────────────────────────
+# Default dev-only auth creds — app refuses to start without them.
+# Override WEB_AUTH_USER / WEB_AUTH_PASS in the environment to change.
+: "${WEB_AUTH_USER:=dev}"
+: "${WEB_AUTH_PASS:=dev}"
+export WEB_AUTH_USER WEB_AUTH_PASS
 echo "Starting app..."
 DATA_PATH="$DATA_DIR" npx tsx "$REPO_DIR/src/index.ts" &
 APP_PID=$!
@@ -53,6 +58,7 @@ cat <<EOF
 
 Dev environment is running!
   Web UI:         http://localhost:$APP_PORT
+  Auth:           $WEB_AUTH_USER / $WEB_AUTH_PASS
   GreenMail IMAP: localhost:$IMAP_PORT
   GreenMail SMTP: localhost:3025
   Data directory: $DATA_DIR
