@@ -1,34 +1,34 @@
 ---
 gsd_state_version: 1.0
-milestone: v0.8
-milestone_name: Action Folder Safety Hardening
+milestone: null
+milestone_name: null
 status: planning
-last_updated: "2026-05-01T18:39:00.000Z"
-last_activity: 2026-05-01
+last_updated: "2026-05-06T04:30:00.000Z"
+last_activity: 2026-05-06
 progress:
-  total_phases: 1
-  completed_phases: 1
-  total_plans: 2
-  completed_plans: 2
-  percent: 100
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-23)
+See: .planning/PROJECT.md (updated 2026-05-06)
 
 **Core value:** Dramatically reduce inbox volume without losing visibility
-**Current focus:** Planning next milestone
+**Current focus:** Planning next milestone (v0.8 shipped 2026-05-06)
 
 ## Current Position
 
-Milestone: v0.8 Action Folder Safety Hardening — Active
+Milestone: (none active — v0.8 shipped 2026-05-06)
 Status: Planning
-Last activity: 2026-05-01 - Completed quick task 260501-fo4: Implement HTTP BASIC auth on web app and API
+Last activity: 2026-05-06 — v0.8 milestone shipped, archived to milestones/
 
-Progress: [░░░░░░░░░░] 0% (0/0 plans, 0/1 phases)
+Progress: [██████████] 100% — v0.8 complete (5/5 plans, 2/2 phases)
 
 ## Performance Metrics
 
@@ -47,28 +47,27 @@ Progress: [░░░░░░░░░░] 0% (0/0 plans, 0/1 phases)
 Decisions are logged in PROJECT.md Key Decisions table.
 Recent decisions affecting current work:
 
+- [v0.8]: `guardedOp` chokepoint single-sources wedge detection across every public ImapClient op
+- [v0.8]: Clustered op-class timeout buckets (CONNECT/LOCK/WRITE/BULK_FETCH) instead of per-op constants
+- [v0.8]: `imapflow.close()` is the in-flight cancellation seam — no AbortController plumbing
+- [v0.8]: FM-002 spec NOT renamed when generalized — title rewrite preserves IX-001/MOD-0002/linker references
+- [v0.8]: Action-folder logging via `pendingActivities` accumulator — defer until after move succeeds
+- [v0.8]: Diagnostic logs go to pino only, not activity log
+- [v0.8]: `idleTimeout` 300s→90s for 3.3× faster wedge detection
 - [v0.7]: Message-ID is the persistent identifier (not UID — UIDVALIDITY changes invalidate UIDs)
 - [v0.7]: Two-tier scan: fast-path checks expected folders, deep scan only on missing sentinels
-- [v0.7]: Auto-healing must NOT trigger full pipeline rebuilds
-- [v0.7]: INBOX never gets a sentinel (cannot be renamed/deleted)
-- [v0.7]: Sentinel cleanup on untrack (rule deleted, config changed)
-- [v0.7]: Config mutations via saveConfig() bypass ConfigRepository listeners to prevent pipeline rebuilds
-- [v0.7]: Dedup folder-loss notifications by removing sentinel mapping after first notification
-- [Phase 31]: Barrel exports already present from 31-01; only src/index.ts needed wiring changes
 
 ### Pending Todos
 
 1. **Prevent redundant proposed rules and handle rule ordering conflicts** — Block approval of rules that duplicate existing criteria; warn when shadowed by higher-priority rules with reorder option
 2. **Populate delivered-to field in proposed rules and modify form** — Include delivered-to as matcher in proposals, prepopulate in Modify modal
-3. **Generalize FM-002 — harden ImapClient against wedged-connection silent failures** — Extend the FM-002 trip-wire from IDLE+listFolders to the entire ImapClient public surface; bound flow.connect(); verify in-flight rejection on handleClose; consider lowering idleTimeout default. Likely root of much of the app's silent flakiness.
-4. **Add Delayed Move rule type with INBOX sweep** — New rule action where message stays in INBOX and gets swept from there after read/unread delays (Review-like semantics, INBOX-resident). Adds "Approve as Delayed" button on proposed rules page.
-5. **Add Reply-To to rule-tracked message fields** — Extend emailMatchSchema with `replyTo` matcher; flow through evaluator, conflict-checker, proposal generation, and UI. Targets bulk senders with unstable From but stable Reply-To.
+3. **Add Delayed Move rule type with INBOX sweep** — New rule action where message stays in INBOX and gets swept from there after read/unread delays (Review-like semantics, INBOX-resident). Adds "Approve as Delayed" button on proposed rules page.
+4. **Pre-existing private `poll()` fallback (non-IDLE servers) lacks NOOP timeout wrapper** — Deferred from v0.8 (not introduced by v0.8). Track if non-IDLE IMAP servers become a target.
 
 ### Roadmap Evolution
 
-- v0.8 milestone created: Action Folder Safety Hardening (incident-driven, 2026-04-24)
-- Phase 33 added: Action Folder Safety Hardening — sentinel-aware skip, circuit breaker, diagnostic logging
-- Phase 34 added: Generalize FM-002 — harden ImapClient against wedged-connection silent failures
+- v0.8 milestone shipped 2026-05-06 (Phases 33-34: Action Folder Safety Hardening & FM-002 Generalization)
+- Next milestone TBD — run `/gsd-new-milestone`
 
 ### Blockers/Concerns
 
@@ -90,5 +89,5 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-24T22:58:45.334Z
-Last activity: 2026-04-23 — v0.7 milestone shipped, archived to milestones/
+Last session: 2026-05-06T04:30:00.000Z
+Last activity: 2026-05-06 — v0.8 milestone shipped, archived to milestones/

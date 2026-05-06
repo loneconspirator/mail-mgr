@@ -1,5 +1,27 @@
 # Milestones
 
+## v0.8 Action Folder Safety Hardening & FM-002 Generalization (Shipped: 2026-05-06)
+
+**Phases completed:** 2 phases (33-34), 5 plans, 11 tasks
+**Timeline:** 12 days (2026-04-24 → 2026-05-05)
+**Audit:** PASSED (12/12 requirements, 4/4 integration flows, 4/4 E2E flows, both phases Nyquist-compliant)
+
+**Key accomplishments:**
+
+- Action-folder processor: post-move activity logging via `pendingActivities` accumulator, duplicate-path early return, structured diagnostic logging (D-05/D-06/D-07)
+- Sentinel-aware poller skip eliminates ~4 wasteful `fetchAllMessages` IMAP round-trips per poll cycle when folders contain only their sentinel (D-01/D-02)
+- `guardedOp` chokepoint wraps every public ImapClient operation with per-op timeout buckets (CONNECT/LOCK/WRITE/BULK_FETCH); single-sourced wedge detection (R2)
+- `cleanupFlow` drains in-flight imapflow promises via `flow.close()`; `flow.connect()`/initial `mailboxOpen`/`flow.logout()` all bounded (R3, R4)
+- `idleTimeout` default lowered 300s→90s (3.3× faster wedge detection); 22 test fixtures swept (R5)
+- FM-002 spec retitled to bind every ImapClient op; MOD-0002 Notes mirrors; 42 FM-002 it.each matrix tests (≥30 acceptance bar) (R1, R6)
+
+**Tech Debt:**
+
+- Pre-existing private `poll()` fallback (non-IDLE servers) lacks NOOP timeout wrapper — not introduced by v0.8, deferred to backlog
+- Wedge detection latency is up to 120s (90s idleTimeout + 30s NOOP timeout), not 90s — R5 satisfied as written
+
+---
+
 ## v0.7 Sentinel Message System (Shipped: 2026-04-23)
 
 **Phases completed:** 7 phases, 13 plans, 16 tasks

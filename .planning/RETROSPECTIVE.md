@@ -124,6 +124,54 @@
 
 ---
 
+## Milestone: v0.8 — Action Folder Safety Hardening & FM-002 Generalization
+
+**Shipped:** 2026-05-06
+**Phases:** 2 (33-34) | **Plans:** 5 | **Tasks:** 11
+**Timeline:** 12 days (2026-04-24 → 2026-05-05)
+
+### What Was Built
+- Action-folder processor: post-move logging via `pendingActivities` accumulator, duplicate-path early return, structured diagnostic logging
+- Sentinel-aware poller skip eliminates ~4 wasteful `fetchAllMessages` IMAP round-trips per cycle when folders contain only their sentinel
+- `guardedOp` chokepoint wraps every public ImapClient op + lock acquisition with per-op timeout buckets (CONNECT/LOCK/WRITE/BULK_FETCH)
+- `cleanupFlow` drains in-flight imapflow promises via `flow.close()`; bounded `connect`/`mailboxOpen`/`logout`
+- `idleTimeout` default lowered 300s→90s; 22 fixtures swept
+- FM-002 spec generalized to bind every ImapClient op; MOD-0002 Notes mirrors; 42-case `it.each` matrix replaces enumerated tests
+
+### What Worked
+- Splitting Phase 34 into 3 plans (foundation → wire-up → spec) kept each plan reviewable; parallel worktrees on plans 02 and 03 actually merged cleanly
+- Audit-driven gap closure pattern: audit found 2 doc inconsistencies + 1 test gap, all closed in the same session before completion
+- Treating FM-002 as a contract (failure-mode spec) rather than a test gave the implementation a clear north star — every public op had to map to a guarded call site
+- TDD throughout — every fault-injection test was RED before GREEN, including the cross-cutting matrix
+- Preserving the existing FM-002 file path during generalization (rewrote frontmatter, didn't rename) avoided breaking IX-001/MOD-0002/external linkers
+
+### What Was Inefficient
+- Initial v0.8 scope was incident-driven and reactive — Phase 34 grew from a backlog todo into a full phase mid-milestone instead of being scoped up front
+- Auto-generated MILESTONES.md accomplishments needed manual rewrite (CLI extracted code-review bullets and "TDD RED" boilerplate from SUMMARY files instead of the actual deliverable summary)
+- Auto-generated v0.8-ROADMAP.md archive was a dump of the entire ROADMAP.md, not the milestone-scoped detail format used for v0.3-v0.7 — required full rewrite
+- Two doc inconsistencies in 34-02 timeout buckets (LIST vs WRITE, WRITE vs BULK_FETCH) shipped to merged plan before the audit caught them — a tighter plan-checker pass would have caught these
+
+### Patterns Established
+- Chokepoint wrapper pattern for cross-cutting concerns (`guardedOp` is the second instance after `withTimeout` itself); future cross-cutting hardening should look for the chokepoint first
+- Library-level cancellation seam (`imapflow.close()`) over user-space plumbing (AbortController) when the library exposes it
+- Op-class timeout buckets over per-op constants for ops with similar wedge characteristics
+- Spec-first contract for failure modes: FM-XXX spec is authoritative; module spec mirrors; code implements; any drift is a finding
+- Pending-effects accumulator pattern for ordering log/audit entries after the operation they describe
+
+### Key Lessons
+1. **Audit-driven gap closure beats post-merge cleanup.** The v0.8 audit caught 2 doc inconsistencies + 1 test gap; closing them in the same session preserves coherent shipping. If closure had slipped to "next milestone," they'd rot.
+2. **Auto-extracted accomplishments need a human pass.** SUMMARY files contain TDD ceremony ("TDD RED:") and review-fix line items that pollute auto-extraction. Either tighten the SUMMARY template's "one-liner" field discipline, or accept that the milestone-completion step will rewrite them.
+3. **Reactive milestones are valid but should be re-scoped explicitly.** v0.8 started as one-incident-fix and grew to two phases. That's fine, but the growth should be a deliberate scope-add commit, not implicit drift.
+4. **Don't rename spec files when their semantics widen.** Path baked into linkers everywhere; title-frontmatter rewrite is sufficient and avoids cascade churn.
+5. **Test fixture sweeps are worth it.** Lowering `idleTimeout` 300s→90s touched 22 fixtures; sweeping them all in one commit beats per-test breakage downstream.
+
+### Cost Observations
+- Model mix: opus for planning/execution; sonnet for audit and validation
+- Sessions: ~6 sessions over 12 days (some long gaps for adjacent quick tasks: BASIC auth, replyTo matcher)
+- Notable: smallest milestone yet (2 phases) but longest calendar duration — driven by interleaving with quick tasks rather than continuous focus
+
+---
+
 ## Cross-Milestone Trends
 
 ### Process Evolution
@@ -135,6 +183,7 @@
 | v0.5 | 66 | 4 | Tight scope, query-based views, single-day delivery |
 | v0.6 | ~100 | 9 | Declarative registry pattern, always-empty invariant, config API |
 | v0.7 | 121 | 7 | Sentinel-based folder tracking, auto-healing, clean TDD throughout |
+| v0.8 | ~35 | 2 | Audit-driven gap closure, chokepoint pattern (guardedOp), spec-first contract for failure modes |
 
 ### Cumulative Quality
 
@@ -145,6 +194,7 @@
 | v0.5 | 478+ | 11/11 requirements satisfied, 7/7 E2E flows verified |
 | v0.6 | 700+ | Nyquist backfill, 25/25 requirements, action folder idempotency |
 | v0.7 | 759 | 25/25 requirements, production bug caught post-deploy (review action routing) |
+| v0.8 | 800+ | 12/12 requirements, 4/4 integration flows, 4/4 E2E flows, audit-gap closure same-session |
 
 ### Top Lessons (Verified Across Milestones)
 
@@ -154,3 +204,5 @@
 4. Tests that assert buggy behavior are actively harmful — worse than no test at all (v0.7 review action bug)
 5. Seed/test data must mirror production config — minimal seeds mask real-world bugs (v0.7 review rules)
 6. Don't build UI you're about to automate — v0.6 folder rename UI was immediately replaced by v0.7 auto-healing
+7. Audit-driven gap closure beats post-merge cleanup — close findings in the same session, not "next milestone" (v0.8)
+8. Chokepoint wrapper pattern (single seam per cross-cutting concern) outperforms scattered per-op plumbing — `guardedOp` is the canonical example (v0.8)

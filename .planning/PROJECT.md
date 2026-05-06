@@ -87,6 +87,11 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - ✓ Sentinel-aware poller skip (skip fetchAllMessages when messages ≤ 1, eliminating wasteful IMAP round-trips) — v0.8 Phase 33
 - ✓ Diagnostic logging for action folder processor (sender, subject, messageId, uid per message) — v0.8 Phase 33
 
+- ✓ FM-002 wedge-detection contract generalized to entire ImapClient public surface (guardedOp chokepoint, per-op timeout buckets) — v0.8 Phase 34
+- ✓ Bounded `flow.connect()` and initial `mailboxOpen('INBOX')` under `CONNECT_TIMEOUT_MS` — v0.8 Phase 34
+- ✓ `cleanupFlow` drains in-flight imapflow promises via `flow.close()` (in-flight rejection on `handleClose`) — v0.8 Phase 34
+- ✓ `idleTimeout` default lowered from 300s → 90s for faster wedge detection — v0.8 Phase 34
+
 ### Active
 
 (None — planning next milestone)
@@ -110,7 +115,7 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 - **Database:** SQLite via better-sqlite3
 - **Web UI:** Vanilla HTML/CSS/JS SPA served by Fastify
 - **Testing:** Vitest with 759+ tests (unit + integration)
-- **Codebase:** ~13,500 LOC TypeScript across 55+ source files
+- **Codebase:** ~9,000 LOC TypeScript across 55+ source files (test suite ~65 test files)
 - **Architecture:** Monitor loop polls IMAP, evaluates rules, executes actions, logs activity. Sweep runs periodically on Review folder. BatchEngine applies rules retroactively with chunked execution. Web server exposes REST API for UI.
 - **Key insight:** Folder structure is primarily owned by the mail client/IMAP server. The system discovers what folders exist and uses them. Exception: Action Folders (v0.6) creates a dedicated `Actions/` hierarchy for drag-to-act functionality.
 - **Design assumption:** Users may have years of accumulated mail with inconsistent organization. The folder taxonomy works with what exists, not imposing a new structure.
@@ -151,6 +156,13 @@ Dramatically reduce inbox volume without losing visibility — messages that nee
 | Auto-healing bypasses ConfigRepository listeners | Prevents full pipeline rebuilds on folder rename; surgical reference updates only | ✓ Good |
 | INBOX never gets a sentinel | INBOX cannot be renamed/deleted — sentinel provides zero value, would just confuse users | ✓ Good |
 | Sentinel auto-healing replaces manual folder rename UI | Auto-healing is superior — no user action needed, covers renames done in any mail client | ✓ Good |
+| `guardedOp` chokepoint over per-op timeout plumbing | Single seam for wedge detection; every public ImapClient op funnels through one wrapper, so adding a new op only needs a `guardedOp(label, fn, timeoutMs)` call. Eliminates copy-paste of withTimeout/usable/handleClose pattern. | ✓ Good |
+| Clustered op-class timeout buckets (CONNECT/LOCK/WRITE/BULK_FETCH) | Per-op constants would proliferate without adding signal; op-class buckets group ops with similar wedge characteristics. | ✓ Good |
+| `imapflow.close()` as in-flight cancellation seam | Library API rejects in-flight promises via setImmediate — using it avoids rolling AbortController plumbing through every op. | ✓ Good |
+| FM-002 spec NOT renamed when generalized | File path is baked into IX-001 / MOD-0002 / external linkers — title-frontmatter rewrite is sufficient and avoids breaking references. | ✓ Good |
+| Action-folder logging via `pendingActivities` accumulator | Pre-move logging produced false-positive success entries on move failure; deferring activity log entries until after `moveMessage` succeeds (with `success: false` on failure) is the correct ordering. | ✓ Good |
+| Diagnostic logs go to pino only, not activity log | Activity log is the user audit trail; diagnostic logs are ops debugging. Conflating them muddies both. | ✓ Good |
+| `idleTimeout` 300s→90s | 5-minute wedge latency was unacceptably slow; 90s gives 3.3× faster detection without spamming reconnects. | ✓ Good |
 
 ## Evolution
 
@@ -170,4 +182,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-24 after v0.8 Phase 33 (Action Folder Safety Hardening — post-move logging, duplicate early return, sentinel-aware poller skip, diagnostic logging)*
+*Last updated: 2026-05-06 after v0.8 milestone shipped (Action Folder Safety Hardening + FM-002 generalization across the ImapClient public surface)*

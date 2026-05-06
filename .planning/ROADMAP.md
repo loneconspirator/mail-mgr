@@ -9,7 +9,7 @@
 - ✅ **v0.5 Sender Disposition Views** — Phases 13-16 (shipped 2026-04-20)
 - ✅ **v0.6 Action Folders** — Phases 17-25 (shipped 2026-04-22)
 - ✅ **v0.7 Sentinel Message System** — Phases 26-32 (shipped 2026-04-23)
-- 🔨 **v0.8 Action Folder Safety Hardening & FM-002 Generalization** — Phases 33-34 (active)
+- ✅ **v0.8 Action Folder Safety Hardening & FM-002 Generalization** — Phases 33-34 (shipped 2026-05-06)
 
 ## Phases
 
@@ -85,6 +85,16 @@ Full details: [milestones/v0.7-ROADMAP.md](milestones/v0.7-ROADMAP.md)
 
 </details>
 
+<details>
+<summary>✅ v0.8 Action Folder Safety Hardening & FM-002 Generalization (Phases 33-34) — SHIPPED 2026-05-06</summary>
+
+- [x] Phase 33: Action Folder Safety Hardening (2/2 plans) — Post-move logging, duplicate early return, sentinel-aware poller skip, diagnostic logging
+- [x] Phase 34: Generalize FM-002 (3/3 plans) — guardedOp chokepoint across all public ImapClient ops, bounded connect/mailboxOpen, cleanupFlow drain, idleTimeout 300s→90s, FM-002 spec generalized
+
+Full details: [milestones/v0.8-ROADMAP.md](milestones/v0.8-ROADMAP.md)
+
+</details>
+
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
@@ -124,28 +134,6 @@ Full details: [milestones/v0.7-ROADMAP.md](milestones/v0.7-ROADMAP.md)
 | 33. Action Folder Safety Hardening | v0.8 | 2/2 | Complete | 2026-04-23 |
 | 34. Generalize FM-002 | v0.8 | 3/3 | Complete | 2026-05-01 |
 
-## Current Milestone: v0.8 Action Folder Safety Hardening & FM-002 Generalization
+## Next Milestone
 
-Incident-driven hardening of the action-folder pipeline to prevent mass erroneous rule creation (Block and VIP floods) and eliminate wasteful sentinel-only polling.
-
-### Phase 33: Action Folder Safety Hardening
-
-**Goal:** Fix processor bugs (pre-move logging, duplicate fall-through), add sentinel-aware polling skip, and diagnostic logging
-**Depends on:** v0.7 Sentinel Message System
-**Plans:** 2/2 plans complete
-
-Plans:
-- [x] 33-01-PLAN.md — Fix processor bugs (D-05 post-move logging, D-06 duplicate early return) and add diagnostic logging (D-07)
-- [x] 33-02-PLAN.md — Add sentinel-aware skip to poller (D-01 skip on messages=1, D-02 skip on messages=0)
-
-### Phase 34: Generalize FM-002 — harden ImapClient against wedged-connection silent failures
-
-**Goal:** Extend the FM-002 wedge-detection contract from IDLE+listFolders to the entire ImapClient public surface — every public op routes through a guardedOp chokepoint with per-op timeouts, cleanupFlow drains in-flight imapflow promises, flow.connect() is bounded, idleTimeout default drops 300s→90s, and the FM-002/MOD-0002 specs are widened to match.
-**Requirements**: R1 (spec generalization), R2 (guardedOp wrapper), R3 (bound flow.connect), R4 (in-flight rejection on handleClose via cleanupFlow.flow.close()), R5 (idleTimeout default 90s), R6 (it.each test matrix N×2)
-**Depends on:** Phase 33
-**Plans:** 3/3 plans complete
-
-Plans:
-- [x] 34-01-PLAN.md — Foundation: guardedOp wrapper, timeout constants, cleanupFlow.flow.close(), bound flow.connect/mailboxOpen, ImapFlowLike.close() (R2 partial, R3, R4 partial)
-- [x] 34-02-PLAN.md — Apply guardedOp to every public op + lock acquisition; tune idleTimeout default 300_000→90_000; FM-002 it.each matrix (N×2 ≥ 30 cases) + R4 in-flight rejection test (R2 remainder, R4, R5, R6)
-- [x] 34-03-PLAN.md — Spec generalization: FM-002 title + Required behavior + Test approach widened; MOD-0002 Notes updated; validate-failure-mode FM-002 PASS (R1)
+Planning next milestone — run `/gsd-new-milestone` to begin.
