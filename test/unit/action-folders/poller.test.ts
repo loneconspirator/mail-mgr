@@ -330,6 +330,36 @@ describe('ActionFolderPoller', () => {
       );
     });
 
+    it('skips re-check entirely when every fetched message is a sentinel', async () => {
+      const deps = createDeps();
+      (deps.client.status as ReturnType<typeof vi.fn>)
+        .mockResolvedValueOnce({ messages: 2, unseen: 0 }) // vip initial (2 sentinels)
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // block
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }) // undoVip
+        .mockResolvedValueOnce({ messages: 0, unseen: 0 }); // unblock
+      (deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).mockResolvedValue([
+        makeReviewMessage(1),
+        makeReviewMessage(2),
+      ]);
+      (deps.processor.processMessage as ReturnType<typeof vi.fn>).mockResolvedValue({
+        ok: true,
+        sender: 'sentinel',
+      });
+      const poller = new ActionFolderPoller(deps);
+
+      await poller.scanAll();
+
+      // No re-check status call (4 initial only — branch short-circuits before the recheck)
+      expect(deps.client.status as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(4);
+      // fetchAllMessages called once (no retry)
+      expect(deps.client.fetchAllMessages as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(1);
+      // Debug log fires for the skip-retry branch
+      expect(deps.logger.debug as ReturnType<typeof vi.fn>).toHaveBeenCalledWith(
+        expect.objectContaining({ folder: 'Actions/VIP Sender', sentinels: 2 }),
+        'All messages are sentinels, skipping retry',
+      );
+    });
+
     it('does not retry if re-check shows 0 messages', async () => {
       const deps = createDeps();
       (deps.client.status as ReturnType<typeof vi.fn>)
